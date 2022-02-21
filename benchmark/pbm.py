@@ -2,44 +2,20 @@ from __future__ import annotations
 
 import numpy as np
 
-from statistics import mean
-from sys import path_importer_cache
-from typing import Dict, List, Optional
+from typing import List
 from attrs import define, field
-from sequence import Sequence
+from labels import BinaryLabel
 from math import nan
-from utils import END_LINE_CHARS, auto_convert
+from utils import END_LINE_CHARS
+from dataset import Dataset
+from seqentry import SeqEntry
+from pbmrecord import PBMRecord
 
-@define(field_transformer=auto_convert)
-class PBMRecord:
-    id_spot: int 
-    row: int 
-    col: int
-    control: bool
-    id_probe: str 
-    pbm_sequence: Sequence
-    linker_sequence: Sequence
-    mean_signal_intensity: float
-    mean_background_intensity: Optional[float] = field(
-        converter=lambda x: float(x) if x else None)
-    flag: bool
-    metainfo: Dict = field(factory=dict, repr=False)
 
-    @classmethod
-    def from_dict(cls, dt):
-        return cls(**dt)
 
 @define
 class PBMExperiment:
     records: List[PBMRecord] = field(repr=False)
-    mean: float = field(init=False, repr=True)
-    std: float = field(init=False, repr=True)
-
-    def __attrs_post_init__(self):
-        vals = [r.mean_signal_intensity for r in self.records]
-        self.mean = np.mean(vals)
-        self.std = np.std(vals)
-
     @staticmethod
     def parse_header(header):
         names = header\
@@ -67,26 +43,10 @@ class PBMExperiment:
                 records.append(record)
         return cls(records)
 
-@define
-class PBMDataset:
-    positive: List[PBMRecord]
-    negative: List[PBMRecord]
-    
-    def get_records(self, hide_labels=True):
-        pos_seq = [r.pbm_sequence for r in self.positive]
-        pos_labels = [0] * len(pos_seq)
-        neg_seq = [r.pbm_sequence for r in self.negative]
-        neg_labels = [0] * len(neg_seq)
-
-        seqs = pos_seq + neg_seq
-        labels = pos_labels + neg_labels
-        return seqs, labels
-
-    @staticmethod
-    def weirauch_threshold(experiment: PBMExperiment,
+    def weirauch_threshold(self,
                            min_probs=50,
                            max_probs=1300):
-        vals = [r.mean_signal_intensity for r in experiment.records]
+        vals = [r.mean_signal_intensity for r in self.records]
         vals.sort()
         mean = np.mean(vals)
         std = np.std(vals)
@@ -97,34 +57,21 @@ class PBMDataset:
         th = max(th, th3)
         return th
 
-    @classmethod
-    def weirauch_protocol(cls, 
-                        experiment: PBMExperiment):
-        threshold = cls.weirauch_threshold(experiment)
-        return cls.one_threshold_protocol(experiment, 
-                                          threshold)
-
-    @classmethod
-    def one_threshold_protocol(cls,
-                               experiment: PBMExperiment,
+    def weirauch_protocol(self):
+        threshold = self.weirauch_threshold()
+        return self.one_threshold_protocol(threshold)
+    
+    def one_threshold_protocol(self,
                                threshold: float):
-        pos = []
-        neg = []
-        for r in experiment.records:
-            if r.mean_signal_intensity >= threshold:
-                pos.append(r)
+        entries = []
+        for rec in self.records:
+            if rec.mean_signal_intensity >= threshold:
+                label = BinaryLabel.POSITIVE
             else:
-                neg.append(r)
-        
-        return cls(pos, neg)
+                label = BinaryLabel.NEGATIVE
+            entry = SeqEntry.from_record(rec, label)
+            entries.append(entry)
 
-    def to_tsv(self, path):
-        raise NotImplementedError
-
-    def to_json(self, path):
-        raise NotImplementedError
-
-    def to_classic_format(self, path):
-        return 
+        return Dataset(entries)
 
     

@@ -1,3 +1,12 @@
+from functools import singledispatchmethod, update_wrapper
+
+def _register(self, cls, method=None):
+    if hasattr(cls, "__func__"):
+        setattr(cls, "__annotations__", cls.__func__.__annotations__)
+    return self.dispatcher.register(cls, func=method)
+
+singledispatchmethod.register = _register
+
 END_LINE_CHARS = "\r\n"
 
 GLOBAL_CONVERTORS = {
