@@ -7,3 +7,5 @@ print(rec)
 
 dataset = exp.weirauch_protocol()
 print(dataset.entries[0])
+print(dataset.infer_fields())
+dataset.to_tsv("out.txt")

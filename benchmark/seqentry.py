@@ -27,4 +27,5 @@ class SeqEntry:
         metainfo = SeqMetaInfo(asdict(record, recurse=True))
         metainfo.pop('pbm_sequence')
         metainfo['linker_sequence'] = metainfo['linker_sequence']['seq']
+        metainfo['source'] = "PBM"
         return cls(seq, label, metainfo)
