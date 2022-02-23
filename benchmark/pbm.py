@@ -2,15 +2,13 @@ from __future__ import annotations
 
 import numpy as np
 
-from typing import List
+from typing import List, Optional
 from attrs import define, field
 from labels import BinaryLabel
-from math import nan
 from utils import END_LINE_CHARS
-from dataset import Dataset
+from dataset import PBMDataset
 from seqentry import SeqEntry
 from pbmrecord import PBMRecord
-
 
 
 @define
@@ -59,10 +57,11 @@ class PBMExperiment:
 
     def weirauch_protocol(self):
         threshold = self.weirauch_threshold()
-        return self.one_threshold_protocol(threshold)
+        return self.one_threshold_protocol(threshold, "weirauch")
     
     def one_threshold_protocol(self,
-                               threshold: float):
+                               threshold: float,
+                               protocol_name: Optional[str] = None):
         entries = []
         for rec in self.records:
             if rec.mean_signal_intensity >= threshold:
@@ -70,8 +69,10 @@ class PBMExperiment:
             else:
                 label = BinaryLabel.NEGATIVE
             entry = SeqEntry.from_record(rec, label)
+            if protocol_name is not None:
+                entry.metainfo['protocol'] = protocol_name
             entries.append(entry)
 
-        return Dataset(entries)
+        return PBMDataset(entries)
 
     

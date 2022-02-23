@@ -1,11 +1,8 @@
+from dataset import DatasetMode
 from examples import PBM_EXAMPLE_PATH
 from pbm import PBMExperiment
 
 exp = PBMExperiment.read(PBM_EXAMPLE_PATH)
-rec = exp.records[0]
-print(rec)
-
 dataset = exp.weirauch_protocol()
-print(dataset.entries[0])
-print(dataset.infer_fields())
-dataset.to_tsv("out.txt")
+dataset.to_canonical_format("as_test.txt")
+dataset.to_canonical_format("as_train.txt", mode=DatasetMode.TRAIN)

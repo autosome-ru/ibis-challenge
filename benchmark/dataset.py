@@ -1,11 +1,25 @@
-from typing import List
+from abc import abstractmethod, ABCMeta
+from enum import Enum
+from typing import ClassVar, List, Optional
+from exceptions import WrongDatasetModeException
+from labels import BinaryLabel
 from utils import undict
 from seqentry import SeqEntry
-from attrs import define 
+from attrs import define, fields
+from pbmrecord import PBMRecord
+
+class DatasetMode(Enum):
+    TRAIN = 1
+    VALIDATION = 2
+    TEST = 3
+    FULL = 4
 
 @define
-class Dataset:
+class Dataset(metaclass=ABCMeta):
     entries: List[SeqEntry]
+    SEQUENCE_FIELD: ClassVar[str] = "sequence"
+    LABEL_FIELD: ClassVar[str] = "label"
+    NO_INFO_VALUE: ClassVar[str] = "NoInfo"
 
     def infer_fields(self):
         fields = set()
@@ -13,30 +27,92 @@ class Dataset:
             dt = undict(en.metainfo)
             fields.update(dt.keys())
         fields = list(fields)
-        fields = ['seq', 'label'] + fields
         return fields
-   
-    def to_tsv(self, path, fields=None):
-        if fields is None:
+    
+    def get_fields(self, mode: DatasetMode):
+        if mode is DatasetMode.TRAIN:
+            return self.get_train_fields()
+        if mode is DatasetMode.TEST:
+            return self.get_test_fields()
+        if mode is DatasetMode.VALIDATION:
+            return self.get_valid_fields()
+        if mode is DatasetMode.FULL:
+            return self.get_full_fields()
+        raise WrongDatasetModeException(f"{mode}")
+
+    @abstractmethod
+    def get_train_fields(self):
+        raise NotImplementedError()
+    
+    @abstractmethod
+    def get_test_fields(self):
+        raise NotImplementedError()
+
+    def get_valid_fields(self):
+        return self.get_train_fields()
+    
+    def get_full_fields(self):
+        return self.get_train_fields()
+    
+    def to_tsv(self, path, mode: Optional[DatasetMode] = DatasetMode.TEST):
+        if mode is None:
             fields = self.infer_fields()
+        else:
+            fields = self.get_fields(mode)
+        
         with open(path, "w") as out:
             header = "\t".join(fields)
             print(header, file=out)
             for en in self.entries:
                 values = []
                 for fld in fields:
-                    if fld == "seq":
-                        val = en.seq.seq
-                    elif fld == "label":
-                        val = en.label.name # type: ignore
+                    if fld == self.SEQUENCE_FIELD:
+                        seq = getattr(en, fld)
+                        val = seq.seq
+                    elif fld == self.LABEL_FIELD:
+                        label = getattr(en, fld)
+                        if isinstance(label, BinaryLabel):
+                           val = label.name 
+                        else:
+                            raise NotImplementedError()
                     else:
-                        val = en.metainfo.get(fld, "")
+                        val = en.metainfo.get(fld, self.NO_INFO_VALUE)
                     values.append(str(val))
                 print("\t".join(values), file=out)
-                break
                     
-    def to_json(self, path):
-        raise NotImplementedError
+    def to_json(self, path, mode: Optional[DatasetMode] = DatasetMode.TEST):
+        raise NotImplementedError()
 
-    def to_canonical_format(self, path):
-        return self.to_tsv(path)
+    @abstractmethod
+    def to_canonical_format(self, path, mode: Optional[DatasetMode] = DatasetMode.TEST):
+        raise NotImplementedError()
+
+    def split(self):
+        raise NotImplementedError()
+
+class PBMDataset(Dataset):
+    TRAIN_ONLY_META_FIELDS = [
+        "mean_signal_intensity",
+        "mean_background_intensity"
+    ]
+
+    META_FIELDS = [f.name for f in fields(PBMRecord)\
+                          if f.name not in (Dataset.SEQUENCE_FIELD, 
+                                            Dataset.LABEL_FIELD, 
+                                            'pbm_sequence')]\
+                  + ['protocol']
+
+    def get_test_fields(self):
+        fields = [self.SEQUENCE_FIELD]
+        for f in self.META_FIELDS:
+            if f not in self.TRAIN_ONLY_META_FIELDS:
+                fields.append(f)
+        return fields
+
+    def get_train_fields(self):
+        fields = [self.SEQUENCE_FIELD, self.LABEL_FIELD]
+        fields.extend(self.META_FIELDS)
+        return fields
+
+    def to_canonical_format(self, path, mode: Optional[DatasetMode] = DatasetMode.TEST):
+        return self.to_tsv(path, mode)
