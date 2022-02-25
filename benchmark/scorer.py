@@ -2,7 +2,8 @@ from attrs import define
 from utils import auto_convert
 
 class Scorer:
-    pass
+    def score(self):
+        pass
 
 @define(field_transformer=auto_convert)
 class ScorerInfo:

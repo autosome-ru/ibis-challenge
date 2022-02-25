@@ -28,3 +28,14 @@ class SeqEntry:
         metainfo['linker_sequence'] = metainfo['linker_sequence']['seq']
         metainfo['source'] = "PBM"
         return cls(sequence, label, metainfo)
+
+    def get(self, key, default=None):
+        try:
+            val = getattr(self, key)
+            if key == "sequence":
+                val = val.seq
+            elif key == "label":
+                val = val.name 
+        except AttributeError:
+            val = self.metainfo.get(key, default)
+        return val

@@ -1,5 +1,6 @@
 import json
-from dataset import DatasetConfig, Dataset
+from dataset import Dataset
+from datasetconfig import DatasetConfig
 from pathlib import Path
 from attrs import define
 from enum import Enum 

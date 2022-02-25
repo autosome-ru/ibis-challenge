@@ -1,18 +1,35 @@
 from __future__ import annotations
-
-import numpy as np
-
-from typing import List, Optional
+from typing import List
 from attrs import define, field
-from labels import BinaryLabel
-from utils import END_LINE_CHARS
-from seqentry import SeqEntry
+from sklearn.preprocessing import normalize
+from utils import END_LINE_CHARS, auto_convert, register_enum
 from pbmrecord import PBMRecord
+from experiment import Experiment
+from pathlib import Path
+from enum import Enum
+
+@register_enum
+class PBMType(Enum):
+    ME = "ME"
+    HK = "HK"
+
+@register_enum
+class PBMPreprocessing(Enum):
+    RAW = "raw"
+    SD = "SD"
+    QNZS = "QNSZ"
+    SDQN = "SDQN"
 
 
-@define
-class PBMExperiment:
+@define(field_transformer=auto_convert)
+class PBMExperiment(Experiment):
+    name: str
     records: List[PBMRecord] = field(repr=False)
+    motif: str 
+    pbm_type: PBMType
+    preprocessing: PBMPreprocessing
+    metainfo: dict = {}
+
     @staticmethod
     def parse_header(header):
         names = header\
@@ -29,7 +46,12 @@ class PBMExperiment:
         return record
 
     @classmethod
-    def read(cls, path, sep="\t"):
+    def read(cls, 
+             name: str,
+             path: Path,
+             motif: str = "uknown", 
+             metainfo: dict = {},
+             sep="\t"):
         records = []
         with open(path, "r") as inp:
             header = inp.readline().rstrip(END_LINE_CHARS)
@@ -38,38 +60,13 @@ class PBMExperiment:
                 line = line.rstrip(END_LINE_CHARS)
                 record = cls.parse_record(names, line, sep)
                 records.append(record)
-        return cls(records)
-
-    def weirauch_threshold(self,
-                           min_probs=50,
-                           max_probs=1300):
-        vals = [r.mean_signal_intensity for r in self.records]
-        vals.sort()
-        mean = np.mean(vals)
-        std = np.std(vals)
-        th1 = mean + 4 * std
-        th2 = vals[-min_probs]
-        th = min(th1, th2)
-        th3 = vals[-max_probs]
-        th = max(th, th3)
-        return th
-
-    def weirauch_protocol(self):
-        threshold = self.weirauch_threshold()
-        return self.one_threshold_protocol(threshold, "weirauch")
-    
-    def one_threshold_protocol(self,
-                               threshold: float,
-                               protocol_name: Optional[str] = None):
-        entries = []
-        for rec in self.records:
-            if rec.mean_signal_intensity >= threshold:
-                label = BinaryLabel.POSITIVE
-            else:
-                label = BinaryLabel.NEGATIVE
-            entry = SeqEntry.from_record(rec, label)
-            if protocol_name is not None:
-                entry.metainfo['protocol'] = protocol_name
-            entries.append(entry)
-
-        return entries
+        metainfo['path'] = path
+        
+        pbm_type = metainfo.pop("pbm_type")
+        preprocessing = metainfo.pop("preprocessing")
+        return cls(name=name,
+                   records=records, 
+                   motif=motif,
+                   pbm_type=pbm_type,
+                   preprocessing=preprocessing, 
+                   metainfo=metainfo)
