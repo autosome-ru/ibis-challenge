@@ -1,4 +1,4 @@
-from dataset import Dataset, DatasetMode
+from dataset import Dataset
 from examples import PBM_EXAMPLE_PATH
 from pbm import PBMExperiment
 from pathlib import Path
@@ -42,13 +42,3 @@ class Benchmark:
 
 
 BENCHMARK_CONFIG = Path("/home_local/dpenzar/ibis-challenge/benchmark/benchmark.json")
-
-
-if __name__ == "__main__":
-    exit(0)
-    label = "example"
-    path = BENCHMARK_CONFIG['datasets']
-    exp = PBMExperiment.read(PBM_EXAMPLE_PATH)
-    dataset = exp.weirauch_protocol()
-    dataset.to_canonical_format("as_test.txt")
-    dataset.to_canonical_format("as_train.txt", mode=DatasetMode.TRAIN) 

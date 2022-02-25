@@ -7,7 +7,7 @@ class BenchmarkException(IbisChallengeException):
 class WrongPathException(BenchmarkException):
     pass
 
-class WrongDatasetModeException(BenchmarkException):
+class WrongDatasetTypeException(BenchmarkException):
     pass
 
 class WrongBecnhmarkModeException(BenchmarkException):

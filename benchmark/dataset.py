@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABCMeta
 from enum import Enum
 from typing import ClassVar, List, Optional
-from exceptions import WrongDatasetModeException
+from exceptions import WrongDatasetTypeException, WrongExperimentTypeException
 from labels import BinaryLabel
 from utils import register_enum, undict, auto_convert
 from seqentry import SeqEntry
@@ -10,7 +10,7 @@ from pbmrecord import PBMRecord
 from pathlib import Path
 
 @register_enum
-class DatasetMode(Enum):
+class DatasetType(Enum):
     TRAIN = 1
     VALIDATION = 2
     TEST = 3
@@ -31,9 +31,9 @@ class CurationStatus(Enum):
 @define(field_transformer=auto_convert)
 class DatasetInfo:
     name: str
-    type: ExperimentType
+    exp_type: ExperimentType
     motif: str
-    mode: DatasetMode
+    ds_type: DatasetType
     path: Path
     curation_status: CurationStatus
     metainfo: dict
@@ -57,9 +57,17 @@ class DatasetInfo:
 @define
 class Dataset(metaclass=ABCMeta):
     entries: List[SeqEntry]
+
     SEQUENCE_FIELD: ClassVar[str] = "sequence"
     LABEL_FIELD: ClassVar[str] = "label"
     NO_INFO_VALUE: ClassVar[str] = "NoInfo"
+
+    @staticmethod
+    def from_cfg(cfg: DatasetInfo):
+        path = cfg.path
+        exp_type = cfg.type
+        raise NotImplementedError()
+        
 
     def infer_fields(self):
         fields = set()
@@ -69,16 +77,16 @@ class Dataset(metaclass=ABCMeta):
         fields = list(fields)
         return fields
     
-    def get_fields(self, mode: DatasetMode):
-        if mode is DatasetMode.TRAIN:
+    def get_fields(self, mode: DatasetType):
+        if mode is DatasetType.TRAIN:
             return self.get_train_fields()
-        if mode is DatasetMode.TEST:
+        if mode is DatasetType.TEST:
             return self.get_test_fields()
-        if mode is DatasetMode.VALIDATION:
+        if mode is DatasetType.VALIDATION:
             return self.get_valid_fields()
-        if mode is DatasetMode.FULL:
+        if mode is DatasetType.FULL:
             return self.get_full_fields()
-        raise WrongDatasetModeException(f"{mode}")
+        raise WrongDatasetTypeException(f"{mode}")
 
     @abstractmethod
     def get_train_fields(self):
@@ -94,7 +102,7 @@ class Dataset(metaclass=ABCMeta):
     def get_full_fields(self):
         return self.get_train_fields()
     
-    def to_tsv(self, path, mode: Optional[DatasetMode] = DatasetMode.TEST):
+    def to_tsv(self, path, mode: Optional[DatasetType] = DatasetType.TEST):
         if mode is None:
             fields = self.infer_fields()
         else:
@@ -120,11 +128,11 @@ class Dataset(metaclass=ABCMeta):
                     values.append(str(val))
                 print("\t".join(values), file=out)
                     
-    def to_json(self, path, mode: Optional[DatasetMode] = DatasetMode.TEST):
+    def to_json(self, path, mode: Optional[DatasetType] = DatasetType.TEST):
         raise NotImplementedError()
 
     @abstractmethod
-    def to_canonical_format(self, path, mode: Optional[DatasetMode] = DatasetMode.TEST):
+    def to_canonical_format(self, path, mode: Optional[DatasetType] = DatasetType.TEST):
         raise NotImplementedError()
 
     def split(self):
@@ -154,5 +162,5 @@ class PBMDataset(Dataset):
         fields.extend(self.META_FIELDS)
         return fields
 
-    def to_canonical_format(self, path, mode: Optional[DatasetMode] = DatasetMode.TEST):
+    def to_canonical_format(self, path, mode: Optional[DatasetType] = DatasetType.TEST):
         return self.to_tsv(path, mode)
