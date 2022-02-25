@@ -1,0 +1,43 @@
+{   "name": "example",
+    "datasets": [
+        {
+            "name": "example",
+            "type": "PBM",
+            "motif": "ZHX3",
+            "mode": "TRAIN",
+            "path":  "/home_local/vorontsovie/greco-data/release_7a.2021-10-14/full/PBM.QNZS/Train_intensities/ZHX3.DBD@PBM.ME@PBM13852.5GTGAAATTGTTATCCGCTCT@QNZS.snappy-zucchini-yak.Train.tsv",
+            "curation_status": "NOT_CURATED",
+            "metainfo":{
+                "nothing": 5
+            }
+        }
+    ],
+    "scorers": [
+        {
+            "name": "scikit_rocauc",
+            "alias": "rocauc",
+            "params": {}
+        },
+        {
+            "name": "scikit_prauc",
+            "params": {}
+        },
+        {
+            "name": "scorer05",
+            "alias": "cons50"
+        },
+        {
+            "name": "scorer09",
+            "alias": "cons90",
+            "params": {
+                "cons": 0.9
+            } 
+        },
+        {
+            "name": "randoms",
+            "params": {
+                "seed": 777
+            }
+        }
+    ]
+}

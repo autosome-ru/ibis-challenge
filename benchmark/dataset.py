@@ -3,16 +3,56 @@ from enum import Enum
 from typing import ClassVar, List, Optional
 from exceptions import WrongDatasetModeException
 from labels import BinaryLabel
-from utils import undict
+from utils import register_enum, undict, auto_convert
 from seqentry import SeqEntry
 from attrs import define, fields
 from pbmrecord import PBMRecord
+from pathlib import Path
 
+@register_enum
 class DatasetMode(Enum):
     TRAIN = 1
     VALIDATION = 2
     TEST = 3
     FULL = 4
+
+@register_enum
+class ExperimentType(Enum):
+    PBM = 1
+    ChIPSeq = 2
+
+@register_enum
+class CurationStatus(Enum):
+    NOT_CURATED = 1
+    ACCEPTED = 2
+    REJECTED = 3
+    QUESTIONABLE = 4
+
+@define(field_transformer=auto_convert)
+class DatasetInfo:
+    name: str
+    type: ExperimentType
+    motif: str
+    mode: DatasetMode
+    path: Path
+    curation_status: CurationStatus
+    metainfo: dict
+
+    @classmethod
+    def from_dict(cls, dt: dict):
+        names = {f.name for f in fields(cls)}
+        args = {}
+        metainfo = {}
+        for key, value in dt.items():
+            if key in names:
+                args[key] = value
+            else:
+                metainfo[key] = value
+        if "metainfo" not in args:
+            args['metainfo'] = metainfo
+        else:
+            args['metainfo'].update(metainfo)
+        return cls(**args)
 
 @define
 class Dataset(metaclass=ABCMeta):

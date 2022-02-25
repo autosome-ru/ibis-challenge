@@ -1,8 +1,23 @@
 class IbisChallengeException(Exception):
     pass
 
-class BenchmarkException(Exception):
+class BenchmarkException(IbisChallengeException):
     pass
 
-class  WrongDatasetModeException(Exception):
+class WrongPathException(BenchmarkException):
+    pass
+
+class WrongDatasetModeException(BenchmarkException):
+    pass
+
+class WrongBecnhmarkModeException(BenchmarkException):
+    pass
+
+class WrongExperimentTypeException(BenchmarkException):
+    pass
+
+class WrongCurationStatusException(BenchmarkException):
+    pass
+
+class BenchmarkConfigException(BenchmarkException):
     pass

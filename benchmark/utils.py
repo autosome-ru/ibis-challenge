@@ -1,4 +1,7 @@
+from enum import Enum
 from functools import singledispatchmethod, update_wrapper
+from pathlib import Path
+from exceptions import *
 
 def _register(self, cls, method=None):
     if hasattr(cls, "__func__"):
@@ -9,24 +12,60 @@ singledispatchmethod.register = _register
 
 END_LINE_CHARS = "\r\n"
 
-GLOBAL_CONVERTORS = {
-    "int": int,
-    "float": float,
-    "str": str,
-    "bool": bool}
+def safe_path(s: str) -> Path:
+    path = Path(s)
+    if not path.exists():
+        msg = f"Path '{s}' doesn't exist"
+        raise WrongPathException(msg)
+    return path
 
-def register_global_converter(type_name, converter):
-    global GLOBAL_CONVERTORS
-    GLOBAL_CONVERTORS[type_name] = converter
+GLOBAL_CONVERTERS = {
+    "int": int,
+    int: int,
+    "float": float,
+    float: float,
+    "str": str,
+    str: str,
+    "bool": bool,
+    bool: bool,
+    "Path": safe_path,
+    Path: safe_path}
+
+def register_global_converter(type_, converter):
+    global GLOBAL_CONVERTERS
+    GLOBAL_CONVERTERS[type_] = converter
+    GLOBAL_CONVERTERS[type_.__name__] = converter
+
+def register_enum(enum_tp):
+    def converter(x: str):
+        x_canonical = x.upper()
+        try:
+            return enum_tp[x_canonical]
+        except KeyError:
+            pass
+        msg = f"Wrong value '{x}' for enum '{enum_tp}'"
+        possible_exc = "Wrong{enum_tp.__name__}Exception"
+        if possible_exc in globals():
+            globals()[possible_exc](msg)
+        else:
+            raise BenchmarkException(msg)
+            
+    register_global_converter(enum_tp, converter)
+    return enum_tp 
+
+def register_type(type_):
+    register_global_converter(type_, lambda x: type_(x))
+    return type_
 
 
 def auto_convert(cls, fields):
     results = []
     for field in fields:
+
         if field.converter is not None:
             results.append(field)
             continue
-        converter = GLOBAL_CONVERTORS.get(field.type, None)
+        converter = GLOBAL_CONVERTERS.get(field.type, None)
         results.append(field.evolve(converter=converter))
     return results
 
