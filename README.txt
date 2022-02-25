@@ -1,11 +1,8 @@
 # Current TODOs 
-#TODO (Optionally) add label to experiment - to tell the source, TF and etc? 
-#TODO add unique identifier to each object
+
 #TODO implement BenchmarkInstance, which:
-# 1. Loads benchmark config file
-# 2. Processes datasets according to config (formiing train and test dirs and datasets)
-# 3. Optionally run model training on train dataset (not to implement now)  
-# 4. Score model on datasets 
+# 1. Processes datasets according to config (forming train and test dirs and datasets)
+# 2. Score model on datasets 
 #TODO implement Scorer and it's subclasses:
 # 1. RandomScorer 
 # 2. Sklearn-based ROC and PR scores
@@ -16,3 +13,5 @@
 #TODO implement MotifModel (through binding of C-package) 
 #TODO validator for MotifModel file.
 #TODO *_protocol_* functions must be changed to Protocol class and it's subclasses
+#TODO Allow benchmark optionally run model training on train dataset (not to implement now)
+#TODO add unique identifier to each object  

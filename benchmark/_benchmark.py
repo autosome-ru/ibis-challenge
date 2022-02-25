@@ -26,7 +26,6 @@ class Benchmark:
     scorers: Sequence[Scorer]
     metainfo: dict
 
-
     def write_datasets(self, mode: BenchmarkMode):
         if mode is BenchmarkMode.USER:
             self.write_for_user()
