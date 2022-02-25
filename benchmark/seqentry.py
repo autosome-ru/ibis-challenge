@@ -3,7 +3,6 @@ from attrs import define, asdict
 from pbmrecord import PBMRecord
 from utils import auto_convert
 from sequence import Sequence
-from metainfo import SeqMetaInfo
 from labels import Label
 from record import Record
 from typing import Optional, ClassVar
@@ -13,7 +12,7 @@ from typing import Optional, ClassVar
 class SeqEntry:
     sequence: Sequence
     label: Label
-    metainfo: SeqMetaInfo
+    metainfo: dict
 
     @singledispatchmethod
     @classmethod
@@ -24,7 +23,7 @@ class SeqEntry:
     @classmethod
     def from_pbm_record(cls, record: PBMRecord, label: Label):
         sequence = record.pbm_sequence
-        metainfo = SeqMetaInfo(asdict(record, recurse=True))
+        metainfo = asdict(record, recurse=True)
         metainfo.pop('pbm_sequence')
         metainfo['linker_sequence'] = metainfo['linker_sequence']['seq']
         metainfo['source'] = "PBM"

@@ -21,3 +21,6 @@ class WrongCurationStatusException(BenchmarkException):
 
 class BenchmarkConfigException(BenchmarkException):
     pass
+
+class WrongProtocolException(BenchmarkException):
+    pass

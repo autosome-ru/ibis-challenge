@@ -1,13 +1,17 @@
 from abc import abstractmethod, ABCMeta
-from enum import Enum
+from importlib.resources import path
 from typing import ClassVar, List, Optional
-from exceptions import WrongDatasetTypeException, WrongExperimentTypeException
+from exceptions import (WrongDatasetTypeException, WrongExperimentTypeException,
+                        WrongProtocolException, WrongProtocolException)
 from labels import BinaryLabel
-from utils import register_enum, undict, auto_convert
+from utils import undict, register_enum, register_enum, auto_convert
 from seqentry import SeqEntry
-from attrs import define, fields
+from attrs import define, fields, field
 from pbmrecord import PBMRecord
+from enum import Enum
 from pathlib import Path
+from pbm import PBMExperiment
+
 
 @register_enum
 class DatasetType(Enum):
@@ -16,59 +20,17 @@ class DatasetType(Enum):
     TEST = 3
     FULL = 4
 
-@register_enum
-class ExperimentType(Enum):
-    PBM = 1
-    ChIPSeq = 2
-
-@register_enum
-class CurationStatus(Enum):
-    NOT_CURATED = 1
-    ACCEPTED = 2
-    REJECTED = 3
-    QUESTIONABLE = 4
-
-@define(field_transformer=auto_convert)
-class DatasetInfo:
-    name: str
-    exp_type: ExperimentType
-    motif: str
-    ds_type: DatasetType
-    path: Path
-    curation_status: CurationStatus
-    metainfo: dict
-
-    @classmethod
-    def from_dict(cls, dt: dict):
-        names = {f.name for f in fields(cls)}
-        args = {}
-        metainfo = {}
-        for key, value in dt.items():
-            if key in names:
-                args[key] = value
-            else:
-                metainfo[key] = value
-        if "metainfo" not in args:
-            args['metainfo'] = metainfo
-        else:
-            args['metainfo'].update(metainfo)
-        return cls(**args)
-
 @define
 class Dataset(metaclass=ABCMeta):
-    entries: List[SeqEntry]
+    name: str
+    motif: str
+    entries: List[SeqEntry] = field(repr=False)
+    metainfo: dict
 
     SEQUENCE_FIELD: ClassVar[str] = "sequence"
     LABEL_FIELD: ClassVar[str] = "label"
     NO_INFO_VALUE: ClassVar[str] = "NoInfo"
-
-    @staticmethod
-    def from_cfg(cfg: DatasetInfo):
-        path = cfg.path
-        exp_type = cfg.type
-        raise NotImplementedError()
-        
-
+    
     def infer_fields(self):
         fields = set()
         for en in self.entries:
@@ -164,3 +126,82 @@ class PBMDataset(Dataset):
 
     def to_canonical_format(self, path, mode: Optional[DatasetType] = DatasetType.TEST):
         return self.to_tsv(path, mode)
+
+@register_enum
+class ExperimentType(Enum):
+    PBM = 1
+    ChIPSeq = 2
+
+@register_enum
+class CurationStatus(Enum):
+    NOT_CURATED = 1
+    ACCEPTED = 2
+    REJECTED = 3
+    QUESTIONABLE = 4
+
+@define(field_transformer=auto_convert)
+class DatasetConfig:
+    name: str
+    exp_type: ExperimentType
+    motif: str
+    ds_type: DatasetType
+    path: Path
+    curation_status: CurationStatus
+    protocol: str
+    metainfo: dict
+
+    
+    @classmethod
+    def from_dict(cls, dt: dict):
+        names = {f.name for f in fields(cls)}
+        args = {}
+        metainfo = {}
+        for key, value in dt.items():
+            if key in names:
+                args[key] = value
+            else:
+                metainfo[key] = value
+        if "metainfo" not in args:
+            args['metainfo'] = metainfo
+        else:
+            args['metainfo'].update(metainfo)
+        return cls(**args)
+
+    def get_entries(self):
+        if self.exp_type is ExperimentType.PBM:
+            experiment = PBMExperiment.read(self.path)
+            if self.protocol == "weirauch":
+                entries = experiment.weirauch_protocol()
+            else:
+                raise WrongProtocolException(f"No protocal {self.protocol} for {self.exp_type}")
+        elif self.exp_type is ExperimentType.ChIPSeq:
+            raise NotImplementedError()
+        else:
+            raise WrongExperimentTypeException(f"Wrong experiment type: {self.exp_type}")
+        return entries 
+
+    def get_ds_metainfo(self):
+        metainfo = self.metainfo.copy()
+        metainfo['protocol'] = self.protocol
+        metainfo['exp_type'] = self.exp_type
+        metainfo['path'] = self.path
+        metainfo['curation_status'] = self.curation_status
+        return metainfo
+
+    def infer_ds_cls(self):
+        if self.exp_type is ExperimentType.PBM:
+            cls = PBMDataset
+        elif self.exp_type is ExperimentType.ChIPSeq:
+            raise NotImplementedError()
+        else:
+            raise WrongExperimentTypeException(f"Wrong experiment type: {self.exp_type}")
+        return cls
+
+
+    def make_dataset(self):
+        entries = self.get_entries()
+        metainfo = self.get_ds_metainfo()
+        cls = self.infer_ds_cls()
+        return cls(self.name, self.motif, entries, metainfo)
+    
+

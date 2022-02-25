@@ -6,7 +6,6 @@ from typing import List, Optional
 from attrs import define, field
 from labels import BinaryLabel
 from utils import END_LINE_CHARS
-from dataset import PBMDataset
 from seqentry import SeqEntry
 from pbmrecord import PBMRecord
 
@@ -73,6 +72,4 @@ class PBMExperiment:
                 entry.metainfo['protocol'] = protocol_name
             entries.append(entry)
 
-        return PBMDataset(entries)
-
-    
+        return entries

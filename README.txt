@@ -1,5 +1,5 @@
-# Current TODO 
-#TODO add label to experiment - to tell the source, TF and etc? 
+# Current TODOs 
+#TODO (Optionally) add label to experiment - to tell the source, TF and etc? 
 #TODO add unique identifier to each object
 #TODO implement BenchmarkInstance, which:
 # 1. Loads benchmark config file
@@ -15,3 +15,4 @@
 # 2. PerfectPredictor
 #TODO implement MotifModel (through binding of C-package) 
 #TODO validator for MotifModel file.
+#TODO *_protocol_* functions must be changed to Protocol class and it's subclasses
