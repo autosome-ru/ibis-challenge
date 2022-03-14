@@ -24,3 +24,6 @@ class BenchmarkConfigException(BenchmarkException):
 
 class WrongProtocolException(BenchmarkException):
     pass
+
+class WrongPRAUCTypeException(BenchmarkException):
+    pass
