@@ -25,21 +25,18 @@
             "params": {}
         },
         {
-            "name": "scorer05",
-            "alias": "cons50"
+            "name": "constant_scorer",
+            "alias": "cons50",
+            "params": {
+                "cons": 0.5
+            }
         },
         {
-            "name": "scorer09",
+            "name": "constant_scorer",
             "alias": "cons90",
             "params": {
                 "cons": 0.9
             } 
-        },
-        {
-            "name": "randoms",
-            "params": {
-                "seed": 777
-            }
         }
     ]
 }

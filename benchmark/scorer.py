@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from atexit import register
+from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from tabnanny import verbose
 from attrs import define
@@ -9,12 +10,20 @@ from typing import List
 from sklearn.metrics import roc_auc_score, average_precision_score
 import numpy as np
 from enum import Enum
-from exceptions import WrongPRAUCTypeException
+from exceptions import WrongPRAUCTypeException, WrongScorerException
 
-class Scorer:
-    pass
+class Scorer(metaclass=ABCMeta):
+    @abstractmethod
+    def score(self, *args, **kwargs) -> float:
+        pass
 
-class BinaryScorer(Scorer, metaclass=ABCMeta):
+@dataclass
+class ConstantScorer(Scorer):
+    const: float
+    def score(self, *args, **kwargs) -> float:
+        return self.const
+
+class BinaryScorer(Scorer):
     @abstractmethod
     def score(self, y_score: List[float], y_real: List[BinaryLabel]) -> float:
         raise NotImplementedError
@@ -73,8 +82,6 @@ class PRROC_PRAUC(PRROCScorer):
             raise WrongPRAUCTypeException()
         return auroc
 
-
-@dataclass
 class PRROC_ROCAUC(PRROCScorer):
     def score(self, y_score: List[float], y_real: List[BinaryLabel]):
         pkg = import_PRROC()
@@ -100,7 +107,25 @@ class ScorerInfo:
             self.alias = self.name
     
     def make_scorer(self):
-        return Scorer()
+        if self.name == "scikit_rocauc":
+            return SklearnROCAUC()
+        elif self.name == "scikit_prauc":
+            return SklearnPRAUC()
+        elif self.name == "prroc_rocauc":
+            return PRROC_ROCAUC()
+        elif self.name == "prroc_prauc":
+            tp = self.params.get("type")
+            if tp is None:
+                raise WrongScorerException("type must be specified for scorers from PRROC package")
+            tp = PRAUC_TYPE(tp)
+            return PRROC_PRAUC(tp)
+        elif self.name == "constant_scorer":
+            cons = self.params.get("cons")
+            if cons is None:
+                raise WrongScorerException("cons must be specified for scorers from PRROC package")
+            cons = float(cons)
+            return ConstantScorer(cons)
+        raise WrongScorerException(f"Wrong scorer: {self.name}")
 
 
 if __name__ == "__main__":
@@ -138,3 +163,4 @@ if __name__ == "__main__":
     scores = [1.] * 5 + [0.] * 5
     s = scorer.score(scores, labels)
     print(s)
+    print(PRAUC_TYPE("integral"))
