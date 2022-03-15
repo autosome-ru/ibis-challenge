@@ -47,6 +47,8 @@ class Benchmark:
     def score_model(self, model: Model):
         raise NotImplementedError()
 
+    def score_models(self, model_lst: List[Model]):
+        raise NotImplementedError()
 
 @define
 class BenchmarkConfig:

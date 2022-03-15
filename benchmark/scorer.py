@@ -1,8 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from atexit import register
-from contextlib import AbstractAsyncContextManager
-from dataclasses import dataclass
-from tabnanny import verbose
 from attrs import define
 from utils import auto_convert, register_enum
 from labels import BinaryLabel
@@ -17,7 +13,7 @@ class Scorer(metaclass=ABCMeta):
     def score(self, *args, **kwargs) -> float:
         pass
 
-@dataclass
+@define
 class ConstantScorer(Scorer):
     const: float
     def score(self, *args, **kwargs) -> float:
@@ -64,7 +60,7 @@ class PRAUC_TYPE(Enum):
     INTEGRAL = "integral"
     DG = "davisgoadrich"
 
-@dataclass
+@define
 class PRROC_PRAUC(PRROCScorer):
     type: PRAUC_TYPE
     def score(self, y_score: List[float], y_real: List[BinaryLabel]):

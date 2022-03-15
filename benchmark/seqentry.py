@@ -12,6 +12,7 @@ from typing import Optional, ClassVar
 class SeqEntry:
     sequence: Sequence
     label: Label
+    tag: str
     metainfo: dict
 
     @singledispatchmethod
@@ -23,11 +24,12 @@ class SeqEntry:
     @classmethod
     def from_pbm_record(cls, record: PBMRecord, label: Label):
         sequence = record.pbm_sequence
+        tag = record.id_probe
         metainfo = asdict(record, recurse=True)
         metainfo.pop('pbm_sequence')
         metainfo['linker_sequence'] = metainfo['linker_sequence']['seq']
         metainfo['source'] = "PBM"
-        return cls(sequence, label, metainfo)
+        return cls(sequence, label, tag, metainfo)
 
     def get(self, key, default=None):
         try:

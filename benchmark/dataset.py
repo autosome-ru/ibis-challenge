@@ -26,7 +26,11 @@ class Dataset(metaclass=ABCMeta):
 
     SEQUENCE_FIELD: ClassVar[str] = "sequence"
     LABEL_FIELD: ClassVar[str] = "label"
+    TAG_FIELD: ClassVar[str] = "tag"
     NO_INFO_VALUE: ClassVar[str] = "NoInfo"
+
+    def __len__(self) -> int:
+        return len(self.entries)
     
     def infer_fields(self):
         fields = set()
@@ -109,20 +113,21 @@ class PBMDataset(Dataset):
     ]
 
     META_FIELDS: ClassVar[List[str]] = [f.name for f in fields(PBMRecord)\
-                          if f.name not in (Dataset.SEQUENCE_FIELD, 
-                                            Dataset.LABEL_FIELD, 
+                          if f.name not in (Dataset.TAG_FIELD,
+                                            Dataset.SEQUENCE_FIELD, 
+                                            Dataset.LABEL_FIELD,
                                             'pbm_sequence')]\
                   + ['protocol']
 
     def get_test_fields(self):
-        fields = [self.SEQUENCE_FIELD]
+        fields = [Dataset.TAG_FIELD, self.SEQUENCE_FIELD]
         for f in self.META_FIELDS:
             if f not in self.TRAIN_ONLY_META_FIELDS:
                 fields.append(f)
         return fields
 
     def get_train_fields(self):
-        fields = [self.SEQUENCE_FIELD, self.LABEL_FIELD]
+        fields = [Dataset.TAG_FIELD, self.SEQUENCE_FIELD, self.LABEL_FIELD]
         fields.extend(self.META_FIELDS)
         return fields
 
