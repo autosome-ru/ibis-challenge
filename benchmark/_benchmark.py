@@ -1,10 +1,11 @@
 import json
-from dataset import Dataset
+from prediction import Prediction
+from dataset import Dataset, DatasetType
 from datasetconfig import DatasetConfig
 from pathlib import Path
 from attrs import define
 from enum import Enum 
-from typing import ClassVar, List
+from typing import ClassVar, List, Optional
 from scorer import ScorerInfo, Scorer
 from exceptions import BenchmarkConfigException, WrongBecnhmarkModeException
 from utils import register_enum
@@ -35,14 +36,45 @@ class Benchmark:
             raise WrongBecnhmarkModeException()
         raise NotImplementedError()
 
-    def write_for_user(self):
+    def write_for_user(self, path: Optional[Path]=None):
+        if path is None:
+            path = Path.cwd()
+        path.mkdir(exist_ok=True)
+        for ds in self.datasets:
+            if ds.type is DatasetType.TRAIN:
+                pass
+
         raise NotImplementedError()
 
     def write_for_admin(self):
         raise NotImplementedError()
 
-    def score_prediction(self, prediction):
-        raise NotImplementedError()
+    def write_ideal_model(self, path: Path):
+        '''
+        writes real labels for both train and test set
+        in the prediction file format
+        '''
+        with path.open("w") as out:
+            for ds in self.datasets:
+                for entry in ds:
+                    print(entry.tag, entry.label.value, sep="\t", file=out)  # type: ignore
+    
+    def score_prediction(self, prediction: Prediction):
+        model_scores = {}
+        for ds in self.datasets:
+            labels = []
+            scores = []
+            for e in ds.entries:
+                y_real = e.label
+                y_score = prediction[e.tag]
+                labels.append(y_real)
+                scores.append(y_score)
+            ds_scores = {}
+            for sc in self.scorers:
+                score = sc.score(y_real=labels, y_score=scores)
+                ds_scores[sc.name] = score
+            model_scores[ds.name] = ds_scores
+        return model_scores  
 
     def score_model(self, model: Model):
         raise NotImplementedError()

@@ -1,7 +1,7 @@
 from atexit import register
 from enum import Enum
 import numpy as np
-from dataset import PBMDataset
+from dataset import PBMDataset, DatasetType
 from labels import BinaryLabel
 from typing import List
 from pbm import PBMExperiment
@@ -14,17 +14,19 @@ class ProtocolType(Enum):
     WEIRAUCH = "weirauch"
 
 class Protocol:
-    def process(self, exp: Experiment):
+    def process(self, exp: Experiment, ds_type: DatasetType):
         raise NotImplementedError(
             f"processing is not defined for experiment {type(exp)} in {type(self)}")
 
 class WeirauchProtocol(Protocol):
     @singledispatchmethod
-    def process(self, exp: Experiment):
-        return super().process(exp)
+    def process(self, 
+                exp: Experiment, 
+                ds_type: DatasetType):
+        return super().process(exp, ds_type)
 
     @staticmethod
-    def pbm_threshold(exp: PBMExperiment,
+    def pbm_threshold(exp: PBMExperiment, 
                            min_probs=50,
                            max_probs=1300):
         vals = [r.mean_signal_intensity for r in exp.records]
@@ -40,7 +42,8 @@ class WeirauchProtocol(Protocol):
 
     @process.register
     def process_pbm(self, 
-                    exp: PBMExperiment) -> PBMDataset:
+                    exp: PBMExperiment, 
+                    ds_type: DatasetType) -> PBMDataset:
         threshold = self.pbm_threshold(exp)
         entries = []
         for rec in exp.records:
@@ -50,11 +53,15 @@ class WeirauchProtocol(Protocol):
                 label = BinaryLabel.NEGATIVE
             entry = SeqEntry.from_record(rec, label)
             entries.append(entry)
-        
+
         metainfo = exp.metainfo.copy()
         metainfo['protocol'] = ProtocolType.WEIRAUCH
         metainfo['exp_type'] = ExperimentType.PBM
         metainfo['pbm_type'] = exp.pbm_type
         metainfo['preprocessing'] = exp.preprocessing
 
-        return PBMDataset(exp.name, exp.motif, entries, metainfo)
+        return PBMDataset(exp.name,
+                          ds_type,
+                          exp.motif,
+                          entries, 
+                          metainfo)

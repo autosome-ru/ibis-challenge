@@ -62,6 +62,5 @@ class DatasetConfig:
                                   self.motif,
                                   metainfo)
         prc_cls = self.infer_protocol_cls()
-        protocol = prc_cls() 
-        
-        return protocol.process(experiment)
+        protocol = prc_cls()
+        return protocol.process(experiment, self.ds_type)

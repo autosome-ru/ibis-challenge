@@ -3,26 +3,26 @@ from attrs import define, asdict
 from pbmrecord import PBMRecord
 from utils import auto_convert
 from sequence import Sequence
-from labels import Label
+from labels import BinaryLabel
 from record import Record
-from typing import Optional, ClassVar
+from typing import Optional
 
 
 @define(field_transformer=auto_convert)
 class SeqEntry:
     sequence: Sequence
-    label: Label
+    label: BinaryLabel
     tag: str
     metainfo: dict
 
     @singledispatchmethod
     @classmethod
-    def from_record(cls, record: Record, label: Optional[Label]):
+    def from_record(cls, record: Record, label: Optional[BinaryLabel]):
         raise NotImplementedError
     
     @from_record.register
     @classmethod
-    def from_pbm_record(cls, record: PBMRecord, label: Label):
+    def from_pbm_record(cls, record: PBMRecord, label: BinaryLabel):
         sequence = record.pbm_sequence
         tag = record.id_probe
         metainfo = asdict(record, recurse=True)

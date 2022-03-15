@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABCMeta
 from importlib.resources import path
-from typing import ClassVar, List, Optional
+from typing import ClassVar, Iterator, List, Optional
 from exceptions import WrongDatasetTypeException
 from utils import undict, register_enum, register_enum, auto_convert
 from seqentry import SeqEntry
@@ -20,6 +20,7 @@ class DatasetType(Enum):
 @define
 class Dataset(metaclass=ABCMeta):
     name: str
+    type: DatasetType
     motif: str
     entries: List[SeqEntry] = field(repr=False)
     metainfo: dict
@@ -31,6 +32,9 @@ class Dataset(metaclass=ABCMeta):
 
     def __len__(self) -> int:
         return len(self.entries)
+
+    def __iter__(self) -> Iterator[SeqEntry]:
+        return iter(self.entries)
     
     def infer_fields(self):
         fields = set()
@@ -40,16 +44,16 @@ class Dataset(metaclass=ABCMeta):
         fields = list(fields)
         return fields
     
-    def get_fields(self, mode: DatasetType):
-        if mode is DatasetType.TRAIN:
+    def get_fields(self):
+        if self.type is DatasetType.TRAIN:
             return self.get_train_fields()
-        if mode is DatasetType.TEST:
+        if self.type is DatasetType.TEST:
             return self.get_test_fields()
-        if mode is DatasetType.VALIDATION:
+        if self.type is DatasetType.VALIDATION:
             return self.get_valid_fields()
-        if mode is DatasetType.FULL:
+        if self.type is DatasetType.FULL:
             return self.get_full_fields()
-        raise WrongDatasetTypeException(f"{mode}")
+        raise WrongDatasetTypeException(f"{self.type}")
 
     @abstractmethod
     def get_train_fields(self):
@@ -79,7 +83,7 @@ class Dataset(metaclass=ABCMeta):
         if mode is None:
             fields = self.infer_fields()
         else:
-            fields = self.get_fields(mode)
+            fields = self.get_fields()
         
         if ds_fields:
            ds_values = [self.get(fl, self.NO_INFO_VALUE) for fl in ds_fields]

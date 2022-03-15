@@ -8,7 +8,9 @@ import numpy as np
 from enum import Enum
 from exceptions import WrongPRAUCTypeException, WrongScorerException
 
+@define
 class Scorer(metaclass=ABCMeta):
+    name: str
     @abstractmethod
     def score(self, *args, **kwargs) -> float:
         pass
@@ -53,7 +55,6 @@ def import_PRROC():
         utils.install_packages("PRROC", quiet = True, verbose=False)
     pkg = importr("PRROC")
     return pkg
-
 
 @register_enum
 class PRAUC_TYPE(Enum):
@@ -104,38 +105,38 @@ class ScorerInfo:
     
     def make_scorer(self):
         if self.name == "scikit_rocauc":
-            return SklearnROCAUC()
+            return SklearnROCAUC(self.alias)
         elif self.name == "scikit_prauc":
-            return SklearnPRAUC()
+            return SklearnPRAUC(self.alias)
         elif self.name == "prroc_rocauc":
-            return PRROC_ROCAUC()
+            return PRROC_ROCAUC(self.alias)
         elif self.name == "prroc_prauc":
             tp = self.params.get("type")
             if tp is None:
                 raise WrongScorerException("type must be specified for scorers from PRROC package")
             tp = PRAUC_TYPE(tp)
-            return PRROC_PRAUC(tp)
+            return PRROC_PRAUC(self.alias, tp)
         elif self.name == "constant_scorer":
             cons = self.params.get("cons")
             if cons is None:
                 raise WrongScorerException("cons must be specified for scorers from PRROC package")
             cons = float(cons)
-            return ConstantScorer(cons)
+            return ConstantScorer(self.alias, cons)
         raise WrongScorerException(f"Wrong scorer: {self.name}")
 
 
 if __name__ == "__main__":
-    scorer = SklearnROCAUC()
+    scorer = SklearnROCAUC("example")
     s = scorer.score([0.] * 5 + [1.] * 5, [BinaryLabel.NEGATIVE] * 5 + [BinaryLabel.POSITIVE] * 5)
     print(s)
     s = scorer.score([1.] * 5 + [0.] * 5, [BinaryLabel.NEGATIVE] * 5 + [BinaryLabel.POSITIVE] * 5)
     print(s)
-    scorer = SklearnPRAUC()
+    scorer = SklearnPRAUC("example")
     s = scorer.score([0.] * 5 + [1.] * 5, [BinaryLabel.NEGATIVE] * 5 + [BinaryLabel.POSITIVE] * 5)
     print(s)
     s = scorer.score([1.] * 5 + [0.] * 5, [BinaryLabel.NEGATIVE] * 5 + [BinaryLabel.POSITIVE] * 5)
     print(s)
-    scorer = PRROC_PRAUC(PRAUC_TYPE.INTEGRAL)
+    scorer = PRROC_PRAUC("example", PRAUC_TYPE.INTEGRAL)
     labels =  [BinaryLabel.NEGATIVE] * 5 + [BinaryLabel.POSITIVE] * 5
     scores = [0.] * 5 + [1.] * 5
     s = scorer.score(scores, labels)
@@ -144,7 +145,7 @@ if __name__ == "__main__":
     scores = [1.] * 5 + [0.] * 5
     s = scorer.score(scores, labels)
     print(s)
-    scorer = PRROC_PRAUC(PRAUC_TYPE.DG)
+    scorer = PRROC_PRAUC("example", PRAUC_TYPE.DG)
     labels =  [BinaryLabel.NEGATIVE] * 5 + [BinaryLabel.POSITIVE] * 5
     scores = [1.] * 5 + [0.] * 5
     s = scorer.score(scores, labels)
@@ -154,7 +155,7 @@ if __name__ == "__main__":
     scores = [random.random() for _ in labels]
     s = scorer.score(scores, labels)
     print(s)
-    scorer = PRROC_ROCAUC()
+    scorer = PRROC_ROCAUC("example")
     labels =  [BinaryLabel.NEGATIVE] * 5 + [BinaryLabel.POSITIVE] * 5
     scores = [1.] * 5 + [0.] * 5
     s = scorer.score(scores, labels)

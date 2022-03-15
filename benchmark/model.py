@@ -5,8 +5,9 @@ from typing import Dict, List
 from attr import define
 import numpy as np
 from numpy.random import default_rng
+from prediction import Prediction
 
-from benchmark.dataset import Dataset
+from dataset import Dataset
 
 class Model(metaclass=ABCMeta):
     def __init__(self) -> None:
@@ -51,17 +52,12 @@ class DictPredictor(Model):
     '''
     predict using entry-unique tag
     '''
-    scores: Dict[str, float]
+    scores: Prediction
 
     @classmethod
     def load(cls, path: Path, sep="\t"):
-        with path.open(mode="r") as infile:
-            dt = {}
-            for line in infile:
-                tag, score = line.split(sep)
-                score = float(score)
-                dt[tag] = score
-        return cls(dt)
+        scores = Prediction.load(path)
+        return cls(scores)
 
     def train(self, X, y):
         self.is_trained = True
