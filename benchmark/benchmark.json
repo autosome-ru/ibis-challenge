@@ -16,12 +16,12 @@
         {
             "name": "example2",
             "exp_type": "PBM",
-            "motif": "ZHX3",
+            "motif": "SCAN4",
             "ds_type": "test",
-            "path":  "/home_local/vorontsovie/greco-data/release_7a.2021-10-14/full/PBM.QNZS/Train_intensities/ZHX3.DBD@PBM.ME@PBM13852.5GTGAAATTGTTATCCGCTCT@QNZS.snappy-zucchini-yak.Train.tsv",
+            "path": "/home_local/vorontsovie/greco-data/release_7a.2021-10-14/full/PBM.QNZS/Train_intensities/ZSCAN4.NA@PBM.HK@PBM14320.5GTGAAATTGTTATCCGCTCT@QNZS.flimsy-flax-salamander.Train.tsv",
             "curation_status": "NOT_CURATED",
             "protocol": "weirauch",
-            "pbm_type": "ME",
+            "pbm_type": "HK",
             "preprocessing": "QNZS",
             "metainfo":{
             }
@@ -35,7 +35,13 @@
         },
         {
             "name": "scikit_prauc",
+            "alias": "prauc",
             "params": {}
+        },
+        {
+            "name": "prroc_prauc",
+            "alias": "dg_prauc",
+            "params": {"type": "davisgoadrich"}
         },
         {
             "name": "constant_scorer",

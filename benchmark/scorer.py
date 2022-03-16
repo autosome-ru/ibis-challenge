@@ -114,6 +114,7 @@ class ScorerInfo:
             tp = self.params.get("type")
             if tp is None:
                 raise WrongScorerException("type must be specified for scorers from PRROC package")
+            tp = tp.lower()
             tp = PRAUC_TYPE(tp)
             return PRROC_PRAUC(self.alias, tp)
         elif self.name == "constant_scorer":

@@ -1,4 +1,6 @@
 import json
+
+import numpy as np
 from prediction import Prediction
 from dataset import Dataset, DatasetType
 from datasetconfig import DatasetConfig
@@ -59,20 +61,41 @@ class Benchmark:
                 for entry in ds:
                     print(entry.tag, entry.label.value, sep="\t", file=out)  # type: ignore
     
+    @staticmethod
+    def retrieve_prediction(prediction: Prediction, ds: Dataset):
+        labels = []
+        scores = []
+        skip_ds = False
+        for e in ds.entries:
+            y_real = e.label
+            try:
+                y_score = prediction[e.tag]
+            except KeyError:
+                print(f"No information about entry {e.tag} for {ds.name}. Skipping dataset")
+                skip_ds = True
+                break
+            labels.append(y_real)
+            scores.append(y_score)
+        if skip_ds:
+            return None, None
+        else:
+            return labels, scores
+
+    def score(self, labels, scores):
+        ds_scores = {}
+        for sc in self.scorers:
+            score = sc.score(y_real=labels, y_score=scores)
+            ds_scores[sc.name] = score
+        return ds_scores
+
     def score_prediction(self, prediction: Prediction):
         model_scores = {}
         for ds in self.datasets:
-            labels = []
-            scores = []
-            for e in ds.entries:
-                y_real = e.label
-                y_score = prediction[e.tag]
-                labels.append(y_real)
-                scores.append(y_score)
-            ds_scores = {}
-            for sc in self.scorers:
-                score = sc.score(y_real=labels, y_score=scores)
-                ds_scores[sc.name] = score
+            labels, scores = self.retrieve_prediction(prediction, ds)
+            if labels is None:
+                ds_scores = {sc.name: "skip" for sc in self.scorers}
+            else:
+                ds_scores = self.score(labels, scores)
             model_scores[ds.name] = ds_scores
         return model_scores  
 
