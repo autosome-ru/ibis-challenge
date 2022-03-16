@@ -1,3 +1,4 @@
+from typing import Union
 from enum import Enum
 from functools import singledispatchmethod, update_wrapper
 from pathlib import Path
@@ -37,8 +38,13 @@ def register_global_converter(type_, converter):
     GLOBAL_CONVERTERS[type_.__name__] = converter
 
 def register_enum(enum_tp):
-    def converter(x: str):
-        x_canonical = x.upper()
+    def converter(x: Union[str, enum_tp]):
+        if isinstance(x, enum_tp):
+            return x
+        if isinstance(x, str):
+            x_canonical = x.upper()
+        else:
+            x_canonical = x
         try:
             return enum_tp[x_canonical]
         except KeyError:

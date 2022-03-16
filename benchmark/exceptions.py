@@ -30,3 +30,6 @@ class WrongPRAUCTypeException(BenchmarkException):
 
 class WrongScorerException(BenchmarkException):
     pass
+
+class PWMWrongModeException(BenchmarkException):
+    pass
