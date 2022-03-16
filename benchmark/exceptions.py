@@ -33,3 +33,9 @@ class WrongScorerException(BenchmarkException):
 
 class PWMWrongModeException(BenchmarkException):
     pass
+
+class PWMWrongPathException(BenchmarkException):
+    pass
+
+class ModelNotTrainedException(BenchmarkException):
+    pass

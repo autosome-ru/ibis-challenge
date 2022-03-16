@@ -57,5 +57,6 @@
                 "cons": 0.9
             } 
         }
-    ]
+    ],
+    "results_dir": "/home_local/dpenzar/results"
 }

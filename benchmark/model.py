@@ -1,51 +1,45 @@
 from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
 from tkinter import SEPARATOR
 from typing import Dict, List
 from attr import define
 import numpy as np
-from numpy.random import default_rng
+from random import Random
 from prediction import Prediction
+from exceptions import ModelNotTrainedException
 
 from dataset import Dataset
 
 class Model(metaclass=ABCMeta):
-    def __init__(self) -> None:
-        self.is_trained = False
-
     @abstractmethod
-    def train(self, X, y):
-        pass
-    
-    @abstractmethod
-    def score(self, X):
+    def score(self, X: Dataset) -> Prediction:
         pass
 
 class RandomPredictor(Model):
     def __init__(self, seed: int) -> None:
         super().__init__()
-        self.is_trained = True
-        self.rng = default_rng(seed)
+        self.seed = seed
 
-    def train(self, X, y):
-        self.is_trained = True
-    
-    def score(self, X): 
-        y_shape = len(X)
-        score = self.rng.random(size=y_shape, dtype=np.float32)
-        return score
+    def score(self, X: Dataset) -> Prediction:
+        r = Random(self.seed) 
+        scores = {e.tag: r.random() for e in X}
+        return Prediction(scores)
 
 class ClassBalancePredictor(Model):
     def __init__(self):
         super().__init__()
+        self.is_trained = False
     
     def train(self, X, y):
         self.balance = np.mean(y)
-    
-    def score(self, X):
-        y_shape = len(X)
-        score = np.full(shape=y_shape, fill_value=self.balance, dtype=np.float32)
-        return score
+        self.is_trained = True 
+
+    def score(self, X: Dataset) -> Prediction:
+        if not self.is_trained:
+            raise ModelNotTrainedException("Model is not trained")
+        dt = {e.tag: self.balance for e in X}
+        return Prediction(dt)
 
 @define
 class DictPredictor(Model):
@@ -58,9 +52,6 @@ class DictPredictor(Model):
     def load(cls, path: Path, sep="\t"):
         scores = Prediction.load(path)
         return cls(scores)
-
-    def train(self, X, y):
-        self.is_trained = True
     
     def score(self, X: Dataset) -> List[float]:
         predictions = []

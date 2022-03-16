@@ -1,17 +1,17 @@
 import json
 
-import numpy as np
+import pandas as pd
+from pwm import PWMEvalMode, PWMEvalPredictor
 from prediction import Prediction
 from dataset import Dataset, DatasetType
 from datasetconfig import DatasetConfig
 from pathlib import Path
-from attrs import define
+from attr import field, define
 from enum import Enum 
-from typing import ClassVar, List, Optional
+from typing import ClassVar, List, Optional, Union
 from scorer import ScorerInfo, Scorer
-from exceptions import BenchmarkConfigException, WrongBecnhmarkModeException
+from exceptions import BenchmarkConfigException, BenchmarkException, WrongBecnhmarkModeException
 from utils import register_enum
-from attrs import define 
 from typing import List
 from collections.abc import Sequence
 from pathlib import Path
@@ -27,18 +27,22 @@ class Benchmark:
     name: str
     datasets: Sequence[Dataset]
     scorers: Sequence[Scorer]
+    results_dir: Path
     metainfo: dict
+    pwmeval_path: Optional[Path] = None
+    models: dict[str, Model] = field(factory=dict)
+    predictions: dict[str, Prediction] = field(factory=dict)
 
     def write_datasets(self, mode: BenchmarkMode):
         if mode is BenchmarkMode.USER:
-            self.write_for_user()
+            self.write_datasets_for_user()
         elif mode is BenchmarkMode.ADMIN:
-            self.write_for_admin()
+            self.write_datasets_for_admin()
         else:
             raise WrongBecnhmarkModeException()
         raise NotImplementedError()
 
-    def write_for_user(self, path: Optional[Path]=None):
+    def write_datasets_for_user(self, path: Optional[Path]=None):
         if path is None:
             path = Path.cwd()
         path.mkdir(exist_ok=True)
@@ -48,7 +52,7 @@ class Benchmark:
 
         raise NotImplementedError()
 
-    def write_for_admin(self):
+    def write_datasets_for_admin(self):
         raise NotImplementedError()
 
     def write_ideal_model(self, path: Path):
@@ -81,6 +85,30 @@ class Benchmark:
         else:
             return labels, scores
 
+    def add_pwm(self, 
+                pref: str, 
+                pwm_path: Union[Path, str], 
+                modes: Sequence[PWMEvalMode] =(PWMEvalMode.BEST_HIT, PWMEvalMode.SUM_SCORE),
+                pwmeval_path: Optional[Path]=None):
+        if pwmeval_path is None:
+            if self.pwmeval_path is None:
+                raise BenchmarkException("Can't add PWM due to unspecified pwmeval_path")
+            pwmeval_path = self.pwmeval_path
+        if isinstance(pwm_path, str):
+            pwm_path = Path(pwm_path)
+        for mode in modes:
+            model = PWMEvalPredictor(pwmeval_path=pwmeval_path,
+                                     pwm_path=pwm_path, 
+                                     mode=mode)
+            name = f"{pref}_{mode.value}"
+            self.add_model(name, model)
+        
+    def add_model(self, name: str, model: Model):
+        self.models[name] = model
+
+    def add_prediction(self, name: str, pred: Prediction):
+        self.predictions[name] = pred
+
     def score(self, labels, scores):
         ds_scores = {}
         for sc in self.scorers:
@@ -88,7 +116,7 @@ class Benchmark:
             ds_scores[sc.name] = score
         return ds_scores
 
-    def score_prediction(self, prediction: Prediction):
+    def score_prediction(self, prediction: Prediction) -> dict[str, dict[str, Union[str, float]]]:
         model_scores = {}
         for ds in self.datasets:
             labels, scores = self.retrieve_prediction(prediction, ds)
@@ -97,24 +125,45 @@ class Benchmark:
             else:
                 ds_scores = self.score(labels, scores)
             model_scores[ds.name] = ds_scores
-        return model_scores  
+        return model_scores
 
-    def score_model(self, model: Model):
-        raise NotImplementedError()
+    def score_model(self, model: Model) -> dict[str, dict[str, Union[str, float]]]:
+        scores = {'f':{}}
+        return scores
 
-    def score_models(self, model_lst: List[Model]):
-        raise NotImplementedError()
+    def get_results_file_path(self, name: str):
+        return self.results_dir / f"{name}.tsv"
 
+    def run(self):
+        self.results_dir.mkdir(exist_ok=True)
+        for name, pred in self.predictions.items():
+            scores = self.score_prediction(pred)
+            path = self.get_results_file_path(name)
+            df = pd.DataFrame(scores)
+            df.to_csv(path, sep="\t")
+
+        for name, model in self.models.items():
+            scores = self.score_model(model)
+            path = self.get_results_file_path(name)
+            df = pd.DataFrame(scores)
+            df.to_csv(path, sep="\t")
+
+
+        
 @define
 class BenchmarkConfig:
     name: str
-    datasets: List[DatasetConfig]
-    scorers: List[ScorerInfo]
-    metainfo: dict 
+    datasets: Sequence[DatasetConfig]
+    scorers: Sequence[ScorerInfo]
+    results_dir: Path
+    pwmeval_path: Optional[Path] = None
+    metainfo: dict = field(factory=dict)
     
     NAME_FIELD: ClassVar[str] = 'name'
     DATASETS_FIELD: ClassVar[str] = 'datasets'
     SCORERS_FIELD: ClassVar[str] = 'scorers'
+    PWMEVAL_PATH_FIELD: ClassVar[str] = "pwmeval"
+    RESULTS_DIR_FIELD: ClassVar[str] = "results_dir"
 
     @classmethod
     def validate_benchmark_dict(cls, dt: dict):
@@ -134,11 +183,18 @@ class BenchmarkConfig:
                         for rec in dt[cls.DATASETS_FIELD]]
         scorers = [ScorerInfo.from_dict(rec)\
                         for rec in dt[cls.SCORERS_FIELD]]
+        results_dir = dt.get(cls.RESULTS_DIR_FIELD)
+        if results_dir is None:
+            results_dir = Path("results")
+        elif isinstance(results_dir, str):
+            results_dir = Path(results_dir)
+        results_dir = results_dir.absolute()
+        pwmeval_path = dt.get(cls.PWMEVAL_PATH_FIELD)
         metainfo = dt.get('metainfo', {})
         for key, value in dt.items():
-            if key not in (cls.NAME_FIELD, cls.DATASETS_FIELD, cls.SCORERS_FIELD):
+            if key not in (cls.NAME_FIELD, cls.DATASETS_FIELD, cls.SCORERS_FIELD, cls.PWMEVAL_PATH_FIELD, cls.RESULTS_DIR_FIELD):
                 metainfo[key] = value
-        return cls(name, datasets, scorers, metainfo)
+        return cls(name, datasets, scorers, results_dir, pwmeval_path, metainfo)
 
     @classmethod
     def from_json(cls, path: Path):
@@ -149,4 +205,4 @@ class BenchmarkConfig:
     def make_benchmark(self):
         datasets = [cfg.make_dataset() for cfg in self.datasets]
         scorers = [cfg.make_scorer() for cfg in self.scorers]
-        return Benchmark(self.name, datasets, scorers, self.metainfo)
+        return Benchmark(self.name, datasets, scorers, self.results_dir, self.metainfo, self.pwmeval_path)

@@ -8,27 +8,32 @@ import shlex
 import subprocess
 from enum import Enum 
 from exceptions import PWMWrongModeException
+from model import Model
 
 @register_enum
-class PWMMode(Enum):
+class PWMEvalMode(Enum):
     BEST_HIT = "best_hit"
     SUM_SCORE = "sum_score"
 
 
 @define(field_transformer=auto_convert)
-class PWMEvalPredictor:
+class PWMEvalPredictor(Model):
     pwmeval_path: Path
     pwm_path: Path
-    mode: PWMMode
+    mode: PWMEvalMode
 
     PWMEvalSeparator: ClassVar[str] = "\t"
     
-    def score(self, Xs: Sequence[Dataset]) -> Prediction:
+    def score(self, X: Dataset) -> Prediction:
+        dt = self.score_dataset(X)
+        return Prediction(dt)
+
+    def score_batch(self, Xs: Sequence[Dataset]) -> Prediction:
         all_dt = {}
         for X in Xs:
             dt = self.score_dataset(X)
             all_dt.update(dt)
-        return Prediction(all_dt)
+        return Prediction(all_dt)    
 
     def score_dataset(self, X: Dataset) -> dict:
         queries = []
@@ -41,9 +46,9 @@ class PWMEvalPredictor:
         return prediction
 
     def get_cmd(self) -> str:
-        if self.mode is PWMMode.BEST_HIT:
+        if self.mode is PWMEvalMode.BEST_HIT:
             return f"{self.pwmeval_path} -m {self.pwm_path} --best"
-        if self.mode is PWMMode.SUM_SCORE:
+        if self.mode is PWMEvalMode.SUM_SCORE:
             return f"{self.pwmeval_path} -m {self.pwm_path}"
         raise PWMWrongModeException("Wrong mode for PWM")
     
