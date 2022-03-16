@@ -203,6 +203,9 @@ class BenchmarkConfig:
         return cls.from_dt(dt)
 
     def make_benchmark(self):
-        datasets = [cfg.make_dataset() for cfg in self.datasets]
-        scorers = [cfg.make_scorer() for cfg in self.scorers]
+        datasets = []
+        for cfg in self.datasets:
+            ds_seq = cfg.make()
+            datasets.extend(ds_seq)
+        scorers = [cfg.make() for cfg in self.scorers]
         return Benchmark(self.name, datasets, scorers, self.results_dir, self.metainfo, self.pwmeval_path)

@@ -5,7 +5,8 @@ from attrs import define, fields
 from pathlib import Path
 from pbm import PBMExperiment
 from experiment import ExperimentType, CurationStatus
-from dataset import DatasetType
+from dataset import DatasetType, Dataset
+from typing import Sequence
 
 @define(field_transformer=auto_convert)
 class DatasetConfig:
@@ -54,7 +55,7 @@ class DatasetConfig:
         else:
             raise WrongExperimentTypeException(f"Wrong protocol type: {self.protocol}")
 
-    def make_dataset(self):
+    def make(self) -> Sequence[Dataset]:
         exp_cls = self.infer_experiment_cls()
         metainfo = self.get_exp_metainfo()
         experiment = exp_cls.read(self.name,

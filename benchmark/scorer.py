@@ -103,7 +103,7 @@ class ScorerInfo:
         if not self.alias:
             self.alias = self.name
     
-    def make_scorer(self):
+    def make(self):
         if self.name == "scikit_rocauc":
             return SklearnROCAUC(self.alias)
         elif self.name == "scikit_prauc":

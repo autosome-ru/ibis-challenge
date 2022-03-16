@@ -1,9 +1,9 @@
 from atexit import register
 from enum import Enum
 import numpy as np
-from dataset import PBMDataset, DatasetType
+from dataset import Dataset, PBMDataset, DatasetType
 from labels import BinaryLabel
-from typing import List
+from typing import Sequence
 from pbm import PBMExperiment
 from experiment import Experiment, ExperimentType
 from utils import register_enum, singledispatchmethod
@@ -14,7 +14,7 @@ class ProtocolType(Enum):
     WEIRAUCH = "weirauch"
 
 class Protocol:
-    def process(self, exp: Experiment, ds_type: DatasetType):
+    def process(self, exp: Experiment, ds_type: DatasetType) -> Sequence[Dataset]:
         raise NotImplementedError(
             f"processing is not defined for experiment {type(exp)} in {type(self)}")
 
@@ -22,7 +22,7 @@ class WeirauchProtocol(Protocol):
     @singledispatchmethod
     def process(self, 
                 exp: Experiment, 
-                ds_type: DatasetType):
+                ds_type: DatasetType) -> Sequence[Dataset]:
         return super().process(exp, ds_type)
 
     @staticmethod
@@ -43,7 +43,7 @@ class WeirauchProtocol(Protocol):
     @process.register
     def process_pbm(self, 
                     exp: PBMExperiment, 
-                    ds_type: DatasetType) -> PBMDataset:
+                    ds_type: DatasetType) -> Sequence[Dataset]:
         threshold = self.pbm_threshold(exp)
         entries = []
         for rec in exp.records:
@@ -60,8 +60,8 @@ class WeirauchProtocol(Protocol):
         metainfo['pbm_type'] = exp.pbm_type
         metainfo['preprocessing'] = exp.preprocessing
 
-        return PBMDataset(exp.name,
+        return (PBMDataset(exp.name,
                           ds_type,
                           exp.motif,
                           entries, 
-                          metainfo)
+                          metainfo),)

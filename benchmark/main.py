@@ -54,5 +54,3 @@ if __name__ == '__main__':
     benchmark.add_prediction("pwm", prediction)
 
     benchmark.run()
-
-
