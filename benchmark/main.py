@@ -51,6 +51,16 @@ if __name__ == '__main__':
 
     model = PWMEvalPredictor(PWMEval_path, pwm_path, PWMEvalMode.BEST_HIT) 
     prediction = model.score_batch(benchmark.datasets)
-    benchmark.add_prediction("pwm", prediction)
+    benchmark.add_prediction("pwm_prediction", prediction)
+
+    #add models 
+    model = PWMEvalPredictor(PWMEval_path, pwm_path, PWMEvalMode.BEST_HIT) 
+    benchmark.add_model("pwm_add_best", model)
+
+    model = PWMEvalPredictor(PWMEval_path, pwm_path, PWMEvalMode.BEST_HIT) 
+    benchmark.add_pwm("pwm_model", pwm_path)
+
+    model = PWMEvalPredictor(PWMEval_path, pwm_path, PWMEvalMode.BEST_HIT) 
+    benchmark.add_pwm("pwm_model2", pwm_path, pwmeval_path=PWMEval_path)
 
     benchmark.run()

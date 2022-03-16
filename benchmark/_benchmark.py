@@ -8,7 +8,7 @@ from datasetconfig import DatasetConfig
 from pathlib import Path
 from attr import field, define
 from enum import Enum 
-from typing import ClassVar, List, Optional, Union
+from typing import ClassVar, Optional, Union
 from scorer import ScorerInfo, Scorer
 from exceptions import BenchmarkConfigException, BenchmarkException, WrongBecnhmarkModeException
 from utils import register_enum
@@ -128,8 +128,20 @@ class Benchmark:
         return model_scores
 
     def score_model(self, model: Model) -> dict[str, dict[str, Union[str, float]]]:
-        scores = {'f':{}}
-        return scores
+        model_scores = {}
+        for ds in self.datasets:
+            pred = model.score(ds)
+            y_score, labels = [], []
+            for e in ds:
+                y_score.append(pred[e.tag])
+                labels.append(e.label)
+            ds_scores = {}
+            for sc in self.scorers:
+                score = sc.score(y_real=labels, y_score=y_score)
+                ds_scores[sc.name] = score
+            model_scores[ds.name] = ds_scores
+       
+        return model_scores
 
     def get_results_file_path(self, name: str):
         return self.results_dir / f"{name}.tsv"
