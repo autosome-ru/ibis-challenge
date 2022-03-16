@@ -39,3 +39,6 @@ class PWMWrongPathException(BenchmarkException):
 
 class ModelNotTrainedException(BenchmarkException):
     pass
+
+class ProtocolException(BenchmarkException):
+    pass

@@ -1,4 +1,4 @@
-from protocol import  ProtocolType, WeirauchProtocol
+from protocol import  ProtocolType, ProtocolFactory
 from exceptions import WrongExperimentTypeException
 from utils import  auto_convert
 from attrs import define, fields
@@ -49,12 +49,6 @@ class DatasetConfig:
             raise WrongExperimentTypeException(f"Wrong experiment type: {self.exp_type}")
         return cls
 
-    def infer_protocol_cls(self):
-        if self.protocol is ProtocolType.WEIRAUCH:
-            return WeirauchProtocol
-        else:
-            raise WrongExperimentTypeException(f"Wrong protocol type: {self.protocol}")
-
     def make(self) -> Sequence[Dataset]:
         exp_cls = self.infer_experiment_cls()
         metainfo = self.get_exp_metainfo()
@@ -62,6 +56,5 @@ class DatasetConfig:
                                   self.path,
                                   self.motif,
                                   metainfo)
-        prc_cls = self.infer_protocol_cls()
-        protocol = prc_cls()
+        protocol = ProtocolFactory.make(self.protocol)
         return protocol.process(experiment, self.ds_type)

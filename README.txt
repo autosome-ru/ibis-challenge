@@ -5,3 +5,4 @@
 #TODO create UniqueTagger unique identifier to each object (required for dataset types different from PBM)
 #TODO validate uniqueness of datasets names
 #TODO implement automated install of PWMEval
+#TODO Possibly redesign ProtocolType and PBMType in a way new protocol can be added by user without protocol.py/experiment.py modification
