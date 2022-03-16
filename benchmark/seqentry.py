@@ -23,12 +23,12 @@ class SeqEntry:
     @from_record.register
     @classmethod
     def from_pbm_record(cls, record: PBMRecord, label: BinaryLabel):
-        sequence = record.pbm_sequence
-        tag = record.id_probe
         metainfo = asdict(record, recurse=True)
         metainfo.pop('pbm_sequence')
         metainfo['linker_sequence'] = metainfo['linker_sequence']['seq']
         metainfo['source'] = "PBM"
+        tag = record.id_probe
+        sequence = Sequence(metainfo['linker_sequence'] + record.pbm_sequence.seq)
         return cls(sequence, label, tag, metainfo)
 
     def get(self, key, default=None):
