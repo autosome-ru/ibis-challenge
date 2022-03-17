@@ -18,8 +18,8 @@ singledispatchmethod.register = _register
 
 END_LINE_CHARS = "\r\n"
 
-
 TEMPORARY_FILES_DIR = Path(__file__).absolute().parent.parent / ".IRIS_TEMPDIR"
+TEMPORARY_FILES_DIR.mkdir(exist_ok=True)
 
 def random_string(length: int=10) -> str:
     ltrs = random.choices(string.ascii_uppercase, k=length)

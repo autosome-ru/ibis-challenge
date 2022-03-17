@@ -1,7 +1,7 @@
 import json
 
 import pandas as pd
-from pwm import PWMEvalMode, PWMEvalPredictor
+from pwmeval import PWMEvalPFMPredictor, PWMEvalPWMPredictor
 from prediction import Prediction
 from dataset import Dataset, DatasetType
 from datasetconfig import DatasetConfig
@@ -75,7 +75,7 @@ class Benchmark:
             try:
                 y_score = prediction[e.tag]
             except KeyError:
-                print(f"No information about entry {e.tag} for {ds.name}. Skipping dataset")
+                print(f"No information about entry {e.tag} from {ds.name}. Skipping dataset")
                 skip_ds = True
                 break
             labels.append(y_real)
@@ -85,24 +85,22 @@ class Benchmark:
         else:
             return labels, scores
 
-    def add_pwm(self, 
+    def add_pfm(self, 
                 pref: str, 
-                pwm_path: Union[Path, str], 
-                modes: Sequence[PWMEvalMode] =(PWMEvalMode.BEST_HIT, PWMEvalMode.SUM_SCORE),
+                pfm_path: Union[Path, str], 
                 pwmeval_path: Optional[Path]=None):
         if pwmeval_path is None:
             if self.pwmeval_path is None:
                 raise BenchmarkException("Can't add PWM due to unspecified pwmeval_path")
             pwmeval_path = self.pwmeval_path
-        if isinstance(pwm_path, str):
-            pwm_path = Path(pwm_path)
-        for mode in modes:
-            model = PWMEvalPredictor(pwmeval_path=pwmeval_path,
-                                     pwm_path=pwm_path, 
-                                     mode=mode)
-            name = f"{pref}_{mode.value}"
-            self.add_model(name, model)
-        
+        if isinstance(pfm_path, str):
+            pfm_path = Path(pfm_path)
+        model = PWMEvalPFMPredictor.from_pfm(pfm_path, pwmeval_path)
+        self.add_model(f"{pref}_sumscore", model)
+        model = PWMEvalPWMPredictor.from_pfm(pfm_path, pwmeval_path)
+        self.add_model(f"{pref}_best", model)
+
+
     def add_model(self, name: str, model: Model):
         self.models[name] = model
 
@@ -132,15 +130,23 @@ class Benchmark:
         for ds in self.datasets:
             pred = model.score(ds)
             y_score, labels = [], []
+            skip_ds=False
             for e in ds:
-                y_score.append(pred[e.tag])
+                try:
+                    y_score.append(pred[e.tag])
+                except KeyError:
+                   print(f"Model returned no prediction for entry {e.tag} from {ds.name}. Skipping dataset")
+                   skip_ds = True
+                   break 
                 labels.append(e.label)
-            ds_scores = {}
-            for sc in self.scorers:
-                score = sc.score(y_real=labels, y_score=y_score)
-                ds_scores[sc.name] = score
+            if skip_ds:
+               ds_scores = {sc.name: "skip" for sc in self.scorers}
+            else:
+                ds_scores = {}
+                for sc in self.scorers:
+                    score = sc.score(y_real=labels, y_score=y_score)
+                    ds_scores[sc.name] = score
             model_scores[ds.name] = ds_scores
-       
         return model_scores
 
     def get_results_file_path(self, name: str):
@@ -160,8 +166,6 @@ class Benchmark:
             df = pd.DataFrame(scores)
             df.to_csv(path, sep="\t")
 
-
-        
 @define
 class BenchmarkConfig:
     name: str

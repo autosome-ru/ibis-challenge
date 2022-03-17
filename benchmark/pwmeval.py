@@ -18,9 +18,9 @@ class PWMEvalPFMPredictor(Model):
     @classmethod
     def from_pfm(cls, 
                  pfm_path: Path, 
-                 pwveval_path: Path):
+                 pwmeval_path: Path):
         return cls(matrix_path=pfm_path, 
-                   pwmeval_path=pwveval_path)
+                   pwmeval_path=pwmeval_path)
 
     def score(self, X: Dataset) -> Prediction:
         dt = self.score_dataset(X)
@@ -125,7 +125,7 @@ class PWMEvalPWMPredictor(Model):
     def process_answer(self, answer: str) -> dict:
         dt = {}
         for line in answer.splitlines():
-            fields = line.rsplit(maxsplit=2, sep=self.PWMEvalSeparator)
+            fields = line.split(sep=self.PWMEvalSeparator)
             tag, score = fields[0], fields[-2]
             score = float(score)
             dt[tag] = score

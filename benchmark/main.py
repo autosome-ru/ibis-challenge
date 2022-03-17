@@ -1,7 +1,7 @@
 from pathlib import Path
 from _benchmark import BenchmarkConfig
 from model import RandomPredictor
-from pwm import PWMEvalPredictor, PWMEvalMode 
+from pwmeval import PWMEvalPFMPredictor, PWMEvalPWMPredictor 
 from prediction import Prediction
 import pandas as pd
 
@@ -27,15 +27,15 @@ if __name__ == '__main__':
     
     # scoring PWM 
     PWMEval_path = Path("/home_local/dpenzar/PWMEval/pwm_scoring")
-    pwm_path = Path("/home_local/dpenzar/ibis-challenge/benchmark/example.pwm")
-    model = PWMEvalPredictor(PWMEval_path, pwm_path, PWMEvalMode.BEST_HIT)
+    pfm_path = Path("/home_local/dpenzar/ibis-challenge/benchmark/example.pwm")
+    model = PWMEvalPFMPredictor.from_pfm(pfm_path=pfm_path, pwmeval_path=PWMEval_path)
     prediction = model.score(benchmark.datasets[0])
     scores = benchmark.score_prediction(prediction)
 
     prediction = model.score_batch(benchmark.datasets)
     scores = benchmark.score_prediction(prediction)
 
-    model = PWMEvalPredictor(PWMEval_path, pwm_path, PWMEvalMode.SUM_SCORE)
+    model = PWMEvalPWMPredictor.from_pfm(pfm_path=pfm_path, pwmeval_path=PWMEval_path)
     prediction = model.score(benchmark.datasets[0])
     scores = benchmark.score_prediction(prediction)
     
@@ -49,17 +49,14 @@ if __name__ == '__main__':
     prediction = model.score(benchmark.datasets[0])
     benchmark.add_prediction("random_first_only", prediction)
 
-    model = PWMEvalPredictor(PWMEval_path, pwm_path, PWMEvalMode.BEST_HIT) 
+    model = PWMEvalPFMPredictor.from_pfm(pfm_path=pfm_path, pwmeval_path=PWMEval_path)
     prediction = model.score_batch(benchmark.datasets)
     benchmark.add_prediction("pwm_prediction", prediction)
 
     #add models 
-    model = PWMEvalPredictor(PWMEval_path, pwm_path, PWMEvalMode.BEST_HIT) 
+    model = PWMEvalPWMPredictor.from_pfm(pfm_path=pfm_path, pwmeval_path=PWMEval_path)
     benchmark.add_model("pwm_add_best", model)
 
-    model = PWMEvalPredictor(PWMEval_path, pwm_path, PWMEvalMode.BEST_HIT) 
-    benchmark.add_pwm("pwm_model", pwm_path)
- 
-    benchmark.add_pwm("pwm_model2", pwm_path, pwmeval_path=PWMEval_path)
+    benchmark.add_pfm("pwm_model2", pfm_path, pwmeval_path=PWMEval_path)
 
     benchmark.run()
