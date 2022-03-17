@@ -12,10 +12,10 @@ from pathlib import Path
 
 @register_enum
 class DatasetType(Enum):
-    TRAIN = 1
-    VALIDATION = 2
-    TEST = 3
-    FULL = 4
+    TRAIN = "train"
+    VALIDATION = "validation"
+    TEST = "test"
+    FULL = "full"
 
 @define
 class Dataset(metaclass=ABCMeta):

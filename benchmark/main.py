@@ -59,8 +59,7 @@ if __name__ == '__main__':
 
     model = PWMEvalPredictor(PWMEval_path, pwm_path, PWMEvalMode.BEST_HIT) 
     benchmark.add_pwm("pwm_model", pwm_path)
-
-    model = PWMEvalPredictor(PWMEval_path, pwm_path, PWMEvalMode.BEST_HIT) 
+ 
     benchmark.add_pwm("pwm_model2", pwm_path, pwmeval_path=PWMEval_path)
 
     benchmark.run()
