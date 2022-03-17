@@ -31,12 +31,6 @@ class WrongPRAUCTypeException(BenchmarkException):
 class WrongScorerException(BenchmarkException):
     pass
 
-class PWMWrongModeException(BenchmarkException):
-    pass
-
-class PWMWrongPathException(BenchmarkException):
-    pass
-
 class ModelNotTrainedException(BenchmarkException):
     pass
 

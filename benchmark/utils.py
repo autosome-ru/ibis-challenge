@@ -1,3 +1,8 @@
+import atexit
+import random
+import string
+import shutil
+
 from typing import Union
 from enum import Enum
 from functools import singledispatchmethod, update_wrapper
@@ -12,6 +17,30 @@ def _register(self, cls, method=None):
 singledispatchmethod.register = _register
 
 END_LINE_CHARS = "\r\n"
+
+
+TEMPORARY_FILES_DIR = Path(__file__).absolute().parent.parent / ".IRIS_TEMPDIR"
+
+def random_string(length: int=10) -> str:
+    ltrs = random.choices(string.ascii_uppercase, k=length)
+    return "".join(ltrs)
+
+def temporary_path(ext: str = "", tempdir=TEMPORARY_FILES_DIR):
+    name = random_string()
+    if ext:
+        name = f"{name}.{ext}"
+    path = TEMPORARY_FILES_DIR / name
+    return path
+
+def temporary_dir(tempdir=TEMPORARY_FILES_DIR):
+    path = temporary_path("", tempdir=tempdir)
+    atexit.register(shutil.rmtree, path)
+    return temporary_path("", tempdir=tempdir)
+
+def temporary_file(ext: str = "", tempdir=TEMPORARY_FILES_DIR):
+    path = temporary_path(ext, tempdir)
+    atexit.register(path.unlink)
+    return path
 
 def safe_path(s: str) -> Path:
     path = Path(s)
@@ -105,6 +134,3 @@ def undict(src, dest=None, pref=None):
             else:
                 dest[name] = value
     return dest
-
-if __name__ == "__main__":
-    print(undict({"1": 50, 2: [2, 4, 5], "key": {5: 7, 4: {5:4}, 10: [1,2,3] }}))

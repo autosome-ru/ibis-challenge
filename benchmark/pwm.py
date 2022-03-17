@@ -1,71 +1,107 @@
 from attrs import define
-from utils import auto_convert, register_enum
 from pathlib import Path
-from typing import Sequence, ClassVar
-from dataset import Dataset
-from prediction import Prediction
-import shlex
-import subprocess
-from enum import Enum 
-from exceptions import PWMWrongModeException
-from model import Model
+from typing import ClassVar, Union
+import numpy as np
+import numpy.typing as npt
 
-@register_enum
-class PWMEvalMode(Enum):
-    BEST_HIT = "best_hit"
-    SUM_SCORE = "sum_score"
+@define
+class PFM:
+    name: str
+    description: str
+    matrix: npt.NDArray[np.float32]
 
+    FLOAT_FMT: ClassVar[str] = '%.5f'
+    EPS: ClassVar[float] = 1e-5
+    SIGNIGICANT_DIGITS=5
 
-@define(field_transformer=auto_convert)
-class PWMEvalPredictor(Model):
-    pwmeval_path: Path
-    pwm_path: Path
-    mode: PWMEvalMode
+    @classmethod
+    def load(cls, path: Union[Path, str]):
+        if isinstance(path, str):
+            path = Path(path)
+        with path.open() as inp:
+            header = inp.readline()
+            fields = header.split(maxsplit=1)
+            if len(fields) == 1:
+                name, description = fields[0], ""
+            else:
+                name, description = fields
+            matrix = np.loadtxt(inp, dtype=np.float32)
+        return cls(name, description, matrix)
 
-    PWMEvalSeparator: ClassVar[str] = "\t"
+    def header(self):
+        if not self.description:
+            return self.name
+        else:
+            return "{self.name} {self.description}"
     
-    def score(self, X: Dataset) -> Prediction:
-        dt = self.score_dataset(X)
-        return Prediction(dt)
+    def write(self, path: Union[Path, str]):
+        if isinstance(path, str):
+            path = Path(path)
+        with path.open("w") as out:
+            header = self.header()
+            print(header, file=out)
+            np.savetxt(out, self.matrix, fmt=self.FLOAT_FMT)
 
-    def score_batch(self, Xs: Sequence[Dataset]) -> Prediction:
-        all_dt = {}
-        for X in Xs:
-            dt = self.score_dataset(X)
-            all_dt.update(dt)
-        return Prediction(all_dt)    
+    @classmethod
+    def pfm2pwm(cls, matrix: npt.NDArray[np.float32], how: str="simple") -> npt.NDArray[np.float32]:
+        matrix = np.log2((matrix + cls.EPS)/ 0.25)
+        return matrix 
 
-    def score_dataset(self, X: Dataset) -> dict:
-        queries = []
-        for entry in X:
-            query = f">{entry.tag}\n{entry.sequence}"
-            queries.append(query)
-        total_query = "\n".join(queries)
-        answer = self.process_query(total_query)
-        prediction = self.process_answer(answer)
-        return prediction
+    @classmethod
+    def pfm2pwm_simple(cls, matrix: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
+        matrix = np.log2((matrix + cls.EPS)/ 0.25)
+        return matrix 
 
-    def get_cmd(self) -> str:
-        if self.mode is PWMEvalMode.BEST_HIT:
-            return f"{self.pwmeval_path} -m {self.pwm_path} --best"
-        if self.mode is PWMEvalMode.SUM_SCORE:
-            return f"{self.pwmeval_path} -m {self.pwm_path}"
-        raise PWMWrongModeException("Wrong mode for PWM")
+    @classmethod
+    def pfm2pwm_complex(cls, matrix: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
+        pcm = matrix * 100
+        return pcm 
+
+    @classmethod
+    def pwm2intpwm(cls, pwm: npt.NDArray[np.float32]) -> npt.NDArray[np.int32]:
+        intpwm = pwm * (10 ** cls.SIGNIGICANT_DIGITS)
+        intpwm = np.asarray(np.round(intpwm), dtype=np.int32)
+        return intpwm
+
+    def intpwm(self) -> 'IntPWM':
+        pwm = self.pfm2pwm_simple(self.matrix)
+        pwm = self.pwm2intpwm(pwm)
+        return IntPWM(self.name, self.description, pwm) 
+
+@define
+class IntPWM:
+    name: str
+    description: str
+    matrix: npt.NDArray[np.int32]
+
+    @classmethod
+    def load(cls, path: Union[Path, str]):
+        if isinstance(path, str):
+            path = Path(path)
+        with path.open() as inp:
+            header = inp.readline()
+            fields = header.split(maxsplit=1)
+            if len(fields) == 1:
+                name, description = fields[0], ""
+            else:
+                name, description = fields
+            matrix = np.loadtxt(inp, dtype=np.int32)
+        return cls(name, description, matrix)
+
+    def header(self):
+        if not self.description:
+            return self.name
+        else:
+            return "{self.name} {self.description}"
     
-    def process_query(self, query: str) -> str:
-        cmd = self.get_cmd()
-        cmd = shlex.split(cmd)
-        p = subprocess.Popen(cmd, 
-                       stdout=subprocess.PIPE,
-                       stdin=subprocess.PIPE,
-                       text=True)
-        stdout, _ = p.communicate(query)
-        return stdout
-    
-    def process_answer(self, answer: str) -> dict:
-        dt = {}
-        for line in answer.splitlines():
-            tag, score = line.split(maxsplit=2, sep=self.PWMEvalSeparator)[:2]
-            score = float(score)
-            dt[tag] = score
-        return dt
+    def write(self, path: Union[Path, str]):
+        if isinstance(path, str):
+            path = Path(path)
+        with path.open("w") as out:
+            header = self.header()
+            print(header, file=out)
+            np.savetxt(out, self.matrix, fmt="%d")
+
+if __name__ == "__main__":
+    pfm = PFM.load("/home_local/dpenzar/ibis-challenge/benchmark/example.pwm")
+    pfm.intpwm().write("a.txt")
