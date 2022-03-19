@@ -53,10 +53,11 @@ class DictPredictor(Model):
         scores = Prediction.load(path)
         return cls(scores)
     
-    def score(self, X: Dataset) -> List[float]:
-        predictions = []
-        for entry in X.entries:
+    def score(self, X: Dataset) -> Prediction:
+        predictions = {}
+        for entry in X:
             tag = entry.tag
-            score = self.scores[tag]
-            predictions.append(score)
-        return predictions
+            score = self.scores.get(tag)
+            if score is not None:
+                predictions[tag] = score
+        return Prediction(predictions)

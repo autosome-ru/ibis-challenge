@@ -1,21 +1,29 @@
-import json
+import concurrent.futures
 
 import pandas as pd
+import numpy as np 
+
+from labels import BinaryLabel
 from pwmeval import PWMEvalPFMPredictor, PWMEvalPWMPredictor
 from prediction import Prediction
 from dataset import Dataset, DatasetType
-from datasetconfig import DatasetConfig
 from pathlib import Path
 from attr import field, define
 from enum import Enum 
 from typing import ClassVar, Optional, Union
-from scorer import ScorerInfo, Scorer
-from exceptions import BenchmarkConfigException, BenchmarkException, WrongBecnhmarkModeException
+from scorer import Scorer
+from exceptions import BenchmarkException, WrongBecnhmarkModeException
 from utils import register_enum
 from typing import List
 from collections.abc import Sequence
 from pathlib import Path
-from model import Model 
+from model import DictPredictor, Model 
+from traceback import print_exc
+
+@define
+class ModelEntry:
+    name: str 
+    model: Model
 
 @register_enum
 class BenchmarkMode(Enum):
@@ -30,8 +38,9 @@ class Benchmark:
     results_dir: Path
     metainfo: dict
     pwmeval_path: Optional[Path] = None
-    models: dict[str, Model] = field(factory=dict)
-    predictions: dict[str, Prediction] = field(factory=dict)
+    models: List[ModelEntry] = field(factory=list)
+
+    SKIPVALUE: ClassVar[float] = np.nan
 
     def write_datasets(self, mode: BenchmarkMode):
         if mode is BenchmarkMode.USER:
@@ -65,26 +74,6 @@ class Benchmark:
                 for entry in ds:
                     print(entry.tag, entry.label.value, sep="\t", file=out)  # type: ignore
     
-    @staticmethod
-    def retrieve_prediction(prediction: Prediction, ds: Dataset):
-        labels = []
-        scores = []
-        skip_ds = False
-        for e in ds.entries:
-            y_real = e.label
-            try:
-                y_score = prediction[e.tag]
-            except KeyError:
-                print(f"No information about entry {e.tag} from {ds.name}. Skipping dataset")
-                skip_ds = True
-                break
-            labels.append(y_real)
-            scores.append(y_score)
-        if skip_ds:
-            return None, None
-        else:
-            return labels, scores
-
     def add_pfm(self, 
                 pref: str, 
                 pfm_path: Union[Path, str], 
@@ -100,128 +89,108 @@ class Benchmark:
         model = PWMEvalPWMPredictor.from_pfm(pfm_path, pwmeval_path)
         self.add_model(f"{pref}_best", model)
 
-
     def add_model(self, name: str, model: Model):
-        self.models[name] = model
+        entry = ModelEntry(name, model)
+        self.models.append(entry)
 
     def add_prediction(self, name: str, pred: Prediction):
-        self.predictions[name] = pred
+        model = DictPredictor(pred)
+        entry = ModelEntry(name, model)
+        self.models.append(entry)
 
-    def score(self, labels, scores):
+    def score(self, labels: List[BinaryLabel], scores: List[float]) -> dict[str, float]:
         ds_scores = {}
         for sc in self.scorers:
             score = sc.score(y_real=labels, y_score=scores)
             ds_scores[sc.name] = score
         return ds_scores
 
-    def score_prediction(self, prediction: Prediction) -> dict[str, dict[str, Union[str, float]]]:
+    @property
+    def skipped_prediction(self) -> dict[str, float]:
+        ds_scores = {sc.name: self.SKIPVALUE for sc in self.scorers}
+        return ds_scores
+
+    def score_model_on_ds(self,
+                          model: Union[Model, ModelEntry], 
+                          ds: Dataset) -> dict[str, float]:
+        if len(ds) == 0:
+            print(f"Size of {ds.name} is 0. Skipping dataset")
+            return self.skipped_prediction
+
+        if isinstance(model, ModelEntry):
+            pred = model.model.score(ds)
+        else:
+            pred = model.score(ds)
+
+        scores, labels = [], []
+        skip_ds=False
+        for e in ds:
+            try:
+                scores.append(pred[e.tag])
+            except KeyError:
+                if isinstance(model, ModelEntry):
+                    print(f"Model {model.name} returned no prediction for entry {e.tag} from {ds.name}. Skipping dataset")
+                else:
+                    print(f"Model returned no prediction for entry {e.tag} from {ds.name}. Skipping dataset")
+                skip_ds = True
+                break 
+            labels.append(e.label)
+        if skip_ds:
+            return self.skipped_prediction
+        
+        ds_scores = self.score(labels, scores)
+        return ds_scores
+
+    def score_model(self, model: Union[Model, ModelEntry]) -> dict[str, dict[str, float]]:
         model_scores = {}
         for ds in self.datasets:
-            labels, scores = self.retrieve_prediction(prediction, ds)
-            if labels is None:
-                ds_scores = {sc.name: "skip" for sc in self.scorers}
-            else:
-                ds_scores = self.score(labels, scores)
+            ds_scores = self.score_model_on_ds(model, ds)
             model_scores[ds.name] = ds_scores
         return model_scores
 
-    def score_model(self, model: Model) -> dict[str, dict[str, Union[str, float]]]:
-        model_scores = {}
-        for ds in self.datasets:
-            pred = model.score(ds)
-            y_score, labels = [], []
-            skip_ds=False
-            for e in ds:
-                try:
-                    y_score.append(pred[e.tag])
-                except KeyError:
-                   print(f"Model returned no prediction for entry {e.tag} from {ds.name}. Skipping dataset")
-                   skip_ds = True
-                   break 
-                labels.append(e.label)
-            if skip_ds:
-               ds_scores = {sc.name: "skip" for sc in self.scorers}
-            else:
-                ds_scores = {}
-                for sc in self.scorers:
-                    score = sc.score(y_real=labels, y_score=y_score)
-                    ds_scores[sc.name] = score
-            model_scores[ds.name] = ds_scores
-        return model_scores
+    def score_prediction(self, prediction: Prediction) -> dict[str, dict[str, float]]:
+        model = DictPredictor(prediction)
+        return self.score_model(model)
 
     def get_results_file_path(self, name: str):
         return self.results_dir / f"{name}.tsv"
-
-    def run(self):
-        self.results_dir.mkdir(exist_ok=True)
-        for name, pred in self.predictions.items():
-            scores = self.score_prediction(pred)
-            path = self.get_results_file_path(name)
-            df = pd.DataFrame(scores)
-            df.to_csv(path, sep="\t")
-
-        for name, model in self.models.items():
-            scores = self.score_model(model)
-            path = self.get_results_file_path(name)
-            df = pd.DataFrame(scores)
-            df.to_csv(path, sep="\t")
-
-@define
-class BenchmarkConfig:
-    name: str
-    datasets: Sequence[DatasetConfig]
-    scorers: Sequence[ScorerInfo]
-    results_dir: Path
-    pwmeval_path: Optional[Path] = None
-    metainfo: dict = field(factory=dict)
     
-    NAME_FIELD: ClassVar[str] = 'name'
-    DATASETS_FIELD: ClassVar[str] = 'datasets'
-    SCORERS_FIELD: ClassVar[str] = 'scorers'
-    PWMEVAL_PATH_FIELD: ClassVar[str] = "pwmeval"
-    RESULTS_DIR_FIELD: ClassVar[str] = "results_dir"
+    def run(self, n_procs=1, timeout=None):
+        self.results_dir.mkdir(exist_ok=True)
+        if n_procs == 1:
+            results = self.run_single()
+        else:
+            print("Parallel run")
+            results = self.run_parallel(n_procs=n_procs, timeout=timeout)
 
-    @classmethod
-    def validate_benchmark_dict(cls, dt: dict):
-        if not cls.NAME_FIELD in dt:
-            raise BenchmarkConfigException(
-                    f"Benchmark config must has field '{cls.NAME_FIELD}'")
-        if not cls.DATASETS_FIELD in dt:
-            raise BenchmarkConfigException("No information about datasets found")
-        if not cls.SCORERS_FIELD in dt:
-            raise BenchmarkConfigException("No information about scorers found")
+        for name, scores in results.items():
+            path = self.get_results_file_path(name)
+            df = pd.DataFrame(scores)
+            df.to_csv(path, sep="\t")
 
-    @classmethod
-    def from_dt(cls, dt: dict):
-        cls.validate_benchmark_dict(dt)
-        name = dt[cls.NAME_FIELD]
-        datasets = [DatasetConfig.from_dict(rec)\
-                        for rec in dt[cls.DATASETS_FIELD]]
-        scorers = [ScorerInfo.from_dict(rec)\
-                        for rec in dt[cls.SCORERS_FIELD]]
-        results_dir = dt.get(cls.RESULTS_DIR_FIELD)
-        if results_dir is None:
-            results_dir = Path("results")
-        elif isinstance(results_dir, str):
-            results_dir = Path(results_dir)
-        results_dir = results_dir.absolute()
-        pwmeval_path = dt.get(cls.PWMEVAL_PATH_FIELD)
-        metainfo = dt.get('metainfo', {})
-        for key, value in dt.items():
-            if key not in (cls.NAME_FIELD, cls.DATASETS_FIELD, cls.SCORERS_FIELD, cls.PWMEVAL_PATH_FIELD, cls.RESULTS_DIR_FIELD):
-                metainfo[key] = value
-        return cls(name, datasets, scorers, results_dir, pwmeval_path, metainfo)
+    def run_single(self):
+        return {entry.name: self.score_model(entry.model) for entry in self.models}
+    
+    def run_parallel(self, n_procs=2, timeout=None) -> dict[str, dict[str, dict[str, float]]]:
+        self.results_dir.mkdir(exist_ok=True)
+        executor = concurrent.futures.ProcessPoolExecutor(max_workers=n_procs)
+        futures = {}
+        for model in self.models:
+            for ds in self.datasets:
+                tag = (model.name, ds.name)
+                ft = executor.submit(self.score_model_on_ds, model, ds)
+                futures[ft] = tag
+        concurrent.futures.wait(futures, timeout)
+ 
+        results = {m.name: {} for m in self.models}
+        for ft in futures:
+            m_name, ds_name = futures[ft]
+            try:
+                scores = ft.result()
+            except Exception as exc:
+                print("Exception occured while running model {m_name} on dataset {ds_name}")
+                print_exc()
+                scores = self.skipped_prediction
+            results[m_name][ds_name] = scores
 
-    @classmethod
-    def from_json(cls, path: Path):
-        with open(path, "r") as inp:
-            dt = json.load(inp)
-        return cls.from_dt(dt)
-
-    def make_benchmark(self):
-        datasets = []
-        for cfg in self.datasets:
-            ds_seq = cfg.make()
-            datasets.extend(ds_seq)
-        scorers = [cfg.make() for cfg in self.scorers]
-        return Benchmark(self.name, datasets, scorers, self.results_dir, self.metainfo, self.pwmeval_path)
+        return results

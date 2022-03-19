@@ -10,6 +10,12 @@ class Prediction:
     def __getitem__(self, tag: str) -> float:
         return self.dt[tag]
 
+    def get(self, tag: str, default=None):
+        return self.dt.get(tag, default)
+
+    def __len__(self) -> int:
+        return len(self.dt)
+
     @classmethod
     def load(cls, path: Path, sep="\t"):
         with path.open(mode="r") as infile:
