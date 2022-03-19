@@ -43,19 +43,9 @@ class PFM:
             np.savetxt(out, self.matrix, fmt=self.FLOAT_FMT)
 
     @classmethod
-    def pfm2pwm(cls, matrix: npt.NDArray[np.float32], how: str="simple") -> npt.NDArray[np.float32]:
+    def pfm2pwm(cls, matrix: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
         matrix = np.log2((matrix + cls.EPS)/ 0.25)
         return matrix 
-
-    @classmethod
-    def pfm2pwm_simple(cls, matrix: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
-        matrix = np.log2((matrix + cls.EPS)/ 0.25)
-        return matrix 
-
-    @classmethod
-    def pfm2pwm_complex(cls, matrix: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
-        pcm = matrix * 100
-        return pcm 
 
     @classmethod
     def pwm2intpwm(cls, pwm: npt.NDArray[np.float32]) -> npt.NDArray[np.int32]:
@@ -64,7 +54,7 @@ class PFM:
         return intpwm
 
     def intpwm(self) -> 'IntPWM':
-        pwm = self.pfm2pwm_simple(self.matrix)
+        pwm = self.pfm2pwm(self.matrix)
         pwm = self.pwm2intpwm(pwm)
         return IntPWM(self.name, self.description, pwm) 
 
