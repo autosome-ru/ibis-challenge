@@ -13,7 +13,7 @@ from pathlib import Path
 @register_enum
 class DatasetType(Enum):
     TRAIN = "train"
-    VALIDATION = "validation"
+    VALIDATION = "val"
     TEST = "test"
     FULL = "full"
 

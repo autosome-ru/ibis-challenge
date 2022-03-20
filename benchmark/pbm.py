@@ -10,15 +10,15 @@ from enum import Enum
 
 @register_enum
 class PBMType(Enum):
-    ME = "ME"
-    HK = "HK"
+    ME = "me"
+    HK = "hk"
 
 @register_enum
 class PBMPreprocessing(Enum):
     RAW = "raw"
-    SD = "SD"
-    QNZS = "QNSZ"
-    SDQN = "SDQN"
+    SD = "sd"
+    QNZS = "qnzs"
+    SDQN = "sdqn"
 
 
 @define(field_transformer=auto_convert)

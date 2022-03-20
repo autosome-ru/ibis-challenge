@@ -71,11 +71,11 @@ def register_enum(enum_tp):
         if isinstance(x, enum_tp):
             return x
         if isinstance(x, str):
-            x_canonical = x.upper()
+            x_canonical = x.lower()
         else:
             x_canonical = x
         try:
-            return enum_tp[x_canonical]
+            return enum_tp(x_canonical)
         except KeyError:
             pass
         msg = f"Wrong value '{x}' for enum '{enum_tp}'"

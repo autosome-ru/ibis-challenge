@@ -6,12 +6,12 @@ class Experiment:
 
 @register_enum
 class ExperimentType(Enum):
-    PBM = 1
-    ChIPSeq = 2
+    PBM = "pbm"
+    ChIPSeq = "chipseq"
 
 @register_enum
 class CurationStatus(Enum):
-    NOT_CURATED = 1
-    ACCEPTED = 2
-    REJECTED = 3
-    QUESTIONABLE = 4
+    NOT_CURATED = "not_curated"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    QUESTIONABLE = "questionable"

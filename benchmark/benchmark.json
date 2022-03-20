@@ -19,7 +19,7 @@
             "exp_type": "PBM",
             "motif": "SCAN4",
             "ds_type": "test",
-            "path": "/home_local/vorontsovie/greco-data/release_7a.2021-10-14/full/PBM.QNZS/Train_intensities/ZSCAN4.NA@PBM.HK@PBM14320.5GTGAAATTGTTATCCGCTCT@QNZS.flimsy-flax-salamander.Train.tsv",
+            "path": "/home_local/vorontsovie/greco-data/release_7a.2021-10-14/full/PBM.SDQN/Val_intensities/SCMH1.DBD@PBM.HK@PBM13769.5GTGAAATTGTTATCCGCTCT@SDQN.pretty-peach-cat.Val.tsv",
             "curation_status": "NOT_CURATED",
             "protocol": "weirauch",
             "pbm_type": "HK",
