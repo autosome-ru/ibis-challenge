@@ -36,3 +36,6 @@ class ModelNotTrainedException(BenchmarkException):
 
 class ProtocolException(BenchmarkException):
     pass
+
+class SubmissionFormatException(BenchmarkException):
+    pass
