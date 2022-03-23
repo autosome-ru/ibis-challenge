@@ -1,7 +1,7 @@
 from attrs import define
 from utils import auto_convert, TEMPORARY_FILES_DIR, temporary_file
 from dataset import Dataset
-from prediction import Prediction
+from prediction import Prediction, Submission
 import shlex
 import subprocess
 from model import Model
@@ -26,12 +26,16 @@ class PWMEvalPFMPredictor(Model):
         dt = self.score_dataset(X)
         return Prediction(dt)
 
-    def score_batch(self, Xs: Sequence[Dataset]) -> Prediction:
+    def score_batch(self, Xs: Sequence[Dataset]) -> Submission:
         all_dt = {}
+        tags = set()
         for X in Xs:
             dt = self.score_dataset(X)
-            all_dt.update(dt)
-        return Prediction(all_dt)    
+            pred =  Prediction(dt)
+            all_dt[X.motif] = pred
+            tags.update(pred.tags)
+        tags = list(tags)
+        return Submission(tags, all_dt)
 
     def score_dataset(self, X: Dataset) -> dict:
         queries = []

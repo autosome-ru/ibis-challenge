@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from ast import Sub
 from dataclasses import dataclass
 from pathlib import Path
 from tkinter import SEPARATOR
@@ -6,7 +7,7 @@ from typing import Dict, List
 from attr import define
 import numpy as np
 from random import Random
-from prediction import Prediction
+from prediction import Prediction, Submission
 from exceptions import ModelNotTrainedException
 
 from dataset import Dataset
@@ -46,18 +47,21 @@ class DictPredictor(Model):
     '''
     predict using entry-unique tag
     '''
-    scores: Prediction
+    scores: Submission
 
     @classmethod
     def load(cls, path: Path, sep="\t"):
-        scores = Prediction.load(path)
+        scores = Submission.load(path)
         return cls(scores)
     
     def score(self, X: Dataset) -> Prediction:
+        pred = self.scores.get(X.motif)
+        if pred is None:
+            return Prediction({})
         predictions = {}
         for entry in X:
             tag = entry.tag
-            score = self.scores.get(tag)
+            score = pred.get(tag)
             if score is not None:
                 predictions[tag] = score
         return Prediction(predictions)

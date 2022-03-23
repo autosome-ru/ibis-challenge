@@ -28,6 +28,10 @@ class Prediction:
     def __setitem__(self, tag:str, score: float):
         self._pred[tag] = score
 
+    @property
+    def tags(self):
+        return list(self._pred.keys())
+
     @classmethod
     def load(cls, path: Path, sep="\t"):
         with path.open(mode="r") as infile:
@@ -145,6 +149,12 @@ class Submission:
     @classmethod
     def write_template(cls, tfs: List[str], tags: List[str], path: Path):
         cls.template(tfs, tags).write(path)
+
+    @classmethod
+    def from_single_prediction(cls, tf_name: str, pred: Prediction):
+        tags = pred.tags
+        _sub = {tf_name: pred}
+        return cls(tags, _sub)
 
 if __name__ == "__main__":
     Submission.write_template(tfs=['TF1', 'TF2', 'TF3'], 

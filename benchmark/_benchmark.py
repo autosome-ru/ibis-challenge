@@ -5,7 +5,7 @@ import numpy as np
 
 from labels import BinaryLabel
 from pwmeval import PWMEvalPFMPredictor, PWMEvalPWMPredictor
-from prediction import Prediction
+from prediction import Prediction, Submission
 from dataset import Dataset, DatasetType
 from pathlib import Path
 from attr import field, define
@@ -41,6 +41,7 @@ class Benchmark:
     models: List[ModelEntry] = field(factory=list)
 
     SKIPVALUE: ClassVar[float] = np.nan
+    REPR_SKIPVALUE: ClassVar[str] = "skipped"
 
     def write_datasets(self, mode: BenchmarkMode):
         if mode is BenchmarkMode.USER:
@@ -52,28 +53,11 @@ class Benchmark:
         raise NotImplementedError()
 
     def write_datasets_for_user(self, path: Optional[Path]=None):
-        if path is None:
-            path = Path.cwd()
-        path.mkdir(exist_ok=True)
-        for ds in self.datasets:
-            if ds.type is DatasetType.TRAIN:
-                pass
-
         raise NotImplementedError()
 
     def write_datasets_for_admin(self):
         raise NotImplementedError()
 
-    def write_ideal_model(self, path: Path):
-        '''
-        writes real labels for both train and test set
-        in the prediction file format
-        '''
-        with path.open("w") as out:
-            for ds in self.datasets:
-                for entry in ds:
-                    print(entry.tag, entry.label.value, sep="\t", file=out)  # type: ignore
-    
     def add_pfm(self, 
                 pref: str, 
                 pfm_path: Union[Path, str], 
@@ -93,8 +77,12 @@ class Benchmark:
         entry = ModelEntry(name, model)
         self.models.append(entry)
 
-    def add_prediction(self, name: str, pred: Prediction):
-        model = DictPredictor(pred)
+    def add_prediction(self, name: str, tf_name: str, pred: Prediction):
+        sub = Submission.from_single_prediction(tf_name, pred)
+        self.add_submission(name, sub)
+    
+    def add_submission(self, name: str, sub: Submission):
+        model = DictPredictor(sub)
         entry = ModelEntry(name, model)
         self.models.append(entry)
 
@@ -125,15 +113,23 @@ class Benchmark:
         scores, labels = [], []
         skip_ds=False
         for e in ds:
-            try:
-                scores.append(pred[e.tag])
-            except KeyError:
+            score = pred.get(e.tag)
+            if score is None:
                 if isinstance(model, ModelEntry):
                     print(f"Model {model.name} returned no prediction for entry {e.tag} from {ds.name}. Skipping dataset")
                 else:
                     print(f"Model returned no prediction for entry {e.tag} from {ds.name}. Skipping dataset")
                 skip_ds = True
                 break 
+            if Prediction.is_skipvalue(score):
+                if isinstance(model, ModelEntry):
+                    print(f"Model {model.name} skipped prediction for entry {e.tag} from {ds.name}. Skipping dataset")
+                else:
+                    print(f"Model returned skipped prediction for entry {e.tag} from {ds.name}. Skipping dataset")
+                skip_ds = True
+                break 
+            
+            scores.append(score)
             labels.append(e.label)
         if skip_ds:
             return self.skipped_prediction
@@ -148,8 +144,12 @@ class Benchmark:
             model_scores[ds.name] = ds_scores
         return model_scores
 
-    def score_prediction(self, prediction: Prediction) -> dict[str, dict[str, float]]:
-        model = DictPredictor(prediction)
+    def score_prediction(self, tf_name: str, prediction: Prediction) -> dict[str, dict[str, float]]:
+        sub = Submission.from_single_prediction(tf_name, prediction)
+        return self.score_submission(sub)
+
+    def score_submission(self, submission: Submission) -> dict[str, dict[str, float]]:
+        model = DictPredictor(submission)
         return self.score_model(model)
 
     def get_results_file_path(self, name: str):

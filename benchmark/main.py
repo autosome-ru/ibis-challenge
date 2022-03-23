@@ -42,20 +42,20 @@ if __name__ == '__main__':
     # using benchmark to score many models simultaneously
     '''
     #add predictions
-    ideal_prediction_path = Path("/home_local/dpenzar/ideal_predictions.tsv")
-    benchmark.write_ideal_model(ideal_prediction_path)
-    prediction = Prediction.load(ideal_prediction_path)
-    benchmark.add_prediction("ideal", prediction)
+    #ideal_prediction_path = Path("/home_local/dpenzar/ideal_predictions.tsv")
+    #benchmark.write_ideal_model(ideal_prediction_path)
+    #prediction = Prediction.load(ideal_prediction_path)
+    #benchmark.add_prediction("ideal", prediction)
 
     model = RandomPredictor(seed=777)
     prediction = model.score(benchmark.datasets[0])
-    benchmark.add_prediction("random_first_only", prediction)
+    benchmark.add_prediction("random_first_only", benchmark.datasets[0].motif, prediction)
 
     PWMEval_path = Path("/home_local/dpenzar/PWMEval/pwm_scoring")
     pfm_path = Path("/home_local/dpenzar/ibis-challenge/benchmark/example.pwm")
     model = PWMEvalPFMPredictor.from_pfm(pfm_path=pfm_path, pwmeval_path=PWMEval_path)
-    prediction = model.score_batch(benchmark.datasets)
-    benchmark.add_prediction("pwm_prediction", prediction)
+    submission = model.score_batch(benchmark.datasets)
+    benchmark.add_submission("pwm_prediction", submission)
     
     #add models 
     model = PWMEvalPWMPredictor.from_pfm(pfm_path=pfm_path, pwmeval_path=PWMEval_path)
