@@ -24,6 +24,8 @@ from traceback import print_exc
 class ModelEntry:
     name: str 
     model: Model
+    tfs: Optional[List[str]] = None
+
 
 @register_enum
 class BenchmarkMode(Enum):
@@ -59,7 +61,8 @@ class Benchmark:
         raise NotImplementedError()
 
     def add_pfm(self, 
-                pref: str, 
+                tf_name: str,
+                name: str, 
                 pfm_path: Union[Path, str], 
                 pwmeval_path: Optional[Path]=None):
         if pwmeval_path is None:
@@ -69,12 +72,12 @@ class Benchmark:
         if isinstance(pfm_path, str):
             pfm_path = Path(pfm_path)
         model = PWMEvalPFMPredictor.from_pfm(pfm_path, pwmeval_path)
-        self.add_model(f"{pref}_sumscore", model)
+        self.add_model(f"{name}_sumscore", model, [tf_name])
         model = PWMEvalPWMPredictor.from_pfm(pfm_path, pwmeval_path)
-        self.add_model(f"{pref}_best", model)
+        self.add_model(f"{name}_best", model, [tf_name])
 
-    def add_model(self, name: str, model: Model):
-        entry = ModelEntry(name, model)
+    def add_model(self, name: str, model: Model, tfs: Optional[List[str]] = None):
+        entry = ModelEntry(name, model, tfs)
         self.models.append(entry)
 
     def add_prediction(self, name: str, tf_name: str, pred: Prediction):
@@ -83,7 +86,7 @@ class Benchmark:
     
     def add_submission(self, name: str, sub: Submission):
         model = DictPredictor(sub)
-        entry = ModelEntry(name, model)
+        entry = ModelEntry(name, model, sub.tfs)
         self.models.append(entry)
 
     def score(self, labels: List[BinaryLabel], scores: List[float]) -> dict[str, float]:
@@ -177,6 +180,8 @@ class Benchmark:
         futures = {}
         for model in self.models:
             for ds in self.datasets:
+                if (model.tfs is not None) and (ds.tf_name not in model.tfs):
+                    continue
                 tag = (model.name, ds.name)
                 ft = executor.submit(self.score_model_on_ds, model, ds)
                 futures[ft] = tag

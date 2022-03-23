@@ -12,7 +12,7 @@ from typing import Sequence
 class DatasetConfig:
     name: str
     exp_type: ExperimentType
-    motif: str
+    tf: str
     ds_type: DatasetType
     path: Path
     curation_status: CurationStatus
@@ -54,7 +54,7 @@ class DatasetConfig:
         metainfo = self.get_exp_metainfo()
         experiment = exp_cls.read(self.name,
                                   self.path,
-                                  self.motif,
+                                  self.tf,
                                   metainfo)
         protocol = ProtocolFactory.make(self.protocol)
         return protocol.process(experiment, self.ds_type)

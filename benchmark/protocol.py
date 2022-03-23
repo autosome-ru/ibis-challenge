@@ -65,7 +65,7 @@ class WeirauchProtocol(Protocol):
 
         return (PBMDataset(exp.name,
                           ds_type,
-                          exp.motif,
+                          exp.tf,
                           entries, 
                           metainfo),)
 
@@ -121,7 +121,7 @@ class IbisProtocol(Protocol):
 
         return (PBMDataset(exp.name,
                           ds_type,
-                          exp.motif,
+                          exp.tf,
                           entries, 
                           metainfo),)
 

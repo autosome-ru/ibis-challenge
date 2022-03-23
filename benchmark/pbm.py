@@ -25,7 +25,7 @@ class PBMPreprocessing(Enum):
 class PBMExperiment(Experiment):
     name: str
     records: List[PBMRecord] = field(repr=False)
-    motif: str 
+    tf: str 
     pbm_type: PBMType
     preprocessing: PBMPreprocessing
     metainfo: dict = {}
@@ -66,7 +66,7 @@ class PBMExperiment(Experiment):
         preprocessing = metainfo.pop("preprocessing")
         return cls(name=name,
                    records=records, 
-                   motif=motif,
+                   tf=motif,
                    pbm_type=pbm_type,
                    preprocessing=preprocessing, 
                    metainfo=metainfo)

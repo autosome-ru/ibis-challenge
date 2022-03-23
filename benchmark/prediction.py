@@ -128,6 +128,10 @@ class Submission:
         flds = [self.TAGFIELDNAME, *self._sub.keys()]
         return self.FIELDSEP.join(flds)
     
+    @property
+    def tfs(self) -> List[str]:
+        return list(self._sub.keys())
+    
     def write(self, path: Union[Path, str]):
         if isinstance(path, str):
             path = Path(path)

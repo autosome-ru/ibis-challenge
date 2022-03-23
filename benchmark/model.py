@@ -55,7 +55,7 @@ class DictPredictor(Model):
         return cls(scores)
     
     def score(self, X: Dataset) -> Prediction:
-        pred = self.scores.get(X.motif)
+        pred = self.scores.get(X.tf_name)
         if pred is None:
             return Prediction({})
         predictions = {}

@@ -32,7 +32,7 @@ class PWMEvalPFMPredictor(Model):
         for X in Xs:
             dt = self.score_dataset(X)
             pred =  Prediction(dt)
-            all_dt[X.motif] = pred
+            all_dt[X.tf_name] = pred
             tags.update(pred.tags)
         tags = list(tags)
         return Submission(tags, all_dt)

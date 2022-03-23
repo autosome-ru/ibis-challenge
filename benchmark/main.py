@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     model = RandomPredictor(seed=777)
     prediction = model.score(benchmark.datasets[0])
-    benchmark.add_prediction("random_first_only", benchmark.datasets[0].motif, prediction)
+    benchmark.add_prediction("random_first_only", benchmark.datasets[0].tf_name, prediction)
 
     PWMEval_path = Path("/home_local/dpenzar/PWMEval/pwm_scoring")
     pfm_path = Path("/home_local/dpenzar/ibis-challenge/benchmark/example.pwm")
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     #add models 
     model = PWMEvalPWMPredictor.from_pfm(pfm_path=pfm_path, pwmeval_path=PWMEval_path)
     benchmark.add_model("pwm_add_best", model)
-    benchmark.add_pfm("pwm_model2", pfm_path, pwmeval_path=PWMEval_path)
+    benchmark.add_pfm("SCAN4", "pwm_model2", pfm_path, pwmeval_path=PWMEval_path)
 
     benchmark.run(n_procs=10)
     

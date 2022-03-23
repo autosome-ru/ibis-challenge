@@ -4,7 +4,7 @@
         {
             "name": "example1",
             "exp_type": "PBM",
-            "motif": "ZHX3",
+            "tf": "ZHX3",
             "ds_type": "train",
             "path":  "/home_local/vorontsovie/greco-data/release_7a.2021-10-14/full/PBM.QNZS/Train_intensities/ZHX3.DBD@PBM.ME@PBM13852.5GTGAAATTGTTATCCGCTCT@QNZS.snappy-zucchini-yak.Train.tsv",
             "curation_status": "NOT_CURATED",
@@ -17,7 +17,7 @@
         {
             "name": "example2",
             "exp_type": "PBM",
-            "motif": "SCAN4",
+            "tf": "SCAN4",
             "ds_type": "test",
             "path": "/home_local/vorontsovie/greco-data/release_7a.2021-10-14/full/PBM.SDQN/Val_intensities/SCMH1.DBD@PBM.HK@PBM13769.5GTGAAATTGTTATCCGCTCT@SDQN.pretty-peach-cat.Val.tsv",
             "curation_status": "NOT_CURATED",

@@ -21,7 +21,7 @@ class DatasetType(Enum):
 class Dataset(metaclass=ABCMeta):
     name: str
     type: DatasetType
-    motif: str
+    tf_name: str
     entries: List[SeqEntry] = field(repr=False)
     metainfo: dict
 
