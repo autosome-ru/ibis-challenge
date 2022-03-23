@@ -26,6 +26,14 @@ class ModelEntry:
     model: Model
     tfs: Optional[List[str]] = None
 
+@define
+class DatasetEntry:
+    name: str
+    tf_name: str
+    type: DatasetType
+    metainfo: dict
+    path: Path
+
 
 @register_enum
 class BenchmarkMode(Enum):
