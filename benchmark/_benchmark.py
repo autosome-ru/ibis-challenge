@@ -113,7 +113,7 @@ class Benchmark:
                           model: Union[Model, ModelEntry], 
                           ds: Dataset) -> dict[str, float]:
         if len(ds) == 0:
-            print(f"Size of {ds.name} is 0. Skipping dataset")
+            print(f"Size of {ds.name} is 0. Skipping dataset", flush=True)
             return self.skipped_prediction
 
         if isinstance(model, ModelEntry):
@@ -127,16 +127,16 @@ class Benchmark:
             score = pred.get(e.tag)
             if score is None:
                 if isinstance(model, ModelEntry):
-                    print(f"Model {model.name} returned no prediction for entry {e.tag} from {ds.name}. Skipping dataset")
+                    print(f"Model {model.name} returned no prediction for entry {e.tag} from {ds.name}. Skipping dataset", flush=True)
                 else:
-                    print(f"Model returned no prediction for entry {e.tag} from {ds.name}. Skipping dataset")
+                    print(f"Model returned no prediction for entry {e.tag} from {ds.name}. Skipping dataset", flush=True)
                 skip_ds = True
                 break 
             if Prediction.is_skipvalue(score):
                 if isinstance(model, ModelEntry):
-                    print(f"Model {model.name} skipped prediction for entry {e.tag} from {ds.name}. Skipping dataset")
+                    print(f"Model {model.name} skipped prediction for entry {e.tag} from {ds.name}. Skipping dataset", flush=True)
                 else:
-                    print(f"Model returned skipped prediction for entry {e.tag} from {ds.name}. Skipping dataset")
+                    print(f"Model returned skipped prediction for entry {e.tag} from {ds.name}. Skipping dataset", flush=True)
                 skip_ds = True
                 break 
             
@@ -171,7 +171,7 @@ class Benchmark:
         if n_procs == 1:
             results = self.run_single()
         else:
-            print("Parallel run")
+            print("Parallel run", flush=True)
             results = self.run_parallel(n_procs=n_procs, timeout=timeout)
 
         for name, scores in results.items():
@@ -201,7 +201,7 @@ class Benchmark:
             try:
                 scores = ft.result()
             except Exception as exc:
-                print("Exception occured while running model {m_name} on dataset {ds_name}")
+                print("Exception occured while running model {m_name} on dataset {ds_name}", flush=True)
                 print_exc()
                 scores = self.skipped_prediction
             results[m_name][ds_name] = scores

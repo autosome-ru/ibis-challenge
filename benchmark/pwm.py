@@ -4,6 +4,8 @@ from typing import ClassVar, Union
 import numpy as np
 import numpy.typing as npt
 
+from utils import END_LINE_CHARS
+
 @define
 class PFM:
     name: str
@@ -19,20 +21,21 @@ class PFM:
         if isinstance(path, str):
             path = Path(path)
         with path.open() as inp:
-            header = inp.readline()
+            header = inp.readline().strip(END_LINE_CHARS)
             fields = header.split(maxsplit=1)
             if len(fields) == 1:
                 name, description = fields[0], ""
             else:
                 name, description = fields
+            name = name.lstrip(">")
             matrix = np.loadtxt(inp, dtype=np.float32)
         return cls(name, description, matrix)
 
     def header(self):
         if not self.description:
-            return self.name
+            return f">{self.name}"
         else:
-            return "{self.name} {self.description}"
+            return f">{self.name} {self.description}"
     
     def write(self, path: Union[Path, str]):
         if isinstance(path, str):
@@ -69,18 +72,19 @@ class IntPWM:
         if isinstance(path, str):
             path = Path(path)
         with path.open() as inp:
-            header = inp.readline()
+            header = inp.readline().strip(END_LINE_CHARS)
             fields = header.split(maxsplit=1)
             if len(fields) == 1:
                 name, description = fields[0], ""
             else:
                 name, description = fields
+            name = name.lstrip(">")
             matrix = np.loadtxt(inp, dtype=np.int32)
         return cls(name, description, matrix)
 
     def header(self):
         if not self.description:
-            return ">{self.name}"
+            return f">{self.name}"
         else:
             return f">{self.name} {self.description}"
     
@@ -97,3 +101,5 @@ if __name__ == "__main__":
     pfm.intpwm().write("a.txt")
     pfm = PFM.load('/home_local/vorontsovie/greco-motifs/release_7d_motifs_2021-12-21/LEUTX.FL@CHS@paltry-buff-snail@HughesLab.Streme@Motif2.ppm')
     pfm.intpwm().write("b.txt")
+    pwm = IntPWM.load("b.txt")
+    pwm.write("c.txt")
