@@ -80,9 +80,9 @@ class IntPWM:
 
     def header(self):
         if not self.description:
-            return self.name
+            return ">{self.name}"
         else:
-            return "{self.name} {self.description}"
+            return f">{self.name} {self.description}"
     
     def write(self, path: Union[Path, str]):
         if isinstance(path, str):
@@ -95,3 +95,5 @@ class IntPWM:
 if __name__ == "__main__":
     pfm = PFM.load("/home_local/dpenzar/ibis-challenge/benchmark/example.pwm")
     pfm.intpwm().write("a.txt")
+    pfm = PFM.load('/home_local/vorontsovie/greco-motifs/release_7d_motifs_2021-12-21/LEUTX.FL@CHS@paltry-buff-snail@HughesLab.Streme@Motif2.ppm')
+    pfm.intpwm().write("b.txt")

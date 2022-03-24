@@ -67,6 +67,7 @@ class BenchmarkConfig:
     def make_benchmark(self):
         datasets = []
         for cfg in self.datasets:
+            print(f"Processing dataset {cfg.name}")
             ds_seq = cfg.make()
             datasets.extend(ds_seq)
         scorers = [cfg.make() for cfg in self.scorers]
