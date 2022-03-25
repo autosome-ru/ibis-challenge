@@ -151,6 +151,9 @@ class Benchmark:
     def score_model(self, model: Union[Model, ModelEntry]) -> dict[str, dict[str, float]]:
         model_scores = {}
         for ds in self.datasets:
+            if isinstance(model, ModelEntry):
+                if (model.tfs is not None) and (ds.tf_name not in model.tfs):
+                        continue
             ds_scores = self.score_model_on_ds(model, ds)
             model_scores[ds.name] = ds_scores
         return model_scores
@@ -193,15 +196,15 @@ class Benchmark:
                 tag = (model.name, ds.name)
                 ft = executor.submit(self.score_model_on_ds, model, ds)
                 futures[ft] = tag
-        concurrent.futures.wait(futures, timeout)
- 
+        
         results = {m.name: {} for m in self.models}
-        for ft in futures:
+        for ft in concurrent.futures.as_completed(futures, timeout):
             m_name, ds_name = futures[ft]
+            print(f"Finished the evaluation of {m_name} on {ds_name}", flush=True)
             try:
                 scores = ft.result()
             except Exception as exc:
-                print("Exception occured while running model {m_name} on dataset {ds_name}", flush=True)
+                print("Exception occured while evaluating {m_name} on dataset {ds_name}", flush=True)
                 print_exc()
                 scores = self.skipped_prediction
             results[m_name][ds_name] = scores
