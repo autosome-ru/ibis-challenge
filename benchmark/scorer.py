@@ -65,29 +65,33 @@ class PRAUC_TYPE(Enum):
 class PRROC_PRAUC(PRROCScorer):
     type: PRAUC_TYPE
     def score(self, y_score: List[float], y_real: List[BinaryLabel]):
-        pkg = import_PRROC()
-        from rpy2.robjects.vectors import FloatVector
-        labels = FloatVector([x.value for x in y_real])
-        scores = FloatVector(y_score)
-        if self.type is PRAUC_TYPE.INTEGRAL:
-            auroc = pkg.pr_curve(scores, weights_class0=labels, dg_compute=False)
-            auroc = auroc[1][0]
-        elif self.type is PRAUC_TYPE.DG:
-            auroc = pkg.pr_curve(scores, weights_class0=labels, dg_compute=True)
-            auroc = auroc[2][0]
-        else:
-            raise WrongPRAUCTypeException()
-        return auroc
+        from rpy2.rinterface_lib import openrlib
+        with openrlib.rlock:
+            pkg = import_PRROC()
+            from rpy2.robjects.vectors import FloatVector
+            labels = FloatVector([x.value for x in y_real])
+            scores = FloatVector(y_score)
+            if self.type is PRAUC_TYPE.INTEGRAL:
+                auroc = pkg.pr_curve(scores, weights_class0=labels, dg_compute=False)
+                auroc = auroc[1][0]
+            elif self.type is PRAUC_TYPE.DG:
+                auroc = pkg.pr_curve(scores, weights_class0=labels, dg_compute=True)
+                auroc = auroc[2][0]
+            else:
+                raise WrongPRAUCTypeException()
+            return auroc
 
 class PRROC_ROCAUC(PRROCScorer):
     def score(self, y_score: List[float], y_real: List[BinaryLabel]):
-        pkg = import_PRROC()
-        from rpy2.robjects.vectors import FloatVector
-        labels = FloatVector([x.value for x in y_real])
-        scores = FloatVector(y_score)
-        auroc = pkg.roc_curve(scores, weights_class0=labels)
-        auroc = auroc[1][0]
-        return auroc
+        from rpy2.rinterface_lib import openrlib
+        with openrlib.rlock:
+            pkg = import_PRROC()
+            from rpy2.robjects.vectors import FloatVector
+            labels = FloatVector([x.value for x in y_real])
+            scores = FloatVector(y_score)
+            auroc = pkg.roc_curve(scores, weights_class0=labels)
+            auroc = auroc[1][0]
+            return auroc
 
 @define(field_transformer=auto_convert)
 class ScorerInfo:
