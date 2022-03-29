@@ -4,6 +4,7 @@ from model import DictPredictor, RandomPredictor
 from pwmeval import PWMEvalPFMPredictor, PWMEvalPWMPredictor 
 from prediction import Prediction
 import pandas as pd
+import rpy2
 
 BENCHMARK_CONFIG = Path("/home_local/dpenzar/ibis-challenge/benchmark/benchmark.json")
 
@@ -62,5 +63,5 @@ if __name__ == '__main__':
     benchmark.add_model("pwm_add_best", model)
     benchmark.add_pfm("SCAN4", "pwm_model2", pfm_path, pwmeval_path=PWMEval_path)
 
-    benchmark.run(n_procs=10)
+    benchmark.run(n_workers=10)
     

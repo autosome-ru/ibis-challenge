@@ -40,6 +40,7 @@ class BenchmarkMode(Enum):
     USER = 1
     ADMIN = 2
 
+
 @define
 class Benchmark:
     name: str
@@ -169,13 +170,13 @@ class Benchmark:
     def get_results_file_path(self, name: str):
         return self.results_dir / f"{name}.tsv"
     
-    def run(self, n_procs=1, timeout=None):
+    def run(self, n_workers=1, timeout=None, how="thread"):
         self.results_dir.mkdir(exist_ok=True)
-        if n_procs == 1:
+        if n_workers == 1:
             results = self.run_single()
         else:
             print("Parallel run", flush=True)
-            results = self.run_parallel(n_procs=n_procs, timeout=timeout)
+            results = self.run_parallel(n_workers=n_workers, timeout=timeout, how=how)
 
         for name, scores in results.items():
             path = self.get_results_file_path(name)
@@ -185,28 +186,35 @@ class Benchmark:
     def run_single(self):
         return {entry.name: self.score_model(entry.model) for entry in self.models}
     
-    def run_parallel(self, n_procs=2, timeout=None) -> dict[str, dict[str, dict[str, float]]]:
+    def run_parallel(self, n_workers=2, timeout=None, how="thread") -> dict[str, dict[str, dict[str, float]]]:
         self.results_dir.mkdir(exist_ok=True)
-        executor = concurrent.futures.ProcessPoolExecutor(max_workers=n_procs)
-        futures = {}
-        for model in self.models:
-            for ds in self.datasets:
-                if (model.tfs is not None) and (ds.tf_name not in model.tfs):
-                    continue
-                tag = (model.name, ds.name)
-                ft = executor.submit(self.score_model_on_ds, model, ds)
-                futures[ft] = tag
-        
-        results = {m.name: {} for m in self.models}
-        for ft in concurrent.futures.as_completed(futures, timeout):
-            m_name, ds_name = futures[ft]
-            print(f"Finished the evaluation of {m_name} on {ds_name}", flush=True)
-            try:
-                scores = ft.result()
-            except Exception as exc:
-                print("Exception occured while evaluating {m_name} on dataset {ds_name}", flush=True)
-                print_exc()
-                scores = self.skipped_prediction
-            results[m_name][ds_name] = scores
+        if how == "thread":
+            executor_cls = concurrent.futures.ThreadPoolExecutor
+        elif how == "parallel":
+            executor_cls = concurrent.futures.ProcessPoolExecutor
+        else:
+            raise BenchmarkException("Wrong parallel type")
+
+        with executor_cls(max_workers=n_workers) as executor:
+            futures = {}
+            for model in self.models:
+                for ds in self.datasets:
+                    if (model.tfs is not None) and (ds.tf_name not in model.tfs):
+                        continue
+                    tag = (model.name, ds.name)
+                    ft = executor.submit(self.score_model_on_ds, model, ds)
+                    futures[ft] = tag
+            
+            results = {m.name: {} for m in self.models}
+            for ft in concurrent.futures.as_completed(futures, timeout):
+                m_name, ds_name = futures[ft]
+                print(f"Finished the evaluation of {m_name} on {ds_name}", flush=True)
+                try:
+                    scores = ft.result()
+                except Exception as exc:
+                    print("Exception occured while evaluating {m_name} on dataset {ds_name}", flush=True)
+                    print_exc()
+                    scores = self.skipped_prediction
+                results[m_name][ds_name] = scores
 
         return results
