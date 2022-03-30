@@ -1,0 +1,5 @@
+tag	TF1	TF2	TF3
+uniq1	5	nodata	nodata
+uniq2	nodata	0.12	nodata
+uniq3	nodata	nodata	nodata
+uniq4	nodata	nodata	nodata
