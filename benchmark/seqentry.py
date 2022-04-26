@@ -1,5 +1,5 @@
 from utils import singledispatchmethod
-from attrs import define, asdict
+from attrs import define, asdict, field
 from pbmrecord import PBMRecord
 from utils import auto_convert
 from sequence import Sequence
@@ -11,9 +11,9 @@ from typing import Optional
 @define(field_transformer=auto_convert)
 class SeqEntry:
     sequence: Sequence
-    label: BinaryLabel
     tag: str
-    metainfo: dict
+    label: Optional[BinaryLabel] = None
+    metainfo: dict = field(factory=dict)
 
     @singledispatchmethod
     @classmethod
@@ -29,7 +29,7 @@ class SeqEntry:
         metainfo['source'] = "PBM"
         tag = record.id_probe
         sequence = Sequence(metainfo['linker_sequence'] + record.pbm_sequence.seq)
-        return cls(sequence, label, tag, metainfo)
+        return cls(sequence, tag, label, metainfo)
 
     def get(self, key, default=None):
         try:

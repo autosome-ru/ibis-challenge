@@ -1,1 +1,3 @@
 benchmark/__pycache__/
+.IRIS_TEMPDIR
+.*

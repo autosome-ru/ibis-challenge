@@ -17,8 +17,12 @@ class PWMEvalPFMPredictor(Model):
 
     @classmethod
     def from_pfm(cls, 
-                 pfm_path: Path, 
-                 pwmeval_path: Path):
+                 pfm_path: Union[Path, str], 
+                 pwmeval_path: Union[Path, str]):
+        if isinstance(pfm_path, str):
+            pfm_path = Path(pfm_path)
+        if isinstance(pwmeval_path, str):
+            pwmeval_path = Path(pwmeval_path)
         return cls(matrix_path=pfm_path, 
                    pwmeval_path=pwmeval_path)
 

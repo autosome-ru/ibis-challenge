@@ -67,17 +67,28 @@ def register_global_converter(type_, converter):
     GLOBAL_CONVERTERS[type_.__name__] = converter
 
 def register_enum(enum_tp):
+    conv_dt = {}
+    for mem in enum_tp:
+        conv_dt[mem] = mem
+        conv_dt[mem.value] = mem
+        conv_dt[mem.name] = mem
+        if isinstance(mem.value, str):
+            conv_dt[mem.value.lower()] = mem
+        if isinstance(mem.name, str):
+            conv_dt[mem.name.lower()] = mem
+
     def converter(x: Union[str, enum_tp]):
-        if isinstance(x, enum_tp):
-            return x
-        if isinstance(x, str):
-            x_canonical = x.lower()
-        else:
-            x_canonical = x
         try:
-            return enum_tp(x_canonical)
+            return conv_dt[x]
+            
         except KeyError:
-            pass
+            if isinstance(x, str):
+                try:
+                    return conv_dt[x.lower()]
+                except KeyError:
+                    pass
+
+
         msg = f"Wrong value '{x}' for enum '{enum_tp}'"
         possible_exc = "Wrong{enum_tp.__name__}Exception"
         if possible_exc in globals():
@@ -89,14 +100,13 @@ def register_enum(enum_tp):
     return enum_tp 
 
 def register_type(type_):
-    register_global_converter(type_, lambda x: type_(x))
+    register_global_converter(type_, lambda x: type_(x) if not isinstance(x, type_) else x)
     return type_
 
 
 def auto_convert(cls, fields):
     results = []
     for field in fields:
-
         if field.converter is not None:
             results.append(field)
             continue

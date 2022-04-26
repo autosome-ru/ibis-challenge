@@ -77,13 +77,9 @@ class Dataset(metaclass=ABCMeta):
         return val
     
     def to_tsv(self,
-               path: Path, 
-               mode: Optional[DatasetType] = DatasetType.TEST,
+               path: Path,
                ds_fields: Optional[List[str]] = None):
-        if mode is None:
-            fields = self.infer_fields()
-        else:
-            fields = self.get_fields()
+        fields = self.get_fields()
         
         if ds_fields:
            ds_values = [self.get(fl, self.NO_INFO_VALUE) for fl in ds_fields]
@@ -124,16 +120,16 @@ class PBMDataset(Dataset):
                   + ['protocol']
 
     def get_test_fields(self):
-        fields = [Dataset.TAG_FIELD, self.SEQUENCE_FIELD]
+        fields = [self.TAG_FIELD, self.SEQUENCE_FIELD]
         for f in self.META_FIELDS:
             if f not in self.TRAIN_ONLY_META_FIELDS:
                 fields.append(f)
         return fields
 
     def get_train_fields(self):
-        fields = [Dataset.TAG_FIELD, self.SEQUENCE_FIELD, self.LABEL_FIELD]
+        fields = [self.TAG_FIELD, self.SEQUENCE_FIELD, self.LABEL_FIELD]
         fields.extend(self.META_FIELDS)
         return fields
 
-    def to_canonical_format(self, path, mode: Optional[DatasetType] = DatasetType.TEST):
-        return self.to_tsv(path, mode)
+    def to_canonical_format(self, path):
+        return self.to_tsv(path)
