@@ -1,3 +1,7 @@
 benchmark/__pycache__/
 .IRIS_TEMPDIR
 .*
+benchmark/check_chip.ipynb
+benchmark/check_pbm.py
+benchmark/trials.py
+benchmark/test.py
