@@ -1,6 +1,6 @@
 from typing import Union
 from pathlib import Path
-from benchmark.labels import BinaryLabel
+from labels import BinaryLabel
 
 from dataset import Dataset, DatasetType
 from seqentry import SeqEntry
@@ -36,7 +36,7 @@ class ChIPSeqDataset(Dataset):
                 tag = dt.pop(cls.TAG_FIELD)
                 label = dt.pop(cls.LABEL_FIELD, None)
                 if label is not None:
-                    label = BinaryLabel(label)
+                    label = BinaryLabel.from_str(label)
                 entry = SeqEntry(sequence=Sequence(sequence), tag=tag, label=label)  
                 self.entries.append(entry)
         return self

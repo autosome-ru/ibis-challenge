@@ -15,6 +15,9 @@ class SeqEntry:
     label: Optional[BinaryLabel] = None
     metainfo: dict = field(factory=dict)
 
+    def __len__(self) -> int:
+        return len(self.sequence)
+
     @singledispatchmethod
     @classmethod
     def from_record(cls, record: Record, label: Optional[BinaryLabel]):

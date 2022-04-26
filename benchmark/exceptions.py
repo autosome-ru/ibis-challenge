@@ -39,3 +39,6 @@ class ProtocolException(BenchmarkException):
 
 class SubmissionFormatException(BenchmarkException):
     pass
+
+class WrongLabelException(BenchmarkException):
+    pass
