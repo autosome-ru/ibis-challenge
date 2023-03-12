@@ -1,1 +1,0 @@
-PBM_EXAMPLE_PATH =  "/home_local/vorontsovie/greco-data/release_7a.2021-10-14/full/PBM.QNZS/Train_intensities/ZHX3.DBD@PBM.ME@PBM13852.5GTGAAATTGTTATCCGCTCT@QNZS.snappy-zucchini-yak.Train.tsv"
