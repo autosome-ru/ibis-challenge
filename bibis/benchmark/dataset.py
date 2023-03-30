@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 @dataclass
-class Dataset:
+class DatasetInfo:
     name: str
     tf: str
     path: Path

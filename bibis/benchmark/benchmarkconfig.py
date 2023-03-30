@@ -8,12 +8,12 @@ from ..scoring.scorer import ScorerInfo
 
 from pathlib import Path 
 
-from .dataset import Dataset 
+from .dataset import DatasetInfo
 
 @dataclass
 class BenchmarkConfig:
     name: str
-    datasets: list[Dataset]
+    datasets: list[DatasetInfo]
     scorers: list[ScorerInfo]
     results_dir: Path
     pwmeval_path: Path
@@ -39,7 +39,7 @@ class BenchmarkConfig:
     def from_dt(cls, dt: dict):
         cls.validate_benchmark_dict(dt)
         name = dt[cls.NAME_FIELD]
-        datasets = [Dataset.from_dict(rec)\
+        datasets = [DatasetInfo.from_dict(rec)\
                         for rec in dt[cls.DATASETS_FIELD]]
         scorers = [ScorerInfo.from_dict(rec)\
                         for rec in dt[cls.SCORERS_FIELD]]
@@ -73,12 +73,3 @@ class BenchmarkConfig:
         with open(path, "r") as inp:
             dt = json.load(inp)
         return cls.from_dt(dt)
-
-    #def make_benchmark(self):
-    #    scorers = [cfg.make() for cfg in self.scorers]
-    #    return Benchmark(self.name, 
-    #                     self.datasets,
-    #                     scorers,
-    #                     self.results_dir,
-    #                     self.metainfo, 
-    #                     self.pwmeval_path)

@@ -4,8 +4,6 @@ from dataclasses import dataclass, field
 from typing import List
 from sklearn.metrics import roc_auc_score, average_precision_score
 import numpy as np
-from enum import Enum
-from exceptions import WrongPRAUCTypeException, WrongScorerException
 
 @dataclass
 class Scorer(metaclass=ABCMeta):
@@ -73,7 +71,7 @@ class PRROC_PRAUC(PRROCScorer):
                 auroc = pkg.pr_curve(scores, weights_class0=labels, dg_compute=True)
                 auroc = auroc[2][0]
             else:
-                raise WrongPRAUCTypeException()
+                raise Exception()
             return auroc
 
 class PRROC_ROCAUC(PRROCScorer):
@@ -112,13 +110,13 @@ class ScorerInfo:
         elif self.name == "prroc_prauc":
             tp = self.params.get("type")
             if tp is None:
-                raise WrongScorerException("type must be specified for scorers from PRROC package")
+                raise Exception("type must be specified for scorers from PRROC package")
             tp = tp.lower()
             return PRROC_PRAUC(self.alias, tp)
         elif self.name == "constant_scorer":
             cons = self.params.get("cons")
             if cons is None:
-                raise WrongScorerException("cons must be specified for scorers from PRROC package")
+                raise Exception("cons must be specified for scorers from PRROC package")
             cons = float(cons)
             return ConstantScorer(self.alias, cons)
-        raise WrongScorerException(f"Wrong scorer: {self.name}")
+        raise Exception(f"Wrong scorer: {self.name}")
