@@ -1,4 +1,5 @@
 benchmark/__pycache__/
 ibis_challenge/examples
 ibis_challenge/bibis/__pycache__
-**/__pycache__/
+__pycache__/
+*.pyc
