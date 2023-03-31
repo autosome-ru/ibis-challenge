@@ -8,7 +8,7 @@ from .prediction import Prediction
 from ..utils import END_LINE_CHARS
 
 @dataclass
-class Submission:
+class ScoreSubmission:
     tags: list[str]
     _sub: dict[str, Prediction]
 
@@ -51,7 +51,7 @@ class Submission:
                     _sub[tf_name][tag] = Prediction.str2val(val)
         return cls(tags, _sub)
 
-    def prepare_for_evaluation(self) -> 'Submission':
+    def prepare_for_evaluation(self) -> 'ScoreSubmission':
         _sub = self._sub.copy()
         tags = self.tags
 
@@ -65,7 +65,8 @@ class Submission:
         if len(_sub) == 0:
             msg = f'Submission must contain full information for at least one factor'
             raise Exception(msg)
-        return Submission(tags, _sub)
+        cls = type(self)
+        return cls(tags, _sub)
 
     @property
     def header(self) -> str:
@@ -105,10 +106,10 @@ class Submission:
         return cls(tags, _sub)
 
 if __name__ == "__main__":
-    Submission.write_template(tfs=['TF1', 'TF2', 'TF3'], 
+    ScoreSubmission.write_template(tfs=['TF1', 'TF2', 'TF3'], 
                               tags=['uniq1', 'uniq2', 'uniq3', 'uniq4'],
                               path=Path("sub_template.txt"))
-    sub = Submission.template(tfs=['TF1', 'TF2', 'TF3'], 
+    sub = ScoreSubmission.template(tfs=['TF1', 'TF2', 'TF3'], 
                               tags=['uniq1', 'uniq2', 'uniq3', 'uniq4'])
     sub['TF1']['uniq1'] = 5
     sub['TF2']['uniq2'] = 0.12
@@ -121,7 +122,7 @@ if __name__ == "__main__":
         sub['TF3'][t] = 0.5
     sub = sub.prepare_for_evaluation()
     sub.write(Path("sub.txt"))
-    sub = Submission.load("sub.txt")
+    sub = ScoreSubmission.load("sub.txt")
     print(sub)
-    sub = Submission.load("sub_template.txt")
+    sub = ScoreSubmission.load("sub_template.txt")
     print(sub)

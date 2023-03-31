@@ -5,8 +5,9 @@ from pathlib import Path
 class DatasetInfo:
     name: str
     tf: str
+    background: str
     path: Path
     
     @classmethod
     def from_dict(cls, path: Path):
-        return cls("", "", path)
+        raise NotImplementedError()

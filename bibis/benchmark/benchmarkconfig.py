@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 import json
 
 from pathlib import Path
+from pyclbr import Class
 from typing import ClassVar
 
 from ..scoring.scorer import ScorerInfo
@@ -13,6 +14,7 @@ from .dataset import DatasetInfo
 @dataclass
 class BenchmarkConfig:
     name: str
+    kind: str
     datasets: list[DatasetInfo]
     scorers: list[ScorerInfo]
     results_dir: Path
@@ -20,6 +22,7 @@ class BenchmarkConfig:
     metainfo: dict = field(default_factory=dict)
     
     NAME_FIELD: ClassVar[str] = 'name'
+    KIND_FIELD: ClassVar[str] = "kind"
     DATASETS_FIELD: ClassVar[str] = 'datasets'
     SCORERS_FIELD: ClassVar[str] = 'scorers'
     PWMEVAL_PATH_FIELD: ClassVar[str] = "pwmeval"
@@ -44,6 +47,8 @@ class BenchmarkConfig:
         scorers = [ScorerInfo.from_dict(rec)\
                         for rec in dt[cls.SCORERS_FIELD]]
         
+        kind = dt[cls.KIND_FIELD]
+        
         results_dir = dt.get(cls.RESULTS_DIR_FIELD)
         if results_dir is None:
             results_dir = Path("results")
@@ -61,12 +66,13 @@ class BenchmarkConfig:
             if key not in (cls.NAME_FIELD, cls.DATASETS_FIELD, cls.SCORERS_FIELD, cls.PWMEVAL_PATH_FIELD, cls.RESULTS_DIR_FIELD):
                 metainfo[key] = value
 
-        return cls(name, 
-                   datasets,
-                   scorers, 
-                   results_dir, 
-                   pwmeval_path,
-                   metainfo)
+        return cls(name=name, 
+                   kind=kind,
+                   datasets=datasets,
+                   scorers=scorers, 
+                   results_dir=results_dir, 
+                   pwmeval_path=pwmeval_path,
+                   metainfo=metainfo)
 
     @classmethod
     def from_json(cls, path: Path):

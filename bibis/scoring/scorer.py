@@ -27,16 +27,16 @@ class SklearnScorer(BinaryScorer):
     pass
 
 class SklearnROCAUC(SklearnScorer):
-    def score(self, y_score: List[float], y_real: List[int]):
+    def score(self, y_score: List[float], y_real: List[int]) -> float:
         y_score_arr = np.array(y_score)
         y_real_arr = np.array(y_real)
-        return roc_auc_score(y_true=y_real_arr, y_score=y_score_arr)
+        return float(roc_auc_score(y_true=y_real_arr, y_score=y_score_arr))
     
 class SklearnPRAUC(SklearnScorer):
-    def score(self, y_score: List[float], y_real: List[int]):
+    def score(self, y_score: List[float], y_real: List[int]) -> float:
         y_score_arr = np.array(y_score)
         y_real_arr = np.array(y_real)
-        return average_precision_score(y_true=y_real_arr, y_score=y_score_arr)
+        return float(average_precision_score(y_true=y_real_arr, y_score=y_score_arr))
 
 class PRROCScorer(BinaryScorer):
     pass
@@ -57,7 +57,7 @@ def import_PRROC():
 class PRROC_PRAUC(PRROCScorer):
     type: str
 
-    def score(self, y_score: List[float], y_real: List[int]):
+    def score(self, y_score: List[float], y_real: List[int]) -> float:
         from rpy2.rinterface_lib import openrlib
         with openrlib.rlock:
             pkg = import_PRROC()
@@ -75,7 +75,7 @@ class PRROC_PRAUC(PRROCScorer):
             return auroc
 
 class PRROC_ROCAUC(PRROCScorer):
-    def score(self, y_score: List[float], y_real: List[int]):
+    def score(self, y_score: List[float], y_real: List[int]) -> float:
         from rpy2.rinterface_lib import openrlib
         with openrlib.rlock:
             pkg = import_PRROC()

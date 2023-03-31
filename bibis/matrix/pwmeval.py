@@ -67,7 +67,7 @@ class MatrixSumPredictor:
                        stdin=subprocess.PIPE)
         stdout, stderr = p.communicate()
         if len(stderr) != 0 or p.returncode != 0:
-            raise Exception("PWMEval exited with error")
+            raise Exception(f"PWMEval exited with error {stderr}")
         try:
             stdout = stdout.decode()
         except UnicodeDecodeError:
@@ -135,7 +135,7 @@ class MatrixMaxPredictor: #(Model):
                        stdin=subprocess.PIPE)
         stdout, stderr = p.communicate()
         if len(stderr) != 0 or p.returncode != 0:
-            raise Exception("PWMEval exited with error")
+            raise Exception(f"PWMEval exited with error {stderr}")
         try:
             stdout = stdout.decode()
         except UnicodeDecodeError:

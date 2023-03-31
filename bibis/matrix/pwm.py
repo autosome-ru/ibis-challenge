@@ -29,6 +29,8 @@ class PFM:
                 name, description = fields
             name = name.lstrip(">")
             matrix = np.loadtxt(inp, dtype=np.float32)
+            if len(matrix.shape) == 1:
+                matrix = np.array([matrix])
             matrix = np.round(matrix, cls.SIGNIGICANT_DIGITS)
         return cls(name, description, matrix)
 
