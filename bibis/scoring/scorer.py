@@ -120,3 +120,10 @@ class ScorerInfo:
             cons = float(cons)
             return ConstantScorer(self.alias, cons)
         raise Exception(f"Wrong scorer: {self.name}")
+    
+    def to_dict(self) -> dict:
+        dt = {}
+        dt['name'] = self.name
+        dt['alias'] = self.alias
+        dt['params'] = self.params
+        return dt

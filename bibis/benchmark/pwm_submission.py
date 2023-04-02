@@ -1,3 +1,4 @@
+from ast import Name
 import string 
 from pathlib import Path
 from typing import ClassVar
@@ -20,6 +21,7 @@ class PFMInfo:
 
 @dataclass
 class PWMSubmission:
+    name: str 
     path: Path | str 
     available_tfs: set[str]
     

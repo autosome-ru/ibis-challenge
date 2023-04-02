@@ -23,12 +23,20 @@ from .pwm_submission import PFMInfo, PWMSubmission
 
 class Submit:
     name: str
+    scoring_type: str
+    parent_name: str = ""
 
 @dataclass
 class AAASubmit(Submit):
     name: str
-    score_path: Path
-
+    scores: ScoreSubmission
+    scoring_type: str = "AAA"
+    parent_name: str = ""
+    
+    def __post_init__(self):
+        self.parent_name = self.name 
+    
+    
 @dataclass
 class MatrixSumbit(Submit):
     name: str
@@ -36,6 +44,7 @@ class MatrixSumbit(Submit):
     matrix_type: str
     scoring_type: str
     tf: str
+    parent_name: str 
     
     def _predict_pwm(self,
                      ds: DatasetInfo,
@@ -110,43 +119,51 @@ class Benchmark:
         ds_scores = {sc.name: self.SKIPVALUE for sc in self.scorers}
         return ds_scores
     
-    def submit_aaa_model(self, name: str, score_path: str | Path):
-        if isinstance(score_path, str):
-            score_path = Path(score_path)
-        aaa_sub = AAASubmit(name=name, 
-                            score_path=score_path)
+    
+    def submit_score_submission(self, sub: ScoreSubmission):
+        aaa_sub = AAASubmit(name=sub.name,
+                            scores=sub)
         self.submits.append(aaa_sub)
         
-    def submit_matrix_model(self, 
-                           name: str, 
-                           tf: str,
-                           matrix_path: str | Path, 
-                           matrix_type: str, 
-                           scoring_type: str):
+    
+        
+    def submit_matrix_model(self,
+                            name: str, 
+                            tf: str,
+                            matrix_path: str | Path, 
+                            matrix_type: str, 
+                            scoring_type: str,
+                            parent_name: str = ""):
         if isinstance(matrix_path, str):
             matrix_path = Path(matrix_path)
         mat_sub = MatrixSumbit(name=name,
                                matrix_path=matrix_path,
                                matrix_type=matrix_type,
                                scoring_type=scoring_type, 
-                               tf=tf)
+                               tf=tf,
+                               parent_name=parent_name)
         self.submits.append(mat_sub)
         
-    def submit_pfm_info(self, pfm_info: PFMInfo):
+    def submit_pfm_info(self, 
+                        pfm_info: PFMInfo,
+                        parent_name: str = ""):
         self.submit_matrix_model(name=pfm_info.tag,
                                  tf=pfm_info.tf,
                                  matrix_path=pfm_info.path,
                                  matrix_type="pfm",
-                                 scoring_type="best")
+                                 scoring_type="best",
+                                 parent_name=parent_name)
         self.submit_matrix_model(name=pfm_info.tag,
                                  tf=pfm_info.tf,
                                  matrix_path=pfm_info.path,
                                  matrix_type="pfm",
-                                 scoring_type="sumscore")
+                                 scoring_type="sumscore",
+                                 parent_name=parent_name)
         
     def submit_pwm_submission(self, pwm_sub: PWMSubmission):
-        for pfm_info in pwm_sub.split_into_pfms(self.results_dir):
-            self.submit_pfm_info(pfm_info)
+        sub_dir = self.results_dir / pwm_sub.name
+        for pfm_info in pwm_sub.split_into_pfms(sub_dir):
+            self.submit_pfm_info(pfm_info, parent_name=pwm_sub.name)
         
     def score_prediction(self, ds: DatasetInfo, prediction: Prediction) -> dict[str, float]:
         labelled_seqs = read_fasta(ds.path)
@@ -156,7 +173,8 @@ class Benchmark:
             for s in labelled_seqs:
                 score = prediction.get(s.tag)
                 if score is None:
-                    print(f"Prediction doesn't contain information for sequence {s.tag}, skipping prediction", file=sys.stderr)
+                    print(f"Prediction doesn't contain information for sequence {s.tag}, skipping prediction",
+                          file=sys.stderr)
                     return self.skipped_prediction
                 pred_y.append(score)
             
@@ -168,12 +186,17 @@ class Benchmark:
             raise NotImplementedError()
 
     def score_aaa_submit(self, submit: AAASubmit) -> dict[str, dict[str, float]]:
-        sub = ScoreSubmission.load(submit.score_path)
         scores = {}
         for ds in self.datasets:
-            if ds.name in sub:
-                scores[ds.name] = self.score_prediction(ds, sub[ds.name])
+            if ds.name in submit.scores:
+                scores[ds.name] = self.score_prediction(ds, submit.scores[ds.name])
+            else:
+                print(f"No predictions for {ds.name} are provided. Skipping", 
+                      file=sys.stderr)
+                scores[ds.name] = self.skipped_prediction
         return scores 
+    
+    
     
     def score_matrix_submit(self, submit: MatrixSumbit) -> dict[str, dict[str, float]]:
         scores = {}
@@ -187,29 +210,34 @@ class Benchmark:
         return self.results_dir / f"{name}.tsv"
     
     def run(self):
-        
         ds_mapping = {ds.name: ds for ds in self.datasets}
         results = []
         with tqdm.tqdm(total=len(self.submits)) as pbar:
             for sub in self.submits:
-                pbar.set_description(f"Processing {sub.name}")
+                pbar.set_description(f"Processing {sub.name}, {sub.scoring_type}")
                 if isinstance(sub, AAASubmit):
                     scores = self.score_aaa_submit(sub)
-                    scoring_type = "AAA"
+
                 elif isinstance(sub, MatrixSumbit):
                     scores = self.score_matrix_submit(sub)
-                    scoring_type = sub.scoring_type
                 else:
                     raise Exception("Wrong submit type")
                 
                 for ds_name, ds_dt in scores.items():
                     for sc, value in ds_dt.items():
                         ds = ds_mapping[ds_name]
-                        results.append([sub.name, scoring_type, ds.tf, ds.background, sc, value])
+                        results.append([sub.parent_name, 
+                                        sub.name, 
+                                        sub.scoring_type,
+                                        ds.tf, 
+                                        ds.background,
+                                        sc,
+                                        value])
                 pbar.update(1)
         
         df = pd.DataFrame(results,
-                          columns=["name",
+                          columns=["submission_name",
+                                   "part_name",
                                    "scoring_type",
                                    "tf", 
                                    "background",

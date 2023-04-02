@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 import json
 
 from pathlib import Path
-from pyclbr import Class
 from typing import ClassVar
 
 from ..scoring.scorer import ScorerInfo
@@ -17,7 +16,6 @@ class BenchmarkConfig:
     kind: str
     datasets: list[DatasetInfo]
     scorers: list[ScorerInfo]
-    results_dir: Path
     pwmeval_path: Path
     metainfo: dict = field(default_factory=dict)
     
@@ -26,7 +24,6 @@ class BenchmarkConfig:
     DATASETS_FIELD: ClassVar[str] = 'datasets'
     SCORERS_FIELD: ClassVar[str] = 'scorers'
     PWMEVAL_PATH_FIELD: ClassVar[str] = "pwmeval"
-    RESULTS_DIR_FIELD: ClassVar[str] = "results_dir"
 
     @classmethod
     def validate_benchmark_dict(cls, dt: dict):
@@ -39,7 +36,7 @@ class BenchmarkConfig:
             raise Exception("No information about scorers found")
 
     @classmethod
-    def from_dt(cls, dt: dict):
+    def from_dt(cls, dt: dict) -> 'BenchmarkConfig':
         cls.validate_benchmark_dict(dt)
         name = dt[cls.NAME_FIELD]
         datasets = [DatasetInfo.from_dict(rec)\
@@ -49,13 +46,6 @@ class BenchmarkConfig:
         
         kind = dt[cls.KIND_FIELD]
         
-        results_dir = dt.get(cls.RESULTS_DIR_FIELD)
-        if results_dir is None:
-            results_dir = Path("results")
-        elif isinstance(results_dir, str):
-            results_dir = Path(results_dir)
-        results_dir = results_dir.absolute()
-        
         pwmeval_path = dt.get(cls.PWMEVAL_PATH_FIELD)
         if pwmeval_path is None:
             raise Exception("PWMEval path must be provided")
@@ -63,19 +53,42 @@ class BenchmarkConfig:
         metainfo = dt.get('metainfo', {})
 
         for key, value in dt.items():
-            if key not in (cls.NAME_FIELD, cls.DATASETS_FIELD, cls.SCORERS_FIELD, cls.PWMEVAL_PATH_FIELD, cls.RESULTS_DIR_FIELD):
+            if key not in (cls.NAME_FIELD, cls.DATASETS_FIELD, cls.SCORERS_FIELD, cls.PWMEVAL_PATH_FIELD):
                 metainfo[key] = value
 
         return cls(name=name, 
                    kind=kind,
                    datasets=datasets,
                    scorers=scorers, 
-                   results_dir=results_dir, 
                    pwmeval_path=pwmeval_path,
                    metainfo=metainfo)
 
     @classmethod
-    def from_json(cls, path: Path):
+    def from_json(cls, path: Path | str) -> 'BenchmarkConfig':
         with open(path, "r") as inp:
             dt = json.load(inp)
         return cls.from_dt(dt)
+    
+    def to_dict(self) -> dict:
+        dt = {}
+        dt[self.NAME_FIELD] = self.name
+        dt[self.KIND_FIELD] = self.kind
+        dt['metainfo'] = self.metainfo
+        dt[self.PWMEVAL_PATH_FIELD] = str(self.pwmeval_path)
+        
+        datasets = []
+        for ds in self.datasets:
+            datasets.append(ds.to_dict())
+        dt[self.DATASETS_FIELD] = datasets
+        
+        scorers = []
+        for sc in self.scorers:
+            scorers.append(sc.to_dict())
+        dt[self.SCORERS_FIELD] = scorers
+        
+        return dt
+    
+    def save(self, path: Path | str):
+        dt = self.to_dict()
+        with open(path, 'w') as inp:
+            json.dump(dt, inp)
