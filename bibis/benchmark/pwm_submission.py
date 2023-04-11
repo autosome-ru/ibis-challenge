@@ -1,8 +1,8 @@
-from ast import Name
+import sys
 import string 
 from pathlib import Path
 from typing import ClassVar
-
+from collections import Counter
 from dataclasses import dataclass
 from bibis.utils import END_LINE_CHARS
 
@@ -123,4 +123,14 @@ class PWMSubmission:
         return chunks
                                  
     def validate(self):
-        self.split_into_chunks()
+        chunks = self.split_into_chunks()
+        submmitted_tfs =  Counter(tf for tf, _ in chunks.values())
+        
+        top_sub_tf, sub_cnt = submmitted_tfs.most_common(1)[0]
+        if  sub_cnt > self.MAX_PWM_PER_TF:
+            raise PWMSubmissionFormatException(f"{sub_cnt} pwms for {top_sub_tf} provided, only {self.MAX_PWM_PER_TF} is allowed")
+        
+        for tf in self.available_tfs:
+            if not tf in submmitted_tfs:
+                print(f"Warning: no pwm submitted for {tf}", file=sys.stderr)
+        
