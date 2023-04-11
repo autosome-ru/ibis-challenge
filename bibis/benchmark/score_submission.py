@@ -7,12 +7,18 @@ from typing import ClassVar
 from .prediction import Prediction
 from ..utils import END_LINE_CHARS
 
+class ScoreSubmissionFormatException(Exception):
+    pass
+
+
 @dataclass
 class ScoreSubmission:
     name: str 
     tags: list[str]
     _sub: dict[str, Prediction]
     tag_col_name: str = "tag" 
+    MAX_PRECISION: ClassVar[int] = 5
+    MAX_0_1_DIFF: ClassVar[float] = 0.000015
 
     FIELDSEP: ClassVar[str] = "\t"
 
@@ -27,6 +33,35 @@ class ScoreSubmission:
 
     def __contains__(self, ds_name: str) -> bool:
         return ds_name in self._sub
+    
+    @classmethod
+    def validate_score(cls, score_str: str):
+        if score_str == Prediction.REPR_SKIPVALUE:
+            return
+        number = None        
+        try:
+            number = float(score_str)
+        except ValueError:
+            pass
+        
+        if number is None:
+            raise ScoreSubmissionFormatException(f"Submission score must { Prediction.REPR_SKIPVALUE} or number: {score_str}")
+        
+        if abs(number - 1) > cls.MAX_0_1_DIFF:
+            raise ScoreSubmissionFormatException(f"Submission score must be in [0, 1]")
+        
+        if number < -cls.MAX_0_1_DIFF:
+            raise ScoreSubmissionFormatException(f"Submission score must be in [0, 1]")
+        
+        fields = score_str.split('.')
+        
+        if len(fields) == 1:
+            return 
+        after_point = fields[1]
+        
+        if len(after_point) > cls.MAX_PRECISION:
+            raise ScoreSubmissionFormatException(f"Submission score must contain at most {cls.MAX_PRECISION} after .")
+        
     
     @classmethod
     def load(cls, path: Path | str, name: str | None = None):
@@ -50,6 +85,7 @@ class ScoreSubmission:
                 tag = vals[0]
                 tags.append(tag)
                 for tf_name, val in zip(tfs, vals[1:]):
+                    cls.validate_score(val)
                     _sub[tf_name][tag] = Prediction.str2val(val)
         return cls(name=name, 
                    tags=tags, 

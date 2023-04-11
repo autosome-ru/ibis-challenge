@@ -58,7 +58,7 @@ class Prediction:
         return float(value)
 
     @classmethod
-    def val2str(cls, value: float) -> str:
+    def val2str(cls, value: float, precision: int = 5) -> str:
         if cls.is_skipvalue(value):
             return cls.REPR_SKIPVALUE
         return str(value)
