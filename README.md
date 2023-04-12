@@ -14,8 +14,9 @@ and update the path to PWMEval in benchmark_example.json
 
 * validate_aaa.py - script to validate aaa submission 
 example run:
-
+```console
 python cli/validate_aaa.py --benchmark safe_examples/benchmark_example.json --aaa_sub safe_examples/example_score_sub.txt 
+```
 
 * validate_pwm.py - script to validate pwm submission 
 example run:
