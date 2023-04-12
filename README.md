@@ -20,7 +20,9 @@ python cli/validate_aaa.py --benchmark safe_examples/benchmark_example.json --aa
 
 * validate_pwm.py - script to validate pwm submission 
 example run:
+```console
 python validate_pwm.py --benchmark safe_examples/benchmark_example.json --pwm_sub safe_examples/pwm_submission.txt 
+```
 
 Both scripts write errors and warning to stderr. They return non-zero error code if any error occured
 1 - if format error occured (wrong submission format)
@@ -30,11 +32,15 @@ Both scripts write errors and warning to stderr. They return non-zero error code
 
 Run pwm submission benchmarking:
 
+```console
 python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/pwm_submission.txt --sub_type pwm
+```
 
 Run aaa submission benchmarking:
 
+```console
 python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/example_score_sub.txt --sub_type aaa
+```
 
 Script write errors and warning to stderr. They return non-zero error code if any error occured
 1 - if format error occured (wrong submission format)
@@ -42,4 +48,6 @@ Script write errors and warning to stderr. They return non-zero error code if an
 
 By default, it will write scores to stdout. This behaviour can be changed using --scores_path
 
+```console
 python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/pwm_submission.txt --sub_type pwm --scores_path out.tsv
+```
