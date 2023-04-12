@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
@@ -47,20 +49,20 @@ class ScoreSubmission:
         if number is None:
             raise ScoreSubmissionFormatException(f"Submission score must { Prediction.REPR_SKIPVALUE} or number: {score_str}")
         
-        if abs(number - 1) > cls.MAX_0_1_DIFF:
-            raise ScoreSubmissionFormatException(f"Submission score must be in [0, 1]")
+        if number > 1 + cls.MAX_0_1_DIFF:
+            raise ScoreSubmissionFormatException(f"Submission score must be in [0, 1]: {score_str}")
         
         if number < -cls.MAX_0_1_DIFF:
-            raise ScoreSubmissionFormatException(f"Submission score must be in [0, 1]")
+            raise ScoreSubmissionFormatException(f"Submission score must be in [0, 1]: {score_str}")
         
         fields = score_str.split('.')
         
-        if len(fields) == 1:
+        if len(fields) == 1: # 0 or 1
             return 
         after_point = fields[1]
         
         if len(after_point) > cls.MAX_PRECISION:
-            raise ScoreSubmissionFormatException(f"Submission score must contain at most {cls.MAX_PRECISION} after .")
+            raise ScoreSubmissionFormatException(f"Submission score must contain at most {cls.MAX_PRECISION} after . : {score_str}")
         
     
     @classmethod
@@ -76,6 +78,7 @@ class ScoreSubmission:
            
             if len(fields) == 1:
                 msg = f"Submission must contain at least one tf field"
+                raise ScoreSubmissionFormatException(msg)
             tfs = fields[1:]
             _sub = {tf_name: Prediction() for tf_name in tfs}
             tags = []
@@ -92,20 +95,34 @@ class ScoreSubmission:
                    _sub=_sub,
                    tag_col_name=tag_col_name)
 
-    def prepare_for_evaluation(self) -> 'ScoreSubmission':
+    def prepare_for_evaluation(self, tfs: list | set | None = None) -> 'ScoreSubmission':
         _sub = self._sub.copy()
         tags = self.tags
+        
+        if tfs is not None:
+            for tf in tfs:
+                if tf not in self._sub:
+                     print(f"Warning: no prediction submitted for factor {tf}", file=sys.stderr)
+            for tf in self._sub:
+                if tf not in tfs:
+                    msg = F"No such factor in benchmark: {tf}"
+                    raise ScoreSubmissionFormatException(msg)
+                
 
         for tf_name, pred in self._sub.items():
             for t in tags:
                 if Prediction.is_skipvalue(pred[t]):
                     print(f"Column for factor {tf_name} contains skipped prediction for {t}." 
-                            "Predictions for this factor won't be evaluated")
+                            "Predictions for this factor won't be evaluated", 
+                            file=sys.stderr)
                     _sub.pop(tf_name)
                     break
+                
+                
         if len(_sub) == 0:
             msg = f'Submission must contain full information for at least one factor'
-            raise Exception(msg)
+            raise ScoreSubmissionFormatException(msg)
+
         cls = type(self)
         return cls(name=self.name,
                    tags=tags, 
@@ -141,18 +158,5 @@ class ScoreSubmission:
         _sub = {tf: Prediction.template(tags) for tf in ds_names}
         return cls(name=name, 
                    tags=tags,
-                   _sub=_sub,
-                   tag_col_name=tag_col_name)
-
-    @classmethod
-    def from_single_prediction(cls, 
-                               name: str, 
-                               tf_name: str,
-                               pred: Prediction,
-                               tag_col_name: str = "tag"):
-        tags = pred.tags
-        _sub = {tf_name: pred}
-        return cls(name=name, 
-                   tags=tags, 
                    _sub=_sub,
                    tag_col_name=tag_col_name)

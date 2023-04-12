@@ -7,7 +7,7 @@ sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
 import argparse
 
 from bibis.benchmark.benchmarkconfig import BenchmarkConfig
-from bibis.benchmark.pwm_submission import PWMSubmission, PWMSubmissionFormatException
+from bibis.benchmark.score_submission import ScoreSubmission, ScoreSubmissionFormatException
 
 SUCCESS_CODE = 0
 FORMAT_ERROR_CODE = 1
@@ -26,3 +26,22 @@ parser.add_argument("--aaa_sub",
 
 
 args = parser.parse_args()
+
+cfg = BenchmarkConfig.from_json(args.benchmark)
+bench_tfs = set([ds.name for ds in cfg.datasets])
+
+try:
+    submission = ScoreSubmission.load(args.aaa_sub)
+    submission.prepare_for_evaluation(tfs=bench_tfs )
+except ScoreSubmissionFormatException as exc:
+    print(f"Error occured: {exc}")
+    sys.exit(FORMAT_ERROR_CODE)
+except Exception as exc:
+    print(f"Uknown error occured: {exc}")
+    sys.exit(INTERNAL_ERROR_CODE)
+else:
+    print("Validation is successful")
+    sys.exit(SUCCESS_CODE)
+
+    
+

@@ -15,6 +15,7 @@ class Prediction:
 
     REPR_SKIPVALUE: ClassVar[str] = "nodata"
     SKIPVALUE: ClassVar[float] = np.nan
+    MAX_PRECISION: ClassVar[int] = 5
 
     def __getitem__(self, tag: str) -> float:
         return self._pred[tag]
@@ -61,4 +62,4 @@ class Prediction:
     def val2str(cls, value: float, precision: int = 5) -> str:
         if cls.is_skipvalue(value):
             return cls.REPR_SKIPVALUE
-        return str(value)
+        return f"{value:.0{cls.MAX_PRECISION}f}"
