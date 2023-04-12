@@ -91,4 +91,4 @@ class BenchmarkConfig:
     def save(self, path: Path | str):
         dt = self.to_dict()
         with open(path, 'w') as inp:
-            json.dump(dt, inp)
+            json.dump(dt, inp, indent=4)

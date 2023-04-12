@@ -1,0 +1,41 @@
+{
+    "name": "trial",
+    "kind": "ChIPSeq",
+    "metainfo": {},
+    "pwmeval": "/home_local/dpenzar/PWMEval/pwm_scoring",
+    "datasets": [
+        {
+            "name": "dumb_foreign",
+            "tf": "DUMB42",
+            "background": "foreign",
+            "path": "safe_examples/DUMB42.fasta"
+        },
+        {
+            "name": "dumb_shades",
+            "tf": "DUMB42",
+            "background": "shades",
+            "path": "safe_examples/DUMB42.fasta"
+        }
+    ],
+    "scorers": [
+        {
+            "name": "scikit_rocauc",
+            "alias": "skroauc",
+            "params": {}
+        },
+        {
+            "name": "constant_scorer",
+            "alias": "cons_42",
+            "params": {
+                "cons": 42
+            }
+        },
+        {
+            "name": "prroc_prauc",
+            "alias": "prauc",
+            "params": {
+                "type": "integral"
+            }
+        }
+    ]
+}
