@@ -118,14 +118,11 @@ class Benchmark:
     def skipped_prediction(self) -> dict[str, float]:
         ds_scores = {sc.name: self.SKIPVALUE for sc in self.scorers}
         return ds_scores
-    
-    
+
     def submit_score_submission(self, sub: ScoreSubmission):
         aaa_sub = AAASubmit(name=sub.name,
                             scores=sub)
         self.submits.append(aaa_sub)
-        
-    
         
     def submit_matrix_model(self,
                             name: str, 
@@ -188,15 +185,13 @@ class Benchmark:
     def score_aaa_submit(self, submit: AAASubmit) -> dict[str, dict[str, float]]:
         scores = {}
         for ds in self.datasets:
-            if ds.name in submit.scores:
-                scores[ds.name] = self.score_prediction(ds, submit.scores[ds.name])
+            if ds.tf in submit.scores:
+                scores[ds.name] = self.score_prediction(ds, submit.scores[ds.tf])
             else:
                 print(f"No predictions for {ds.name} are provided. Skipping", 
                       file=sys.stderr)
                 scores[ds.name] = self.skipped_prediction
         return scores 
-    
-    
     
     def score_matrix_submit(self, submit: MatrixSumbit) -> dict[str, dict[str, float]]:
         scores = {}

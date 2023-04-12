@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
-
 from .prediction import Prediction
 from ..utils import END_LINE_CHARS
 
@@ -95,7 +94,8 @@ class ScoreSubmission:
                    _sub=_sub,
                    tag_col_name=tag_col_name)
 
-    def prepare_for_evaluation(self, tfs: list | set | None = None) -> 'ScoreSubmission':
+    def validate(self, 
+                 tfs: list[str] | set[str] | None = None) -> 'ScoreSubmission':
         _sub = self._sub.copy()
         tags = self.tags
         
@@ -108,7 +108,6 @@ class ScoreSubmission:
                     msg = F"No such factor in benchmark: {tf}"
                     raise ScoreSubmissionFormatException(msg)
                 
-
         for tf_name, pred in self._sub.items():
             for t in tags:
                 if Prediction.is_skipvalue(pred[t]):
@@ -117,7 +116,6 @@ class ScoreSubmission:
                             file=sys.stderr)
                     _sub.pop(tf_name)
                     break
-                
                 
         if len(_sub) == 0:
             msg = f'Submission must contain full information for at least one factor'

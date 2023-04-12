@@ -23,18 +23,16 @@ parser.add_argument("--aaa_sub",
                     help="path to AAA submission file",
                     required=True)
 
-
-
 args = parser.parse_args()
 
 cfg = BenchmarkConfig.from_json(args.benchmark)
-bench_tfs = set([ds.name for ds in cfg.datasets])
+bench_tfs = set([ds.tf for ds in cfg.datasets])
 
 try:
     submission = ScoreSubmission.load(args.aaa_sub)
-    submission.prepare_for_evaluation(tfs=bench_tfs )
+    submission.validate(tfs=bench_tfs )
 except ScoreSubmissionFormatException as exc:
-    print(f"Error occured: {exc}")
+    print(f"Format error detected: {exc}")
     sys.exit(FORMAT_ERROR_CODE)
 except Exception as exc:
     print(f"Uknown error occured: {exc}")

@@ -35,7 +35,7 @@ try:
     subm.validate()
     
 except PWMSubmissionFormatException as exc:
-    print(f"Error occured: {exc}")
+    print(f"Format error detected: {exc}")
     sys.exit(FORMAT_ERROR_CODE)
 except Exception as exc:
     print(f"Uknown error occured: {exc}")
