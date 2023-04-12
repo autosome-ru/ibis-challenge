@@ -32,13 +32,13 @@ try:
     submission = ScoreSubmission.load(args.aaa_sub)
     submission.validate(tfs=bench_tfs )
 except ScoreSubmissionFormatException as exc:
-    print(f"Format error detected: {exc}")
+    print(f"Format error detected: {exc}", file=sys.stderr)
     sys.exit(FORMAT_ERROR_CODE)
 except Exception as exc:
-    print(f"Uknown error occured: {exc}")
+    print(f"Uknown error occured: {exc}", file=sys.stderr)
     sys.exit(INTERNAL_ERROR_CODE)
 else:
-    print("Validation is successful")
+    print("Validation is successful", file=sys.stderr)
     sys.exit(SUCCESS_CODE)
 
     

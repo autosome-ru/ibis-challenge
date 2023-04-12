@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from enum import Enum
 
-from test_bibis.test_genome import genome
 
 class BedClosestMode(Enum):
     UPSTREAM = "-fu"

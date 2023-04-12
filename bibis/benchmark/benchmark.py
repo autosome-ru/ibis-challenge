@@ -1,3 +1,4 @@
+from re import sub
 import tempfile
 import sys
 
@@ -161,6 +162,15 @@ class Benchmark:
         sub_dir = self.results_dir / pwm_sub.name
         for pfm_info in pwm_sub.split_into_pfms(sub_dir):
             self.submit_pfm_info(pfm_info, parent_name=pwm_sub.name)
+            
+    def submit(self, submission: PWMSubmission | ScoreSubmission):
+        if isinstance(submission, PWMSubmission):
+            self.submit_pwm_submission(submission)
+        elif isinstance(submission, ScoreSubmission):
+            self.submit_score_submission(submission)
+        else:
+            raise Exception(f"Wrong submission class: {type(submission)}")
+        
         
     def score_prediction(self, ds: DatasetInfo, prediction: Prediction) -> dict[str, float]:
         labelled_seqs = read_fasta(ds.path)
