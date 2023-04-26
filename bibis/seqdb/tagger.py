@@ -42,6 +42,6 @@ class UniqueTagger:
         if len(self.used_tags) >= self.max_size:
             raise Exception("Max size for fast random generation reached")
         while (tag := self._non_unique_tag()) in self.used_tags:
-            pass
+            continue
         self.used_tags.add(tag)
         return tag

@@ -24,15 +24,18 @@ BedtoolsExecutor.set_defaull_executor(BEDTOOLS_PATH)
 
 BENCH_PROCESSED_DIR = Path("/home_local/dpenzar/BENCHMARK_PROCESSED")
 BENCH_SEQDB_CFG = BENCH_PROCESSED_DIR / "tag.json"
-CHS_BENCH_DIR = BENCH_PROCESSED_DIR / "CHS"
-CHS_BENCH_DIR.mkdir(parents=True, exist_ok=True)
+
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--config_file", required=True, type=str)
+parser.add_argument("--type", choices=['Leaderboard', 'Final'], required=True, type=str)
 parser.add_argument("--n_procs", default=1, type=int)
 
 args = parser.parse_args()
+
+CHS_BENCH_DIR = BENCH_PROCESSED_DIR / "CHS" / args.type
+CHS_BENCH_DIR.mkdir(parents=True, exist_ok=True)
 
 cfg = ChipSeqConfig.load(args.config_file)
 
@@ -40,8 +43,6 @@ tf_peaks = [ChIPPeakList.read(t) for t in cfg.tf_path]
 tf_beds = [f.to_beddata() for f in tf_peaks]
 
 
-        
-        
 if "train" in cfg.splits:
     if "test" in cfg.splits:
         ind, _ = max(enumerate(tf_beds), key=lambda x: len(x[1]))
