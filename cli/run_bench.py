@@ -84,4 +84,11 @@ else:
     print("Wrong submission type", file=sys.stderr)
     sys.exit(INTERNAL_ERROR_CODE)
 
+BACKGROUND_OUTER_NAMING = {
+    "shades":"shades", 
+    "foreigns":"aliens",
+    "genome":"random"
+}
+scores['background'] = scores['background'].apply(lambda x: BACKGROUND_OUTER_NAMING[x])
+
 scores.to_csv(args.scores_path, index=False, sep="\t")
