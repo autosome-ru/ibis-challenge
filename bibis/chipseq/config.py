@@ -77,7 +77,7 @@ class ChipSeqDatasetConfig:
     
     POSITIVE_NAME: ClassVar[str] = "positives"
     FULL_BCK_NAME: ClassVar[str] = "full"
-    BACKGROUNDS: ClassVar[list[str]] = ['shades', 'foreigns', 'genome']
+    BACKGROUNDS: ClassVar[list[str]] = ['shades', 'aliens', 'random']
     
     def part_path(self, part: str, fmt: str) -> Path:
         return Path(self.tf_path) / 'parts' / f"{part}.{fmt}"

@@ -6,7 +6,49 @@ from pathlib import Path
 import argparse
 import sys
 
-sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
+
+
+def filter_chrom(peak_file: str | Path,
+                 out_file: str | Path,
+                 chroms: set[str] | list[str]):
+    with open(peak_file, 'r') as inp, open(out_file, "w") as out:
+        for line in inp:
+            if line.startswith("#"):
+                print(line, end="", file=out)
+            else:
+                ch, _ = line.split("\t", maxsplit=1)
+                if ch in chroms:
+                    print(line, end="", file=out)
+                
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("--benchmark_out_dir", 
+                    required=True, 
+                    type=str)
+parser.add_argument("--tagdb_cfg",
+                    required=True,
+                    type=str)
+parser.add_argument("--config_file", 
+                    required=True, 
+                    type=str)
+parser.add_argument("--type", 
+                    choices=['Leaderboard', 'Final'], 
+                    required=True, type=str)
+parser.add_argument("--n_procs", 
+                    default=1,
+                    type=int)
+parser.add_argument("--bedtools", 
+                    default="/home_local/dpenzar/bedtools2/bin",
+                    type=str)
+parser.add_argument("--bibis_root",
+                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
+                    type=str)
+
+args = parser.parse_args()
+
+sys.path.append(args.bibis_root) # temporary solution while package is in development
+
 from bibis.seqdb.config import DBConfig 
 from bibis.chipseq.config import ChipSeqConfig, ChipSeqDatasetConfig
 from bibis.chipseq.peakfile import ChIPPeakList
@@ -19,20 +61,10 @@ from bibis.seq.genome import Genome
 from bibis.seq.seqentry import write as seq_write
 from bibis.bedtools.bedtoolsexecutor import BedtoolsExecutor
 
-BEDTOOLS_PATH: Path = Path("/home_local/dpenzar/bedtools2/bin")
-BedtoolsExecutor.set_defaull_executor(BEDTOOLS_PATH)
+BedtoolsExecutor.set_defaull_executor(args.bedtools)
 
-BENCH_PROCESSED_DIR = Path("/home_local/dpenzar/BENCHMARK_PROCESSED")
-BENCH_SEQDB_CFG = BENCH_PROCESSED_DIR / "tag.json"
-
-
-parser = argparse.ArgumentParser()
-
-parser.add_argument("--config_file", required=True, type=str)
-parser.add_argument("--type", choices=['Leaderboard', 'Final'], required=True, type=str)
-parser.add_argument("--n_procs", default=1, type=int)
-
-args = parser.parse_args()
+BENCH_PROCESSED_DIR = Path(args.benchmark_out_dir)
+BENCH_SEQDB_CFG = Path(args.tagdb_cfg)
 
 CHS_BENCH_DIR = BENCH_PROCESSED_DIR / "CHS" / args.type
 CHS_BENCH_DIR.mkdir(parents=True, exist_ok=True)
@@ -44,26 +76,42 @@ tf_beds = [f.to_beddata() for f in tf_peaks]
 
 
 if "train" in cfg.splits:
+    split = cfg.splits["train"]
     if "test" in cfg.splits:
         ind, _ = max(enumerate(tf_beds), key=lambda x: len(x[1]))
-        train_beds = list(tf_beds)
-        train_beds.pop(ind)
+        train_peaks_paths = list(cfg.tf_path)
+        train_peaks_paths.pop(ind)
     else:
-        train_beds = tf_beds
+        train_peaks_paths = list(cfg.tf_path)
     
-    split = cfg.splits['train']
-    train_beds = [bed.filter(lambda e: e.chr in split.chroms) for bed in train_beds]
     train_dir = CHS_BENCH_DIR / "train" / cfg.tf_name
     train_dir.mkdir(exist_ok=True, parents=True)
     
-    for ind, bed in enumerate(train_beds, 1):
-        replic_path = train_dir / f"replic_{ind}.bed"
-        bed.write(path=train_dir / replic_path, write_peak=True)
+    #filter_chrom
+    
+    for ind, peak_path in enumerate(train_peaks_paths, 1):
+        fl_name = Path(peak_path).name
+        replic_path = train_dir / fl_name
+        filter_chrom(peak_file=peak_path, 
+                     out_file=replic_path,
+                     chroms=split.chroms)
 
 if "test" in cfg.splits:
     ind, valid_bed = max(enumerate(tf_beds), key=lambda x: len(x[1]))
     train_beds = list(tf_beds)
     train_beds.pop(ind)
+    
+    valid_dir = CHS_BENCH_DIR / "valid" / cfg.tf_name
+    valid_dir.mkdir(exist_ok=True, parents=True)
+    
+    validation_replic_file = cfg.tf_path[ind]
+    print(f"Selected {cfg.tf_path[ind]} as validation replic")
+    
+    sel_path = valid_dir / "selected.json"
+    with open(sel_path, "w") as out:
+        json.dump(obj={"validation_replic": validation_replic_file},
+                  fp=out,
+                  indent=4)
     
     
     split = cfg.splits["test"]
@@ -84,7 +132,6 @@ if "test" in cfg.splits:
         valid_black_list = black_list.filter(lambda e: e.chr in split.chroms)
     else:
         valid_black_list = None
-        
 
     friends_peaks = list(train_beds)
     print("Downloading genome")
@@ -111,7 +158,7 @@ if "test" in cfg.splits:
     samples['shades'] = shades_sampler.sample_bed()
     friends_peaks.append(samples['shades'])
     
-    print("Creating foreigns") 
+    print("Creating aliens") 
     foreign_sampler = ChIPForeignSampler.make(window_size=cfg.window_size,
                                             genome=genome,
                                             tf_peaks=[valid_bed], # type: ignore
@@ -121,10 +168,10 @@ if "test" in cfg.splits:
                                             sample_per_object=cfg.foreign_cfg.balance,
                                             seed=cfg.seed)
 
-    samples['foreigns'] = foreign_sampler.sample_bed()
-    friends_peaks.append(samples['foreigns'])
+    samples['aliens'] = foreign_sampler.sample_bed()
+    friends_peaks.append(samples['aliens'])
     
-    print("Creating genome samples")
+    print("Creating random genome samples")
     genome_sampler = ChIPGenomeSampler.make(window_size=cfg.window_size,
                                     genome=genome,
                                     tf_peaks=[valid_bed], # type: ignore
@@ -136,11 +183,9 @@ if "test" in cfg.splits:
                                     n_procs=args.n_procs,
                                     seed=cfg.seed)
     
-    samples['genome'] = genome_sampler.sample_bed()
-    friends_peaks.append(samples['genome'])
+    samples['random'] = genome_sampler.sample_bed()
+    friends_peaks.append(samples['random'])
     
-    valid_dir = CHS_BENCH_DIR / "valid" / cfg.tf_name
-    valid_dir.mkdir(exist_ok=True, parents=True)
     
     db = DBConfig.load(BENCH_SEQDB_CFG).build()
     
@@ -172,7 +217,7 @@ if "test" in cfg.splits:
     # answer files for benchmark
     answer_dir = valid_dir / 'answer'
     answer_dir.mkdir(exist_ok=True)
-    for background in ('shades', 'foreigns', 'genome'):
+    for background in ('shades', 'aliens', 'random'):
         filepath = answer_dir / f"{cfg.tf_name}_{background}.fasta"
         ds_info = ds.make_ds(background=background,
                    path=filepath,

@@ -46,6 +46,12 @@ class ChIPPeakEntry:
                    name=name,
                    peakcallers=peakcallers)
         
+    #def to_line(self) -> str:
+    #    line = f"{self.chrom}\t{self.start}\t{self.end}\t{self.peak}\t{self.pileup}"\
+    #           f"{self.log_pvalue:.05f}\t{self.fold_enrichment:.05f}"\
+    #           f"{self.log_qvalue:.05f}\t{self.name}\t{self.CALLERS_SEP.join(self.peakcallers)}"
+    #    return line
+        
     def to_bedentry(self, score='qValue'):
         metainfo = dict(name=self.name,
                         pValue=self.log_pvalue,

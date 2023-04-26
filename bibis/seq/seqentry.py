@@ -5,9 +5,10 @@ from Bio.Seq import Seq
 from Bio.SeqIO import SeqRecord
 from dataclasses import dataclass
 from typing import ClassVar
-from ..scoring.label import NO_LABEL, Label, str2label
 from pathlib import Path
 import io
+
+from ..scoring.label import NO_LABEL, Label, str2label
 
 NO_TAG = "__NO_TAG__"
 
@@ -20,6 +21,7 @@ class SeqEntry:
     label: Label = NO_LABEL
     metainfo: dict | None = None
 
+    LABEL_NAME: ClassVar[str] = "label"
     INFO_SEPARATOR: ClassVar[str] = ";"
     KV_SEPARATOR: ClassVar[str] = "="
     
@@ -42,7 +44,11 @@ class SeqEntry:
         return val
     
     def to_seqrecord(self) -> SeqRecord:
-        description = [f"label{self.KV_SEPARATOR}{self.label}"]
+        if self.label != NO_LABEL:
+            description = [f"{self.LABEL_NAME}{self.KV_SEPARATOR}{self.label}"]
+        else:
+            description = []
+
         if self.metainfo is not None:
             for key, value in self.metainfo.items():
                 field = f"{key}{self.KV_SEPARATOR}{value}"
