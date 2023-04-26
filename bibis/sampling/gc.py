@@ -10,6 +10,7 @@ from collections import defaultdict
 from pathlib import Path
 from functools import partial
 import multiprocessing
+import tqdm 
 
 from copy import copy
 
@@ -356,8 +357,6 @@ class GenomeGCSampler:
         
     def _sample_chromosome(self, positives: BedData, chr: str) -> BedData:
         positives = positives.filter(lambda e: e.chr == chr)
-        print(chr)
-        print(len(positives))
         if len(positives) == 0:
             return BedData()
         pos_seqs = self.genome.cut(positives)
@@ -514,7 +513,7 @@ class GenomeGCSampler:
     
     def _sample_noparallel(self, positives: BedData) -> BedData:
         beds = []
-        for chr in self.genome.chroms.keys():
+        for chr in tqdm.tqdm(self.genome.chroms.keys()):
             ch_bed = self._sample_chromosome(positives=positives,
                                                    chr=chr)
             beds.append(ch_bed)
