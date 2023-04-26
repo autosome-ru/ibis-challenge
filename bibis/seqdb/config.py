@@ -19,7 +19,7 @@ class DBConfig:
     def make(cls, 
              db_path: str| Path,
              parts: list[str], 
-             parts_path: dict[str, Path],
+             parts_path: dict[str, str],
              max_occupancy: float = 0.5,
              wait_time: float = 0.1):
         """

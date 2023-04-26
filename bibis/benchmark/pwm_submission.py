@@ -27,7 +27,7 @@ class PWMSubmission:
     
     MAX_PWM_PER_TF: ClassVar[int] = 4   
     MAX_TAG_LENGTH: ClassVar[int] = 30 
-    POSSIBLE_CHARS: ClassVar[set[str]] = set(string.ascii_lowercase + string.digits + "_")
+    POSSIBLE_CHARS: ClassVar[set[str]] = set(string.ascii_lowercase + string.ascii_uppercase + string.digits + "_")
     MAX_PRECISION: ClassVar[int] = 5
     MAX_1_DIFF: ClassVar[float] = 0.0015
     

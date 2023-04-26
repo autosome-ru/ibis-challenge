@@ -62,8 +62,9 @@ class SetGCSampler:
                positive: list[SeqEntry],
                save_metainfo: bool = True,
                return_loss: bool = False) -> list[SeqEntry] | tuple[list[SeqEntry], float]:
-        if len(positive) * self.sample_per_object > len(self.negatives):
-            raise Exception("Can't sample")
+        requested_size = len(positive) * self.sample_per_object
+        if requested_size > len(self.negatives):
+            raise Exception(f"Can't sample: number of negatives: {len(self.negatives)}, requested: { requested_size}")
         
         positive_gc = np.array([s.gc for s in positive])
         negative_gc = self.negatives_gc
@@ -142,6 +143,7 @@ class SetGCSampler:
                         
                         neg.metainfo['pos_cor'] = copy(positive[j].metainfo)
                 neg_sampled.append(neg)
+                
         
         if return_loss:
             return neg_sampled, loss
@@ -353,9 +355,9 @@ class GenomeGCSampler:
   
         
     def _sample_chromosome(self, positives: BedData, chr: str) -> BedData:
+        positives = positives.filter(lambda e: e.chr == chr)
         print(chr)
         print(len(positives))
-        positives = positives.filter(lambda e: e.chr == chr)
         if len(positives) == 0:
             return BedData()
         pos_seqs = self.genome.cut(positives)
@@ -504,33 +506,32 @@ class GenomeGCSampler:
                 s.metainfo['end'] = bed[i].end # type: ignore
         return seqs
     
-    def _sample_seqs_from_chromosome(self, chr: str, positives: BedData) -> list[SeqEntry]:
-        ch_smpls = self._sample_chromosome(positives=positives,
-                                              chr=chr)
-        seqs = self._to_seqs(ch_smpls)
-        return seqs
+    #def _sample_seqs_from_chromosome(self, chr: str, positives: BedData) -> list[SeqEntry]:
+    #    ch_smpls = self._sample_chromosome(positives=positives,
+    #                                          chr=chr)
+    #    seqs = self._to_seqs(ch_smpls)
+    #    return seqs
     
-    def _sample_noparallel(self, positives: BedData) -> list[SeqEntry]:
-        seqs = []
+    def _sample_noparallel(self, positives: BedData) -> BedData:
+        beds = []
         for chr in self.genome.chroms.keys():
-            ch_seqs = self._sample_seqs_from_chromosome(positives=positives,
-                                                        chr=chr)
-            seqs.extend(ch_seqs)
-        return seqs
+            ch_bed = self._sample_chromosome(positives=positives,
+                                                   chr=chr)
+            beds.append(ch_bed)
+        bed = join_bed(beds, sort=True)
+        return bed
     
-    def _sample_parallel(self, positives: BedData) -> list[SeqEntry]:
+    def _sample_parallel(self, positives: BedData) -> BedData:
         seqs = []
-        calculator = partial(self._sample_seqs_from_chromosome,
+        calculator = partial(self._sample_chromosome,
                              positives=positives)
 
         with multiprocessing.Pool(processes=self.n_procs) as pool:
-            ch_seqs = pool.map(calculator, self.genome.chroms.keys())
-        for s in ch_seqs:
-            seqs.extend(s)            
-
-        return seqs
+            beds = pool.map(calculator, self.genome.chroms.keys())
+        bed = join_bed(beds, sort=True)        
+        return bed
             
-    def sample(self, positives: BedData) -> list[SeqEntry]:
+    def sample(self, positives: BedData) -> BedData:
         if self.n_procs == 1:
             print("No parallel")
             return self._sample_noparallel(positives=positives)

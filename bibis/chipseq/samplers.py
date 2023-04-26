@@ -7,7 +7,7 @@ from ..bedtools.beddata import BedData, join_bed
 from ..bedtools.bedentry import BedEntry
 from ..sampling.gc import SetGCSampler, GenomeGCSampler
 
-def _cut_to_window(bed: BedData, window_size: int, genome: Genome) -> BedData:
+def cut_to_window(bed: BedData, window_size: int, genome: Genome) -> BedData:
         cut_peaks = []
         for p in bed:
             if p.peak is None:
@@ -54,17 +54,17 @@ class ChIPForeignSampler:
                                 full=True)
        
         
-        foreign = _cut_to_window(foreign,
+        foreign = cut_to_window(foreign,
                                  window_size=window_size,
                                  genome=genome) 
             
         foreign_seqs = genome.cut(foreign)
         
         sampler = SetGCSampler.make(negatives=foreign_seqs,
-                  sample_per_object=sample_per_object,
-                  seed=seed)
+                                    sample_per_object=sample_per_object,
+                                    seed=seed)
         pos_peaks = max(tf_peaks, key=lambda x: len(x))
-        pos_peaks = _cut_to_window(pos_peaks, 
+        pos_peaks = cut_to_window(pos_peaks, 
                                        window_size=window_size,
                                        genome=genome)
         positives = genome.cut(pos_peaks)
@@ -76,12 +76,14 @@ class ChIPForeignSampler:
                    sample_per_object=sample_per_object, 
                    seed=seed)
     
-    def sample(self) -> list[SeqEntry]:
-        negs = self.sampler.sample(self.positives) # type: ignore 
-        for n in negs:
-            n.sequence = n.sequence.upper() # type: ignore 
-        return negs # type: ignore 
+    def sample_bed(self) -> BedData:
+        negs = self.sampler.sample(self.positives) 
         
+        bed = BedData([BedEntry(chr=n.metainfo["chr"], # type: ignore
+                        start=n.metainfo["start"], # type: ignore
+                        end=n.metainfo["end"]) for n in negs]) # type: ignore
+        bed.sort()
+        return bed
     
 from ..sampling.shades import ShadesSampler
 
@@ -132,6 +134,10 @@ class ChIPShadesSampler:
     def sample(self) -> list[SeqEntry]:
         smpls = self.sampler.sample()
         return self.genome.cut(smpls)
+    
+    def sample_bed(self) -> BedData:
+        smpls = self.sampler.sample()
+        return smpls
 
 @dataclass
 class ChIPGenomeSampler:
@@ -155,6 +161,7 @@ class ChIPGenomeSampler:
              exact: bool = True,
              max_overlap: int | None = None,
              n_procs: int = 1,
+             precalc_profile: bool = False,
              seed = 777):
         assert window_size % 2 == 1, "Window size must be odd"
         
@@ -174,11 +181,12 @@ class ChIPGenomeSampler:
                                            max_overlap=max_overlap, 
                                            sample_per_object=sample_per_object,
                                            exact=exact,
+                                           precalc_profile=precalc_profile,
                                            seed=seed,
                                            n_procs=n_procs)
         
         pos_peaks = max(tf_peaks, key=lambda x: len(x))
-        pos_peaks = _cut_to_window(pos_peaks, 
+        pos_peaks = cut_to_window(pos_peaks, 
                                    window_size=window_size,
                                    genome=genome)
         
@@ -191,6 +199,6 @@ class ChIPGenomeSampler:
                    exact=exact,
                    seed=seed)
         
-    def sample(self) -> list[SeqEntry]:
+    def sample_bed(self) -> BedData:
         return self.sampler.sample(self.positives)
         

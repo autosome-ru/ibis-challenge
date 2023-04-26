@@ -85,5 +85,7 @@ class ShadesSampler:
                 for e in smpl:
                     e.metainfo = positive.metainfo
             entries.extend(smpl)
-
-        return BedData(entries)
+            
+        bed = BedData(entries)
+        bed.sort()
+        return bed

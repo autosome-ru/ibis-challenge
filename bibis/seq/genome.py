@@ -51,7 +51,7 @@ class Genome:
         for chrom in glob.glob(str(dirpath/f"*{ext}")):
             ch_name = Path(chrom).name.replace(ext, "")
             seq = SeqIO.read(chrom, format="fasta")
-            dt[ch_name] = seq.seq
+            dt[ch_name] = Seq(str(seq.seq).upper())
         return cls(dt)
     
     def to_dir(self, dirpath: Path | str, ext=".fa"):

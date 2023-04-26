@@ -1,7 +1,17 @@
 import json
+from pyclbr import Class
+import random
 from pathlib import Path
 from dataclasses import dataclass, asdict
-from ..utils import replace_path2str
+from turtle import back
+from typing import ClassVar
+
+from Bio import Data
+
+from ..benchmark.dataset import DatasetInfo
+from ..seq.seqentry import SeqEntry, read as seq_read
+from ..seq.seqentry import write as seq_write
+from ..scoring.label import POSITIVE_LABEL, NEGATIVE_LABEL
 
 @dataclass
 class ShadesConfig:
@@ -11,7 +21,7 @@ class ShadesConfig:
 @dataclass
 class ForeignConfig:
     balance: int
-    foreigns_path: list[Path]
+    foreigns_path: list[str]
     
 @dataclass
 class GenomeSampleConfig:
@@ -20,45 +30,32 @@ class GenomeSampleConfig:
     n_procs: int
     exact: bool
     precalc_profile: bool
+    
+@dataclass
+class ChipSeqSplit:
+    chroms: list[str]
+    hide_regions: str | None 
 
 @dataclass
-class ChipSeqDSConfig:
+class ChipSeqConfig:
     tf_name: str
-    tf_path: list[Path]
-    black_list_path: list[Path]
-    friends_path: list[Path]
+    tf_path: list[str]
+    black_list_path: str | None
+    friends_path: list[str]
     window_size: int
-    genome_path: Path
+    genome_path: str
     seed: int 
     shades_cfg: ShadesConfig
     foreign_cfg: ForeignConfig
     genome_sample_cfg: GenomeSampleConfig
+    splits: dict[str, ChipSeqSplit]
     
-    @staticmethod
-    def _convert_path(path: list[str | Path] | list[Path] | list[str] | Path | str) -> list[Path]:
-        if not isinstance(path, list):
-            if isinstance(path, str):
-                path = Path(path)
-            path = [path]
-        path_lst = []
-        for p in path:
-            if isinstance(p, str):
-                p = Path(p)
-            p = p.absolute()
-            if p.is_dir():
-                path_lst.extend(p.iterdir())
-            else:
-                path_lst.append(p)
-        return path_lst
+    SPLIT_TYPES: ClassVar[tuple[str, str, str]] = ('train', 'test', 'train/test')
     
     def save(self, path: str | Path):
-        if isinstance(path, str):
-            path = Path(path)
-        if path.is_dir():
-            path = path / f"{self.tf_name}.json"
-        
+        dt = asdict(self)
         with open(path, "w") as out:
-            json.dump(obj=replace_path2str(asdict(self)),
+            json.dump(obj=dt,
                       fp=out,
                       indent=4)
             
@@ -66,61 +63,88 @@ class ChipSeqDSConfig:
     def load(cls, path: str | Path):
         with open(path, "r") as inp:
             dt = json.load(inp)
+        for name, split_dt in dt['splits'].items():
+            dt['splits'][name] = ChipSeqSplit(**split_dt)
         dt["shades_cfg"] = ShadesConfig(**dt["shades_cfg"])
-        dt["foreign_cfg"]['foreigns_path'] = [Path(x) for x in  dt["foreign_cfg"]['foreigns_path'] ]
         dt["foreign_cfg"] = ForeignConfig(**dt["foreign_cfg"])
         dt["genome_sample_cfg"] = GenomeSampleConfig(**dt["genome_sample_cfg"])
-        
-        dt["tf_path"] = [Path(x) for x in dt["tf_path"]]
-        dt["black_list_path"] = [Path(x) for x in dt["black_list_path"]]
-        dt["friends_path"] =      [Path(x) for x in dt["friends_path"]]
-        dt["genome_path"] = Path(dt["genome_path"])
         return cls(**dt)
-        
+    
+@dataclass
+class ChipSeqDatasetConfig:
+    tf_name: str
+    tf_path: str 
+    
+    POSITIVE_NAME: ClassVar[str] = "positives"
+    FULL_BCK_NAME: ClassVar[str] = "full"
+    BACKGROUNDS: ClassVar[list[str]] = ['shades', 'foreigns', 'genome']
+    
+    def part_path(self, part: str, fmt: str) -> Path:
+        return Path(self.tf_path) / 'parts' / f"{part}.{fmt}"
+    
+    def save(self, path: str | Path):
+        with open(path, "w") as out:
+            json.dump(obj=asdict(self),
+                      fp=out,
+                      indent=4)
+    
     @classmethod
-    def make(cls,
-             tf_name: str,
-             tf_path: list[str | Path] | list[Path] | list[str] | Path | str,
-             foreign_path: list[str | Path] | list[Path] | list[str] | Path | str,
-             black_list_path: list[str | Path] | list[Path] | list[str] | Path | str,
-             window_size: int,
-             genome_path: str | Path,
-             shades_balance: int,
-             shades_max_dist: int,
-             foreign_balance: int,
-             genome_random_balance: int,
-             precalc_profile: bool = False,
-             friends_path: list[str | Path] | list[Path] | list[str] | Path | str | None = None,
-             genome_n_procs: int = 1,
-             genome_exact: bool = True,
-             genome_max_overlap: int | None = True,
-             seed: int = 777):
-        if friends_path is None:
-            friends_path = []
-        if isinstance(genome_path, str):
-            genome_path = Path(genome_path)
-        tf_path = cls._convert_path(tf_path)
-        foreign_path = cls._convert_path(foreign_path)
-        friends_path = cls._convert_path(friends_path)
-        black_list_path = cls._convert_path(black_list_path)
+    def load(cls, path: str | Path):
+        with open(path) as inp:
+            dt = json.load(inp)
+        return cls(**dt)
+    
+    def get_negatives(self, background: str) -> list[SeqEntry]:
+        if background in self.BACKGROUNDS:
+            return seq_read(self.part_path(part=background,
+                                        fmt="fasta"))
+        elif background == self.FULL_BCK_NAME:
+            seqs = []
+            for bck in self.BACKGROUNDS:
+                ss = seq_read(self.part_path(part=bck,
+                                        fmt="fasta"))
+                seqs.extend(ss)
+            return seqs                 
+        else:
+            raise Exception(f"Wrong background: {background}")
         
-        shades_cfg = ShadesConfig(balance=shades_balance,
-                                  max_dist=shades_max_dist)
-        foreign_cfg = ForeignConfig(balance=foreign_balance,
-                                    foreigns_path=foreign_path)
-        genome_sample_cfg = GenomeSampleConfig(balance=genome_random_balance,
-                                               max_overlap=genome_max_overlap,
-                                               n_procs=genome_n_procs,
-                                               exact=genome_exact,
-                                               precalc_profile=precalc_profile)
+    def get_positives(self) -> list[SeqEntry]:
+        return seq_read(self.part_path(part=self.POSITIVE_NAME, 
+                                        fmt="fasta"))
+    
+    @staticmethod
+    def entry2key(s: SeqEntry):
+        m = s.metainfo
+        return m['chr'], m['start'], m['end'] # type: ignore
+    
+    def make_ds(self, 
+                path: str | Path, 
+                background: str,
+                hide_labels: bool = True) -> DatasetInfo:
+        positives = self.get_positives()
+        negatives = self.get_negatives(background)
+
+        if not hide_labels:
+            for e in positives:
+                e.label = POSITIVE_LABEL
+            for e in negatives:
+                e.label = NEGATIVE_LABEL
+        total = positives + negatives
         
-        return cls(tf_name=tf_name,
-                   tf_path=tf_path,
-                   black_list_path=black_list_path,
-                   friends_path=friends_path,
-                   window_size=window_size,
-                   genome_path=genome_path,
-                   seed=seed,
-                   shades_cfg=shades_cfg,
-                   foreign_cfg=foreign_cfg,
-                   genome_sample_cfg=genome_sample_cfg)
+        total.sort(key=self.entry2key)
+        
+        seq_write(total, 
+                  path)    
+        
+        name = f"{self.tf_name}_{background}"
+        return DatasetInfo(name=name,
+                           tf=self.tf_name,
+                           background=background, 
+                           path=str(path))
+        
+    def make_full_ds(self, 
+                     path: str | Path, 
+                     hide_labels: bool = True):
+        return self.make_ds(path=path,
+                            background=self.FULL_BCK_NAME,
+                            hide_labels=hide_labels)

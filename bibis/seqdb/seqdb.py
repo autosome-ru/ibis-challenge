@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from .tagger import UniqueTagger
+from ..seq.seqentry import SeqEntry
 
 @dataclass
 class TagDatabase:
@@ -61,16 +62,21 @@ class TagDatabase:
                   dt: dict[str, str]):
         query = f"INSERT INTO {table_name} VALUES(?, ?)"
         cur.executemany(query, dt.items())
-    
+        
     @staticmethod
-    def seqs2strs(seqs: list[str] | list[Seq] | list[str | Seq]) -> list[str]:
+    def seq2str(s: str | Seq) -> str:
+        return str(s).upper()
+    
+    @classmethod
+    def seqs2strs(cls, 
+                  seqs: list[str] | list[Seq] | list[str | Seq]) -> list[str]:
         mod_seqs = []
         for s in seqs:
-            mod_seqs.append(str(s).upper())
+            mod_seqs.append(cls.seq2str(s))
         return mod_seqs
                 
     def taggify(self, 
-            seqs: list[str] | list[Seq] | list[str | Seq]) -> dict[str, str]:
+            seqs: list[str] | list[Seq] | list[str | Seq] ) -> dict[str, str]:
         seqs = self.seqs2strs(seqs)
     
         wait_for_unlock = False
@@ -91,10 +97,10 @@ class TagDatabase:
                             rest[s] = self.tagger.tag()
                     self.update_db(cur, self.TAG_TABLE_NAME, rest)  
             except sqlite3.IntegrityError as exc:
-                print(f"Database lock exception ({exc}), regenerating keys")
+                print(f"Waiting: database lock exception ({exc}), regenerating keys")
                 wait_for_unlock=False
             except sqlite3.OperationalError as exc:
-                print(f"Database unique exception ({exc}), waiting for unlock")
+                print(f"Waiting: database unique exception ({exc}), waiting for unlock")
                 wait_for_unlock=True
                 time.sleep(self.wait_time)
             else:
@@ -102,5 +108,13 @@ class TagDatabase:
                 
         existing.update(rest)
         return {s: existing[s] for s in seqs}
+    
+    def taggify_entries(self, entries: list[SeqEntry]):
+        entry_mapping = {self.seq2str(e.sequence) : e for e in entries}
+        seq_tags = self.taggify(list(entry_mapping.keys()))
+        for s, t in seq_tags.items():
+            e = entry_mapping[s]
+            e.tag = t
+        return entries
     
     

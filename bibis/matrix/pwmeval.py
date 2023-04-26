@@ -58,7 +58,7 @@ class MatrixSumPredictor:
             dt[tag] = score
         return dt
     
-    def process_file(self, path: Path) -> str:
+    def process_file(self, path: str | Path) -> str:
         cmd = self.get_cmd(path)
         cmd = shlex.split(cmd)
         p = subprocess.Popen(cmd, 
@@ -76,7 +76,7 @@ class MatrixSumPredictor:
             raise Exception("PWMEval returned non-unicode symbols")
         return stdout
     
-    def score_file(self, path: Path) -> dict:       
+    def score_file(self, path: str | Path) -> dict:       
         answer = self.process_file(path)
         prediction = self.process_answer(answer)
         return prediction
@@ -126,7 +126,7 @@ class MatrixMaxPredictor: #(Model):
         else:
             return f"{self.pwmeval_path} -m {self.matrix_path} --best --pwm {path}"
     
-    def process_file(self, path: Path) -> str:
+    def process_file(self, path: str | Path) -> str:
         cmd = self.get_cmd(path)
         cmd = shlex.split(cmd)
         p = subprocess.Popen(cmd, 
@@ -144,7 +144,7 @@ class MatrixMaxPredictor: #(Model):
             raise Exception("PWMEval returned non-unicode symbols")
         return stdout
     
-    def score_file(self, path: Path) -> dict:       
+    def score_file(self, path: str | Path) -> dict:       
         answer = self.process_file(path)
         prediction = self.process_answer(answer)
         return prediction
