@@ -4,7 +4,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqIO import SeqRecord
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Iterable
 from pathlib import Path
 import io
 
@@ -94,11 +94,11 @@ def read(handle: io.TextIOWrapper | Path | str, format: str="fasta") -> list[Seq
         case _:
             raise NotImplementedError(f"No method to read {format}")
 
-def write_fasta(entries: list[SeqEntry], handle: io.TextIOWrapper | Path | str):
+def write_fasta(entries: Iterable[SeqEntry], handle: io.TextIOWrapper | Path | str):
     records = (e.to_seqrecord() for e in entries)
     return SeqIO.write(records, handle, format="fasta")
 
-def write(entries: list[SeqEntry], handle: io.TextIOWrapper | Path | str, format: str="fasta"):
+def write(entries: Iterable[SeqEntry], handle: io.TextIOWrapper | Path | str, format: str="fasta"):
     match format:
         case "fasta":
             return write_fasta(entries, handle)

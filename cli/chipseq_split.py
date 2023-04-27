@@ -218,18 +218,22 @@ if "test" in cfg.splits:
     answer_dir = valid_dir / 'answer'
     answer_dir.mkdir(exist_ok=True)
     for background in ('shades', 'aliens', 'random'):
-        filepath = answer_dir / f"{cfg.tf_name}_{background}.fasta"
+        path_pref = str(answer_dir / f"{cfg.tf_name}_{background}")
+        ds_dir = answer_dir / background
+        ds_dir.mkdir(exist_ok=True)
         ds_info = ds.make_ds(background=background,
-                   path=filepath,
-                   hide_labels=False)
-        filepath = answer_dir / f"{cfg.tf_name}_{background}.json"
+                             path_pref=str(ds_dir / "data"),
+                             hide_labels=False)
+        
+        filepath = answer_dir / background / f"config.json"
         ds_info.save(filepath)
     
     #participants files
     participants_dir = valid_dir / "participants"
     participants_dir.mkdir(exist_ok=True)
-    participants_file_path = participants_dir / "submission.fasta"
-    ds_info = ds.make_full_ds(participants_file_path, hide_labels=True)
+    participants_file_path = participants_dir / "submission"
+    ds_info = ds.make_full_ds(path_pref=participants_file_path, 
+                              hide_labels=True)
     participants_file_path = participants_dir / "submission.tsv"
     ds_info.write_tsv(participants_file_path)
     

@@ -1,14 +1,15 @@
 import json
-from pyclbr import Class
-import random
+import sys
+
 from pathlib import Path
+
 from dataclasses import dataclass, asdict
-from turtle import back
+
 from typing import ClassVar
 
 from Bio import Data
 
-from ..benchmark.dataset import DatasetInfo
+from ..benchmark.dataset import DatasetInfo, seqentry2interval_key
 from ..seq.seqentry import SeqEntry, read as seq_read
 from ..seq.seqentry import write as seq_write
 from ..scoring.label import POSITIVE_LABEL, NEGATIVE_LABEL
@@ -112,13 +113,14 @@ class ChipSeqDatasetConfig:
         return seq_read(self.part_path(part=self.POSITIVE_NAME, 
                                         fmt="fasta"))
     
-    @staticmethod
-    def entry2key(s: SeqEntry):
-        m = s.metainfo
-        return m['chr'], m['start'], m['end'] # type: ignore
+    def fasta_path(self, path_pref: str) -> str:
+        return f"{path_pref}.fasta"
+    
+    def answer_path(self, path_pref: str) -> str:
+        return f"{path_pref}_answer.json"
     
     def make_ds(self, 
-                path: str | Path, 
+                path_pref: str, 
                 background: str,
                 hide_labels: bool = True) -> DatasetInfo:
         positives = self.get_positives()
@@ -131,20 +133,34 @@ class ChipSeqDatasetConfig:
                 e.label = NEGATIVE_LABEL
         total = positives + negatives
         
-        total.sort(key=self.entry2key)
+        total.sort(key=seqentry2interval_key)
         
+        fasta_path = self.fasta_path(path_pref=path_pref)
         seq_write(total, 
-                  path)    
+                  fasta_path) 
+
+        
+        if not hide_labels:
+            answer_path = self.answer_path(path_pref=path_pref)
+            answers = {e.tag: e.label for e in total}
+            with open(answer_path, "w") as out:
+                json.dump(obj=answers, 
+                          fp=out,
+                          indent=4)
+        else:
+            answer_path = None
+          
         
         name = f"{self.tf_name}_{background}"
         return DatasetInfo(name=name,
                            tf=self.tf_name,
                            background=background, 
-                           path=str(path))
+                           fasta_path=str(fasta_path),
+                           answer_path=answer_path)
         
     def make_full_ds(self, 
-                     path: str | Path, 
+                     path_pref: str, 
                      hide_labels: bool = True):
-        return self.make_ds(path=path,
+        return self.make_ds(path_pref=path_pref,
                             background=self.FULL_BCK_NAME,
                             hide_labels=hide_labels)

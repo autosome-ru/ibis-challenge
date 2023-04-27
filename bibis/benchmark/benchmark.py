@@ -47,24 +47,27 @@ class MatrixSumbit(Submit):
     tf: str
     parent_name: str 
     
+    SUM_SCORE_NAME: ClassVar[str] = "sumocc"
+    BEST_SCORE_NAME: ClassVar[str] = "besthit"
+    
     def _predict_pwm(self,
                      ds: DatasetInfo,
                      pwm_path: Path,
                      pwmeval_path: Path) -> Prediction:
         model = MatrixMaxPredictor(pwm_path, 
                                     pwmeval_path=pwmeval_path)
-        scores = Prediction(model.score_file(ds.path))
+        scores = Prediction(model.score_file(ds.fasta_path))
         return scores 
     
     def _predict_pfm(self, 
                      ds,
                      pfm_path: Path,
                      pwmeval_path: Path) -> Prediction:
-        if self.scoring_type == "sumscore":
+        if self.scoring_type == self.SUM_SCORE_NAME:
             model = MatrixSumPredictor(pfm_path, 
                                     pwmeval_path=pwmeval_path)
             scores = Prediction(model.score_file(ds.path))
-        elif self.scoring_type == "best":
+        elif self.scoring_type == self.BEST_SCORE_NAME:
             pfm = PFM.load(self.matrix_path)
             int_pwm = pfm.pwm().intpwm()
             with tempfile.TemporaryDirectory() as tempdir:
@@ -149,13 +152,13 @@ class Benchmark:
                                  tf=pfm_info.tf,
                                  matrix_path=pfm_info.path,
                                  matrix_type="pfm",
-                                 scoring_type="best",
+                                 scoring_type=MatrixSumbit.BEST_SCORE_NAME,
                                  parent_name=parent_name)
         self.submit_matrix_model(name=pfm_info.tag,
                                  tf=pfm_info.tf,
                                  matrix_path=pfm_info.path,
                                  matrix_type="pfm",
-                                 scoring_type="sumscore",
+                                 scoring_type=MatrixSumbit.SUM_SCORE_NAME,
                                  parent_name=parent_name)
         
     def submit_pwm_submission(self, pwm_sub: PWMSubmission):
@@ -173,14 +176,16 @@ class Benchmark:
         
         
     def score_prediction(self, ds: DatasetInfo, prediction: Prediction) -> dict[str, float]:
-        labelled_seqs = read_fasta(ds.path)
+        
+        #labelled_seqs = read_fasta(ds.path)
+        answer = ds.answer()
         if self.kind == "ChIPSeq":
-            true_y = [int(s.label) for s in labelled_seqs]
+            true_y = list(map(int, answer.values()))
             pred_y: list[float] = []
-            for s in labelled_seqs:
-                score = prediction.get(s.tag)
+            for tag in answer.keys():
+                score = prediction.get(tag)
                 if score is None:
-                    print(f"Prediction doesn't contain information for sequence {s.tag}, skipping prediction",
+                    print(f"Prediction doesn't contain information for sequence {tag}, skipping prediction",
                           file=sys.stderr)
                     return self.skipped_prediction
                 pred_y.append(score)

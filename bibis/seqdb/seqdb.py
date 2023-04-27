@@ -89,7 +89,7 @@ class TagDatabase:
                     if not wait_for_unlock:
                         existing = self.retrieve_db(cur=cur, 
                                                     table_name=self.TAG_TABLE_NAME)
-                        self.tagger.used_tags.update(existing.values())
+                        self.tagger.update_used(existing.values())
                         rest = {}
                         for s in seqs:
                             if s in existing:

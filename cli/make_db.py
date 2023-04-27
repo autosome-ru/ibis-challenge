@@ -28,15 +28,9 @@ DB_PATH.parent.mkdir(exist_ok=True, parents=True)
 DB_CONFIG_PATH.parent.mkdir(exist_ok=True, parents=True)
 
 
-NAME_PARTS = ["adj", "adj", "nat", "animal"]
-PART_PATHS = {
-    "adj": "/home_local/dpenzar/ibis-challenge/benchmark/data/adjectives.txt",
-    "animal": "/home_local/dpenzar/ibis-challenge/benchmark/data/animals.txt",
-    "nat": "/home_local/dpenzar/ibis-challenge/benchmark/data/nations.txt"
-}
 
 cfg = DBConfig.make(db_path=DB_PATH,
-                    parts=NAME_PARTS, 
-                    parts_path=PART_PATHS)
+                    tagger_type="alpha",
+                    tag_length=7)
 cfg.build()
 cfg.save(DB_CONFIG_PATH)
