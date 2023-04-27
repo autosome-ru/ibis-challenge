@@ -23,17 +23,17 @@ class ScoreSubmission:
 
     FIELDSEP: ClassVar[str] = "\t"
 
-    def __getitem__(self, ds_name: str) -> Prediction:
-        return self._sub[ds_name]
+    def __getitem__(self, tf_name: str) -> Prediction:
+        return self._sub[tf_name]
     
-    def __setitem__(self, ds_name: str, pred: Prediction):
-        self._sub[ds_name] = pred
+    def __setitem__(self, tf_name: str, pred: Prediction):
+        self._sub[tf_name] = pred
 
-    def get(self, ds_name: str) -> Prediction | None:
-        return self._sub.get(ds_name)
+    def get(self, tf_name: str) -> Prediction | None:
+        return self._sub.get(tf_name)
 
-    def __contains__(self, ds_name: str) -> bool:
-        return ds_name in self._sub
+    def __contains__(self, tf_name: str) -> bool:
+        return tf_name in self._sub
     
     @classmethod
     def validate_score(cls, score_str: str):
@@ -132,7 +132,7 @@ class ScoreSubmission:
         return self.FIELDSEP.join(flds)
     
     @property
-    def ds_names(self) -> list[str]:
+    def tf_names(self) -> list[str]:
         return list(self._sub.keys())
     
     def write(self, path: Path | str):
@@ -149,12 +149,12 @@ class ScoreSubmission:
                 print(*vals, sep=self.FIELDSEP, file=outp)
 
     @classmethod
-    def template(cls, name: str, 
-                 ds_names: list[str],
+    def template(cls,
+                 tf_names: list[str],
                  tags: list[str],
                  tag_col_name: str = "tag"):
-        _sub = {tf: Prediction.template(tags) for tf in ds_names}
-        return cls(name=name, 
+        _sub = {tf: Prediction.template(tags) for tf in tf_names}
+        return cls(name="template", 
                    tags=tags,
                    _sub=_sub,
                    tag_col_name=tag_col_name)

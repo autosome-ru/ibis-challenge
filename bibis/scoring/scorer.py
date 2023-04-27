@@ -110,13 +110,13 @@ class ScorerInfo:
         elif self.name == "prroc_prauc":
             tp = self.params.get("type")
             if tp is None:
-                raise Exception("type must be specified for scorers from PRROC package")
+                raise Exception("type must be specified for prauc scorer from PRROC package")
             tp = tp.lower()
             return PRROC_PRAUC(self.alias, tp)
         elif self.name == "constant_scorer":
             cons = self.params.get("cons")
             if cons is None:
-                raise Exception("cons must be specified for scorers from PRROC package")
+                raise Exception("cons must be specified for constant scorer")
             cons = float(cons)
             return ConstantScorer(self.alias, cons)
         raise Exception(f"Wrong scorer: {self.name}")

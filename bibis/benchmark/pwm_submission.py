@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import ClassVar
 from collections import Counter
 from dataclasses import dataclass
+
 from bibis.utils import END_LINE_CHARS
 
 class PWMSubmissionFormatException(Exception):
@@ -133,4 +134,5 @@ class PWMSubmission:
         for tf in self.available_tfs:
             if not tf in submmitted_tfs:
                 print(f"Warning: no pwm submitted for {tf}", file=sys.stderr)
+        
         
