@@ -12,6 +12,7 @@ sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
 from bibis.chipseq.config import ChipSeqConfig, ChipSeqSplit, ForeignConfig, GenomeSampleConfig, ShadesConfig
 from bibis.ibis_utils import ibis_default_name_parser
 
+
 def extract_files(dir, row, parser=ibis_default_name_parser()):
     files = glob.glob(str(dir / f"{row.tf}.*"))
     if len(files) == 0:
@@ -20,6 +21,7 @@ def extract_files(dir, row, parser=ibis_default_name_parser()):
     for fl in files:
         if res := parser.parse(Path(fl).name):
             name = res["name"] #type: ignore
+            name = name[:name.find(".")]
             if name not in row.replics:
                 print(f"Skipping replic {name} for {row.tf} as it wasn't specified in the table", file=sys.stderr)
                 continue
@@ -60,10 +62,10 @@ def process_row(row, train_dir, valid_dir, out_dir):
 
 LEADERBOARD_EXCEL = "/home_local/dpenzar/IBIS TF Selection - Nov 2022 _ Feb 2023.xlsx"
 SPLIT_SHEET_NAME = "v3 TrainTest marked (2023)"
-ILYA_DIR = Path("/home_local/vorontsovie/greco-data/release_8d.2022-07-31/full/CHS/")
+ILYA_DIR = Path("/home_local/vorontsovie/greco-data/release_8d.2022-07-31/full/AFS.Peaks/")
 TRAIN_INT = ILYA_DIR / "Train_intervals"
 VAL_INT = ILYA_DIR / "Val_intervals"
-OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/CHS")
+OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/AFS")
 
 
 parser = argparse.ArgumentParser()
@@ -119,12 +121,15 @@ parser.add_argument("--n_procs",
 args = parser.parse_args()
 print(args)
     
-
 ibis_table = pd.read_excel(LEADERBOARD_EXCEL, sheet_name=SPLIT_SHEET_NAME)
-ibis_table = ibis_table[['Transcription factor', 'CHS', 'ChIP-Seq', 'Stage']]
-ibis_table.columns = ['tf', 'replics', 'split', 'stage']
-ibis_table['replics'] = ibis_table['replics'].str.split(',')
-
+ibis_table = ibis_table[['Transcription factor', 'AFS-GFPIVT', 'AFS-IVT', 'AFS-LYS', 'Genomic HT-SELEX', 'Stage']]
+ibis_table.columns = ['tf', 'replics1', 'replics2', 'replics3', 'split', 'stage']
+ibis_table['replics1'] = ibis_table['replics1'].apply(lambda x: x.split(",") if not pd.isnull(x) else [])
+ibis_table['replics2'] = ibis_table['replics2'].apply(lambda x: x.split(",") if not pd.isnull(x) else [])
+ibis_table['replics3'] = ibis_table['replics3'].apply(lambda x: x.split(",") if not pd.isnull(x) else [])
+ibis_table['replics'] = ibis_table.apply(lambda x: x.replics1 + x.replics2 + x.replics3, axis=1)
+ibis_table.drop(axis=1, labels=['replics1', 'replics2', 'replics3'], inplace=True)
+print(ibis_table.head())
 
 for stage in ('Final', 'Leaderboard'):
     stage_table = ibis_table[ibis_table.stage == stage]

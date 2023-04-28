@@ -102,7 +102,7 @@ pwm_submission_path = out_dir / "pwm_submission.txt"
 with open(pwm_submission_path, "w") as out:
     for ind, tf in enumerate(tfs):
         for i in range(PWMSubmission.MAX_PWM_PER_TF):
-            tag = f"{tf}_motif{ind+1}"
+            tag = f"{tf}_motif{i+1}"
             print(f">{tf} {tag}", file=out)
             for i in range(np.random.randint(3, 11)):
                 a, t, g, c = np.random.dirichlet([1,1,1,1])

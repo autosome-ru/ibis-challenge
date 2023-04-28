@@ -7,7 +7,6 @@ import argparse
 import sys
 
 
-
 def filter_chrom(peak_file: str | Path,
                  out_file: str | Path,
                  chroms: set[str] | list[str]):
@@ -63,10 +62,9 @@ from bibis.bedtools.bedtoolsexecutor import BedtoolsExecutor
 
 BedtoolsExecutor.set_defaull_executor(args.bedtools)
 
-BENCH_PROCESSED_DIR = Path(args.benchmark_out_dir)
 BENCH_SEQDB_CFG = Path(args.tagdb_cfg)
 
-CHS_BENCH_DIR = BENCH_PROCESSED_DIR / "CHS" / args.type
+CHS_BENCH_DIR = Path(args.benchmark_out_dir)
 CHS_BENCH_DIR.mkdir(parents=True, exist_ok=True)
 
 cfg = ChipSeqConfig.load(args.config_file)
@@ -232,7 +230,7 @@ if "test" in cfg.splits:
     participants_dir = valid_dir / "participants"
     participants_dir.mkdir(exist_ok=True)
     participants_file_path = participants_dir / "submission"
-    ds_info = ds.make_full_ds(path_pref=participants_file_path, 
+    ds_info = ds.make_full_ds(path_pref=str(participants_file_path), 
                               hide_labels=True)
     participants_file_path = participants_dir / "submission.tsv"
     ds_info.write_tsv(participants_file_path)
