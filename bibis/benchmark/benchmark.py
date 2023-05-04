@@ -60,13 +60,13 @@ class MatrixSumbit(Submit):
         return scores 
     
     def _predict_pfm(self, 
-                     ds,
+                     ds: DatasetInfo,
                      pfm_path: Path,
                      pwmeval_path: Path) -> Prediction:
         if self.scoring_type == self.SUM_SCORE_NAME:
             model = MatrixSumPredictor(pfm_path, 
                                     pwmeval_path=pwmeval_path)
-            scores = Prediction(model.score_file(ds.path))
+            scores = Prediction(model.score_file(ds.fasta_path))
         elif self.scoring_type == self.BEST_SCORE_NAME:
             pfm = PFM.load(self.matrix_path)
             int_pwm = pfm.pwm().intpwm()
@@ -81,7 +81,7 @@ class MatrixSumbit(Submit):
             raise Exception("Wrong scoring type")
         return scores 
     
-    def predict(self, ds, pwmeval_path: Path) -> Prediction:
+    def predict(self, ds: DatasetInfo, pwmeval_path: Path) -> Prediction:
         if self.matrix_type == "pfm":
             return self._predict_pfm(ds, self.matrix_path, pwmeval_path=pwmeval_path)
         elif self.matrix_type == "pcm":
@@ -179,7 +179,7 @@ class Benchmark:
         
         #labelled_seqs = read_fasta(ds.path)
         answer = ds.answer()
-        if self.kind == "ChIPSeq":
+        if self.kind == "CHS" or self.kind == "AFS":
             true_y = list(map(int, answer.values()))
             pred_y: list[float] = []
             for tag in answer.keys():
