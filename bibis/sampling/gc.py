@@ -166,8 +166,6 @@ class GenomeGCSampler:
     exact: bool = True
     
     
- 
-    
     @staticmethod
     def _exact_profile(genome: Genome,
                  regions: BedData,
@@ -189,7 +187,11 @@ class GenomeGCSampler:
                  min_point_dist: int,
                  rng: Generator) -> GCProfile:
     
-        regions = sample_from_bed(regions, window=window_size, min_dist=min_point_dist, genome=genome)
+        regions = sample_from_bed(regions, 
+                                  window=window_size, 
+                                  min_dist=min_point_dist,
+                                  genome=genome,
+                                  rng=rng)
         return GCProfile.from_bed(
             genome=genome,  
             regions=regions, 
@@ -367,7 +369,7 @@ class GenomeGCSampler:
         negative_gc, neg_positions = chr_profile.gc, chr_profile.idx
         
         if positive_gc.shape[0] * self.sample_per_object > negative_gc.shape[0]:
-            raise Exception("Can't sample")
+            raise Exception(f"Can't sample: requested sample size is smaller, then negatives number: {positive_gc.shape[0] * self.sample_per_object}, {negative_gc.shape[0]}")
         
         negative_gc = np.concatenate([[-np.inf],  negative_gc, [np.inf]])
         
@@ -505,11 +507,6 @@ class GenomeGCSampler:
                 s.metainfo['end'] = bed[i].end # type: ignore
         return seqs
     
-    #def _sample_seqs_from_chromosome(self, chr: str, positives: BedData) -> list[SeqEntry]:
-    #    ch_smpls = self._sample_chromosome(positives=positives,
-    #                                          chr=chr)
-    #    seqs = self._to_seqs(ch_smpls)
-    #    return seqs
     
     def _sample_noparallel(self, positives: BedData) -> BedData:
         beds = []

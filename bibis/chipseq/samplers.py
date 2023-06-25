@@ -18,7 +18,8 @@ def cut_to_window(bed: BedData, window_size: int, genome: Genome) -> BedData:
             entry = BedEntry.from_center(chr=p.chr, 
                                          cntr=cnt, 
                                          radius=window_size // 2, 
-                                         genome=genome)
+                                         genome=genome,
+                                         metainfo=p.metainfo)
             if len(entry) == window_size:
                 cut_peaks.append(entry)
         return BedData(cut_peaks)

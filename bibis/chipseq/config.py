@@ -40,7 +40,8 @@ class ChipSeqSplit:
 @dataclass
 class ChipSeqConfig:
     tf_name: str
-    tf_path: list[str]
+    train_paths: list[str]
+    valid_paths: list[str]
     black_list_path: str | None
     friends_path: list[str]
     window_size: int

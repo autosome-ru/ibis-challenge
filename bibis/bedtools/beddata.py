@@ -256,6 +256,10 @@ class BedData:
             if len(en2) > 0:
                 other.append(en2)
         return smpls
+    
+    def sort_by(self, key_fn) -> 'BedData':
+        cls = type(self)
+        return cls(sorted(self.entries, key=key_fn), sorted=False)
 
 def join_bed(beds: Iterable[BedData],  sort=True) -> BedData:
     if any(not x.sorted for x in beds):
