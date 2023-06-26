@@ -45,7 +45,7 @@ bench_tfs = set([ds.tf for ds in cfg.datasets])
 if args.sub_type == "aaa":
     try:
         submission = ScoreSubmission.load(args.sub)
-        submission.validate(tfs=bench_tfs )
+        submission.validate(cfg=cfg)
     except ScoreSubmissionFormatException as exc:
         print(f"Format error detected: {exc}", file=sys.stderr)
         sys.exit(FORMAT_ERROR_CODE)
@@ -57,7 +57,7 @@ elif args.sub_type == "pwm":
                         path=args.sub,
                         available_tfs=bench_tfs)
     try:
-        submission.validate() 
+        submission.validate(cfg=cfg) 
     except PWMSubmissionFormatException as exc:
         print(f"Format error detected: {exc}", file=sys.stderr)
         sys.exit(FORMAT_ERROR_CODE)

@@ -1,15 +1,22 @@
 from __future__ import annotations
+from logging import warn
 
-import sys
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
+import warnings
+
+from .benchmarkconfig import BenchmarkConfig
 
 from .prediction import Prediction
+from .val import ValidationResult
 from ..utils import END_LINE_CHARS
 
 class ScoreSubmissionFormatException(Exception):
     pass
+
+
 
 
 @dataclass
@@ -95,36 +102,42 @@ class ScoreSubmission:
                    tag_col_name=tag_col_name)
 
     def validate(self, 
-                 tfs: list[str] | set[str] | None = None) -> 'ScoreSubmission':
-        _sub = self._sub.copy()
-        tags = self.tags
+                 cfg: BenchmarkConfig) -> ValidationResult:
+        errors = []
+        warnings = []
         
-        if tfs is not None:
-            for tf in tfs:
-                if tf not in self._sub:
-                     print(f"Warning: no prediction submitted for factor {tf}", file=sys.stderr)
-            for tf in self._sub:
-                if tf not in tfs:
-                    msg = F"No such factor in benchmark: {tf}"
-                    raise ScoreSubmissionFormatException(msg)
+        for tf in cfg.tfs:
+            if tf not in self._sub:
+                msg = f"no prediction submitted for factor {tf}"
+                warnings.append(msg)
+                
+        for tag in self.tags:
+            if tag not in cfg.tags:
+                msg = f"No such tag in becnhmark: {tag}"
+                errors.append(msg)
+
+                
+        for tf in self._sub:
+            if tf not in cfg.tfs:
+                msg = F"No such factor in benchmark: {tf}"
+                errors.append(msg)
                 
         for tf_name, pred in self._sub.items():
-            for t in tags:
+            for t in self.tags:
                 if Prediction.is_skipvalue(pred[t]):
-                    print(f"Column for factor {tf_name} contains skipped prediction for {t}." 
-                            "Predictions for this factor won't be evaluated", 
-                            file=sys.stderr)
-                    _sub.pop(tf_name)
+                    msg = f"Column for factor {tf_name} contains skipped prediction for {t}." 
+                    "Predictions for this factor won't be evaluated"
+                    
+                    warnings.append(msg)                   
+                    self._sub.pop(tf_name)
                     break
                 
-        if len(_sub) == 0:
+        if len(self._sub) == 0:
             msg = f'Submission must contain full information for at least one factor'
-            raise ScoreSubmissionFormatException(msg)
+            errors.append(msg)
 
-        cls = type(self)
-        return cls(name=self.name,
-                   tags=tags, 
-                   _sub=_sub)
+        return ValidationResult(warnings=warnings, 
+                                errors=errors)
 
     @property
     def header(self) -> str:

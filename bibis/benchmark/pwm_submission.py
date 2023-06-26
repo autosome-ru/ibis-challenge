@@ -1,9 +1,13 @@
+from logging import warning
 import sys
 import string 
 from pathlib import Path
 from typing import ClassVar
 from collections import Counter
 from dataclasses import dataclass
+
+from .benchmarkconfig import BenchmarkConfig
+from .val import ValidationResult
 
 from bibis.utils import END_LINE_CHARS
 
@@ -39,7 +43,9 @@ class PWMSubmission:
         dir_path.mkdir(exist_ok=True, parents=True)
         
         pfms: list[PFMInfo] = []
-        for tag, (tf, lines) in  self.split_into_chunks().items():
+        
+        chunks, _ = self.split_into_chunks()
+        for tag, (tf, lines) in  chunks.items():
             pfm_path = dir_path / f"{tag}.pfm"
             if pfm_path.exists():
                 raise PWMSubmissionException(f"Pfm path {pfm_path} already exists")
@@ -60,7 +66,7 @@ class PWMSubmission:
             if c not in self.POSSIBLE_CHARS:
                 raise PWMSubmissionFormatException(f"Only alphanumeric and underscore chars are allowed: {c}, line {ind}")
     
-    def parse_header(self, header: str, ind: int):
+    def parse_header(self, header: str, ind: int) -> tuple[str, str, str | None] :
         if not header.startswith(">"):
             raise PWMSubmissionFormatException(f"Header should start with > symbol: {header}, line {ind}")
         header = header[1:]
@@ -68,10 +74,14 @@ class PWMSubmission:
         if len(fields) != 2:
             raise PWMSubmissionFormatException(f"Header should contain only TF name and unique tag separated by space: {header}, line {ind}")
         tf, tag = fields 
+        
         if not tf in self.available_tfs:
-            raise PWMSubmissionFormatException(f"TF provided doesn't exists: {tf}, line {ind}")
+            warn =  f"TF provided doesn't exists: {tf}, line {ind}"
+        else:
+            warn = None
+
         self.check_tag(tag, ind)
-        return tf, tag
+        return tf, tag, warn
         
     def check_matrix_line(self, line: str, ind: int):
         fields = line.split(" ")
@@ -92,8 +102,9 @@ class PWMSubmission:
         if abs(s - 1) > self.MAX_1_DIFF:
             raise PWMSubmissionFormatException(f"Frequences should sum up to 1±0.001: {s}, line {ind}")
     
-    def split_into_chunks(self) -> dict[str, tuple[str, list[str]]]:
+    def split_into_chunks(self) -> tuple[dict[str, tuple[str, list[str]]], list[str]]:
         chunks: dict[str, tuple[str, list[str]]] = {}
+        warnings = []
         with open(self.path) as inp:
             waiting_for_header = True
             tf, tag = "", ""
@@ -101,7 +112,9 @@ class PWMSubmission:
             for ind, line in enumerate(inp, 1):
                 line = line.rstrip(END_LINE_CHARS)
                 if waiting_for_header:
-                    tf, tag = self.parse_header(line, ind)
+                    tf, tag, warn = self.parse_header(line, ind)
+                    if warn is not None:
+                        warnings.append(warn)
                     if tag in chunks:
                         raise PWMSubmissionFormatException(f"Tags must be unique: {tag}, line {ind}")
                     waiting_for_header = False
@@ -121,10 +134,11 @@ class PWMSubmission:
         for tag, (_, lines) in chunks.items():
             if len(lines) == 0:
                 raise PWMSubmissionFormatException(f"Each matrix should contain at least one row with nucleotide frequencies: {tag}")
-        return chunks
+        return chunks, warnings
                                  
-    def validate(self):
-        chunks = self.split_into_chunks()
+    def validate(self, cfg: BenchmarkConfig) -> ValidationResult:
+        chunks, warnings = self.split_into_chunks()
+            
         submmitted_tfs =  Counter(tf for tf, _ in chunks.values())
         
         top_sub_tf, sub_cnt = submmitted_tfs.most_common(1)[0]
@@ -133,6 +147,8 @@ class PWMSubmission:
         
         for tf in self.available_tfs:
             if not tf in submmitted_tfs:
-                print(f"Warning: no pwm submitted for {tf}", file=sys.stderr)
+                msg = f"no PWM submitted for {tf}"
+                warnings.append(msg)
+        return ValidationResult(warnings=warnings, errors=[])
         
         

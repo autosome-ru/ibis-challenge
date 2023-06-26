@@ -31,8 +31,9 @@ bench_tfs = set([ds.tf for ds in cfg.datasets])
 subm = PWMSubmission(name="to_validate",
                      path=args.pwm_sub,
                      available_tfs=bench_tfs)
+
 try:
-    subm.validate() 
+    val_res = subm.validate(cfg) 
 except PWMSubmissionFormatException as exc:
     print(f"Format error detected: {exc}", file=sys.stderr)
     sys.exit(FORMAT_ERROR_CODE)
@@ -40,5 +41,18 @@ except Exception as exc:
     print(f"Uknown error occured: {exc}", file=sys.stderr)
     sys.exit(INTERNAL_ERROR_CODE)
 else:
+    if len(val_res.errors) != 0:
+        for er in val_res.errors:
+            print(f"Error detected: {er}", file=sys.stderr)
+            
+        if len(val_res.warnings) != 0:
+            for war in val_res.warnings:
+                print(f"Warning: {war}")
+        sys.exit(FORMAT_ERROR_CODE)
+       
+    if len(val_res.warnings) != 0:
+            for war in val_res.warnings:
+                print(f"Warning: {war}")
+    
     print("Validation is successful", file=sys.stderr)
     sys.exit(SUCCESS_CODE)

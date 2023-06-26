@@ -234,6 +234,8 @@ class Benchmark:
                     raise Exception("Wrong submit type")
                 
                 for ds_name, ds_dt in scores.items():
+                    if ds_dt == self.skipped_prediction:
+                        continue 
                     for sc, value in ds_dt.items():
                         ds = ds_mapping[ds_name]
                         results.append([sub.parent_name, 

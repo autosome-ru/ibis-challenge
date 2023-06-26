@@ -51,37 +51,45 @@ config_paths = glob.glob(str(ds_cfg_paths))
 with open(args.scorers, "r") as out:
     scorers_dt = json.load(out)
 
-cfg = BenchmarkConfig(
-    name=args.benchmark_name,
-    kind=args.benchmark_kind,
-    datasets=[DatasetInfo.load(p) for p in config_paths],
-    scorers=[ScorerInfo.from_dict(sc) for sc in scorers_dt],
-    pwmeval_path=args.pwmeval,
-    metainfo={}    
-)
+
 
 
 out_dir = Path(args.out_dir)
 out_dir.mkdir(parents=True, exist_ok=True)
 
-cfg_path = out_dir / f"benchmark.json"
-cfg.save(cfg_path)
+
+datasets = [DatasetInfo.load(p) for p in config_paths]
 
 # collect tags 
 tags = {}
 answers = {}
 tfs = set()
 
-for ds in cfg.datasets:
+for ds in datasets:
     tfs.add(ds.tf)
     ans = ds.answer()
     for tag, label in ans.items():
         tags[tag] = label
         answers[(ds.tf, tag)] = label
 
+cfg = BenchmarkConfig(
+    name=args.benchmark_name,
+    kind=args.benchmark_kind,
+    datasets=datasets,
+    scorers=[ScorerInfo.from_dict(sc) for sc in scorers_dt],
+    pwmeval_path=args.pwmeval,
+    tfs=list(tfs),
+    tags=list(tags.keys()),
+    metainfo={}    
+)
+
+cfg_path = out_dir / f"benchmark.json"
+cfg.save(cfg_path)
+
+
 score_template = ScoreSubmission.template(tag_col_name="peaks",
-                                          tf_names=list(tfs),
-                                          tags=list(tags.keys()))
+                                          tf_names=cfg.tfs,
+                                          tags=cfg.tags)
 aaa_template_path = out_dir / "aaa_template.tsv"
 score_template.write(aaa_template_path)
 
