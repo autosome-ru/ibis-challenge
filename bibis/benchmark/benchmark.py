@@ -179,7 +179,7 @@ class Benchmark:
         
         #labelled_seqs = read_fasta(ds.path)
         answer = ds.answer()
-        if self.kind == "CHS" or self.kind == "AFS":
+        if self.kind == "CHS" or self.kind == "GHTS":
             true_y = list(map(int, answer.values()))
             pred_y: list[float] = []
             for tag in answer.keys():

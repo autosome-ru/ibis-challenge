@@ -30,6 +30,8 @@ class BenchmarkConfig:
         dt["scorers"] = [ScorerInfo.from_dict(rec)\
                         for rec in dt["scorers"]]
         dt["metainfo"] = dt.get('metainfo', {})
+        dt["tags"] = set(dt["tags"])
+        dt["tfs"] = set(dt["tfs"])
 
         return cls(**dt)
 
@@ -49,5 +51,7 @@ class BenchmarkConfig:
     
     def save(self, path: Path | str):
         dt = self.to_dict()
+        dt["tags"] = list(dt["tags"])
+        dt["tfs"] = list(dt["tfs"])
         with open(path, 'w') as inp:
             json.dump(dt, inp, indent=4)

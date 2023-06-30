@@ -110,7 +110,7 @@ class ScoreSubmission:
             if tf not in self._sub:
                 msg = f"no prediction submitted for factor {tf}"
                 warnings.append(msg)
-                
+
         for tag in self.tags:
             if tag not in cfg.tags:
                 msg = f"No such tag in becnhmark: {tag}"

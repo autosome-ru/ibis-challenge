@@ -34,14 +34,13 @@ class GenomeSampleConfig:
     
 @dataclass
 class ChipSeqSplit:
+    paths: list[str]
     chroms: list[str]
     hide_regions: str | None 
 
 @dataclass
 class ChipSeqConfig:
     tf_name: str
-    train_paths: list[str]
-    valid_paths: list[str]
     black_list_path: str | None
     friends_path: list[str]
     window_size: int

@@ -69,25 +69,14 @@ CHS_BENCH_DIR.mkdir(parents=True, exist_ok=True)
 
 cfg = ChipSeqConfig.load(args.config_file)
 
-tf_peaks = [ChIPPeakList.read(t) for t in cfg.tf_path]
-tf_beds = [f.to_beddata() for f in tf_peaks]
 
 
 if "train" in cfg.splits:
     split = cfg.splits["train"]
-    if "test" in cfg.splits:
-        ind, _ = max(enumerate(tf_beds), key=lambda x: len(x[1]))
-        train_peaks_paths = list(cfg.tf_path)
-        train_peaks_paths.pop(ind)
-    else:
-        train_peaks_paths = list(cfg.tf_path)
-    
     train_dir = CHS_BENCH_DIR / "train" / cfg.tf_name
     train_dir.mkdir(exist_ok=True, parents=True)
     
-    #filter_chrom
-    
-    for ind, peak_path in enumerate(train_peaks_paths, 1):
+    for ind, peak_path in enumerate(split.paths, 1):
         fl_name = Path(peak_path).name
         replic_path = train_dir / fl_name
         filter_chrom(peak_file=peak_path, 
@@ -95,15 +84,20 @@ if "train" in cfg.splits:
                      chroms=split.chroms)
 
 if "test" in cfg.splits:
-    ind, valid_bed = max(enumerate(tf_beds), key=lambda x: len(x[1]))
-    train_beds = list(tf_beds)
-    train_beds.pop(ind)
     
+
     valid_dir = CHS_BENCH_DIR / "valid" / cfg.tf_name
     valid_dir.mkdir(exist_ok=True, parents=True)
     
-    validation_replic_file = cfg.tf_path[ind]
-    print(f"Selected {cfg.tf_path[ind]} as validation replic")
+    
+    split = cfg.splits["test"]
+    
+    print(cfg.splits["test"])
+    if len(split.paths) != 1:
+        raise Exception("Only one replic can be used as validation")
+    
+    validation_replic_file = split.paths[0]
+    print(f"Use {validation_replic_file} as a validation replic")
     
     sel_path = valid_dir / "selected.json"
     with open(sel_path, "w") as out:
@@ -112,11 +106,19 @@ if "test" in cfg.splits:
                   indent=4)
     
     
-    split = cfg.splits["test"]
     foreign_peaks = [ChIPPeakList.read(t) for t in cfg.foreign_cfg.foreigns_path]
     foreign_beds = [f.to_beddata() for f in foreign_peaks]
     
+    valid_bed = ChIPPeakList.read(validation_replic_file).to_beddata()
     valid_bed = valid_bed.filter(lambda e: e.chr in split.chroms) # type: ignore
+    
+    if "train" in cfg.splits:
+        train_peaks = [ChIPPeakList.read(t) for t in cfg.splits["train"].paths]
+        train_beds = [f.to_beddata() for f in train_peaks]
+    else:
+        train_beds = []
+    
+
     train_beds = [bed.filter(lambda e: e.chr in split.chroms) for bed in train_beds]
     foreign_beds = [bed.filter(lambda e: e.chr in split.chroms) for bed in foreign_beds]
 

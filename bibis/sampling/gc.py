@@ -12,6 +12,7 @@ from functools import partial
 import multiprocessing
 import tqdm 
 
+import sys
 from copy import copy
 
 from .sample_bed import sample_from_bed
@@ -64,86 +65,99 @@ class SetGCSampler:
                save_metainfo: bool = True,
                return_loss: bool = False) -> list[SeqEntry] | tuple[list[SeqEntry], float]:
         requested_size = len(positive) * self.sample_per_object
-        if requested_size > len(self.negatives):
-            raise Exception(f"Can't sample: number of negatives: {len(self.negatives)}, requested: { requested_size}")
+        #if requested_size > len(self.negatives):
+        #    raise Exception(f"Can't sample: number of negatives: {len(self.negatives)}, requested: { requested_size}")
         
-        positive_gc = np.array([s.gc for s in positive])
-        negative_gc = self.negatives_gc
-        N, M = negative_gc.shape[0], positive_gc.shape[0]
-
-        disjoint = DisjointSet.from_negative_gc(negative_gc) 
-
-        heap = []
-
-        pos_clusters = np.searchsorted(negative_gc, positive_gc) - 1
-
-        for i in range(M):
-            val = positive_gc[i]
-            cl = pos_clusters[i]
-            p = disjoint.root(cl)
-            l = disjoint.left(p)
-            r = disjoint.right(p)
-
-            d1 = abs(negative_gc[l] - val)
-            d2 = abs(negative_gc[r] - val)
-
-            if d1 < d2:
-                pair = (d1, i, l)
-            elif d1 > d2:
-                pair = (d2, i, r)
-            else:
-                if self.rng.random() < 0.5:
-                    pair = (d1, i, l)
-                else:
-                    pair = (d2, i, r)
-
-            heap.append(pair)
-
-        heapq.heapify(heap)
-        samples = defaultdict(list)
-
-        loss = 0
-        while len(heap) != 0:
-            d, i, pos = heapq.heappop(heap)
-
-            if not disjoint.is_taken[pos]:
-                loss += d
-                p = disjoint.take(pos)
-                samples[i].append(pos)
-
-                if len(samples[i]) == self.sample_per_object:
-                    continue
-            cl = pos_clusters[i]
-            p = disjoint.root(cl)
-            val = positive_gc[i]
-            l = disjoint.left(p)
-            r = disjoint.right(p)
-            d1 = abs(negative_gc[l] - val)
-            d2 = abs(negative_gc[r] - val)
-
-            if d1 < d2:
-                pair = (d1, i, l)
-            elif d1 > d2:
-                pair = (d2, i, r)
-            else:
-                if self.rng.random() < 0.5:
-                    pair = (d1, i, l)
-                else:
-                    pair = (d2, i, r)
-            heapq.heappush(heap, pair)
-            
-        neg_sampled = []
-        for j, inds in samples.items():
-            for i in inds:
-                im = i - 1 # due to added -np.inf  !!!!
-                neg = self.negatives[im]
-                if save_metainfo:
-                    if positive[j].metainfo is not None: 
-                        if neg.metainfo is None:
-                            neg.metainfo = {}
+        if requested_size > len(self.negatives):  
+            print(f"Can't sample more than total negatives num: number of negatives: {len(self.negatives)}, requested: {requested_size}", file=sys.stderr)
+            loss = 0 
+            neg_sampled = [copy(n) for n in self.negatives]
+            if save_metainfo:
+                for n in neg_sampled:
+                    if n.metainfo is None:
+                        n.metainfo = {}
+                    else:
+                        n.metainfo = copy(n.metainfo)
                         
-                        neg.metainfo['pos_cor'] = copy(positive[j].metainfo)
-                neg_sampled.append(neg)
+                    n.metainfo["pos_cor"] = "__NO_CORRESPONDENCE"
+        else:
+            positive_gc = np.array([s.gc for s in positive])
+            negative_gc = self.negatives_gc
+            N, M = negative_gc.shape[0], positive_gc.shape[0]
+
+            disjoint = DisjointSet.from_negative_gc(negative_gc) 
+
+            heap = []
+
+            pos_clusters = np.searchsorted(negative_gc, positive_gc) - 1
+
+            for i in range(M):
+                val = positive_gc[i]
+                cl = pos_clusters[i]
+                p = disjoint.root(cl)
+                l = disjoint.left(p)
+                r = disjoint.right(p)
+
+                d1 = abs(negative_gc[l] - val)
+                d2 = abs(negative_gc[r] - val)
+
+                if d1 < d2:
+                    pair = (d1, i, l)
+                elif d1 > d2:
+                    pair = (d2, i, r)
+                else:
+                    if self.rng.random() < 0.5:
+                        pair = (d1, i, l)
+                    else:
+                        pair = (d2, i, r)
+
+                heap.append(pair)
+
+            heapq.heapify(heap)
+            samples = defaultdict(list)
+
+            loss = 0
+            while len(heap) != 0:
+                d, i, pos = heapq.heappop(heap)
+
+                if not disjoint.is_taken[pos]:
+                    loss += d
+                    p = disjoint.take(pos)
+                    samples[i].append(pos)
+
+                    if len(samples[i]) == self.sample_per_object:
+                        continue
+                cl = pos_clusters[i]
+                p = disjoint.root(cl)
+                val = positive_gc[i]
+                l = disjoint.left(p)
+                r = disjoint.right(p)
+                d1 = abs(negative_gc[l] - val)
+                d2 = abs(negative_gc[r] - val)
+
+                if d1 < d2:
+                    pair = (d1, i, l)
+                elif d1 > d2:
+                    pair = (d2, i, r)
+                else:
+                    if self.rng.random() < 0.5:
+                        pair = (d1, i, l)
+                    else:
+                        pair = (d2, i, r)
+                heapq.heappush(heap, pair)
+                
+            neg_sampled = []
+            for j, inds in samples.items():
+                for i in inds:
+                    im = i - 1 # due to added -np.inf  !!!!
+                    neg = self.negatives[im]
+                    if save_metainfo:
+                        if positive[j].metainfo is not None: 
+                            if neg.metainfo is None:
+                                neg.metainfo = {}
+                            
+                            neg.metainfo['pos_cor'] = copy(positive[j].metainfo)
+                    neg_sampled.append(neg)
                 
         
         if return_loss:
