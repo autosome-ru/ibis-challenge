@@ -64,10 +64,12 @@ class SeqEntry:
     @classmethod
     def from_seqrecord(cls, rec: SeqRecord) -> 'SeqEntry':
         info = {}
-        description = rec.description[rec.description.find(" ")+1:]
-        for field in description.split(cls.INFO_SEPARATOR):
-            key, value = field.split(cls.KV_SEPARATOR)
-            info[key] = value
+        point = rec.description.find(" ")
+        if point != -1:
+            description = rec.description[point+1:]
+            for field in description.split(cls.INFO_SEPARATOR):
+                key, value = field.split(cls.KV_SEPARATOR)
+                info[key] = value
         label = info.pop("label", None)
         if label is None:
             label = NO_LABEL

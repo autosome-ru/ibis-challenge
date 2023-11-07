@@ -176,10 +176,9 @@ class Benchmark:
         
         
     def score_prediction(self, ds: DatasetInfo, prediction: Prediction) -> dict[str, float]:
-        
         #labelled_seqs = read_fasta(ds.path)
         answer = ds.answer()
-        if self.kind == "CHS" or self.kind == "GHTS":
+        if self.kind in ("CHS",  "GHTS", "PBM"):
             true_y = list(map(int, answer.values()))
             pred_y: list[float] = []
             for tag in answer.keys():
@@ -195,7 +194,7 @@ class Benchmark:
                 scores[sc.name] = sc.score(y_score=pred_y, y_real=true_y)
             return scores
         else:
-            raise NotImplementedError()
+            raise NotImplementedError(f"Benchmark scoring is not implemented for {self.kind}")
 
     def score_aaa_submit(self, submit: AAASubmit) -> dict[str, dict[str, float]]:
         scores = {}

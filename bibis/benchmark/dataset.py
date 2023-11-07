@@ -46,15 +46,34 @@ class DatasetInfo:
             ans = json.load(inp)
         return ans
     
-    
+
+def get_seqentrykey(s: SeqEntry, kind: str):
+    if kind in ("GHTS", "CHS"):
+        return seqentry2interval_key(s)
+    elif kind == "PBM":
+        return seqentry2pbm_key(s)
+    else:
+        raise Exception(f"entries2tsv is not implemented for benchmark {kind}")
+
 def seqentry2interval_key(s: SeqEntry):
         m = s.metainfo
         try:
             return m['chr'], m['start'], m['end'] # type: ignore
         except KeyError:
             raise Exception("seqentry2interval_key works only for datasets with information about chr, start and end provided")
-    
-def entries2tsv(entries: list[SeqEntry], path: str | Path):
+
+def seqentry2pbm_key(s: SeqEntry):
+    return s.tag
+
+def entries2tsv(entries: list[SeqEntry], path: str | Path, kind: str):
+    if kind in ("GHTS", "CHS"):
+        return peaks_entries2tsv(entries, path)
+    elif kind == "PBM":
+        return pbm_entries2tsv(entries, path)
+    else:
+        raise Exception(f"entries2tsv is not implemented for benchmark {kind}")
+
+def peaks_entries2tsv(entries: list[SeqEntry], path: str | Path):
     with open(path, "w") as out:
         for e in entries:
             try:
@@ -62,7 +81,21 @@ def entries2tsv(entries: list[SeqEntry], path: str | Path):
                 start = e.metainfo['start'] # type: ignore
                 end = e.metainfo['end'] # type: ignore
             except KeyError:
-                raise Exception("write tsv works only for entries with information about chr, start and end provided")
+                raise Exception("peaks_entries2tsv works only for entries with information about chr, start and end provided")
             tag = e.tag
             print(chr, start, end, tag, sep="\t", file=out)
-                
+
+def pbm_entries2tsv(entries: list[SeqEntry], path: str | Path):
+    with open(path, "w") as out:
+        for e in entries:
+            try:
+                id_spot = e.metainfo['id_spot'] # type: ignore
+                row = e.metainfo['row'] # type: ignore
+                col = e.metainfo['col'] # type: ignore
+                linker = e.metainfo['linker'] 
+            except KeyError:
+                raise Exception("pbm_entries2tsv works only for entries with information about id_spot, row, col and linker provided")
+            tag = e.tag
+            print(id_spot, row, col, tag, sep="\t", file=out)
+
+        
