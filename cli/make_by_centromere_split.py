@@ -37,7 +37,11 @@ args = parser.parse_args()
 out_dir = Path(args.out_path)
 out_dir.mkdir(exist_ok=True, parents=True)
 
-t = pd.read_csv(args.centromers_file, sep="\t", header=None, names=['chr', 'start', 'end', 'id'], index_col=False)
+t = pd.read_csv(args.centromers_file,
+                sep="\t", 
+                header=None, 
+                names=['chr', 'start', 'end', 'id'],
+                index_col=False)
 
 
 centromers = []

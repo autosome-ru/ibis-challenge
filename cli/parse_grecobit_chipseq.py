@@ -201,7 +201,7 @@ for stage in ('Final', 'Leaderboard'):
                                                                         exact=args.exact_genome,
                                                                         precalc_profile=False))
         path = configs_dir / f"{tf}.json"
-        to_save[tf] = ( path, config)
+        to_save[tf] = (path, config)
         
     for tf, (path, config) in to_save.items():        
         config.foreign_cfg.foreigns_path = [path for other_tf, path in test_files.items() if other_tf != tf]

@@ -52,8 +52,6 @@ with open(args.scorers, "r") as out:
     scorers_dt = json.load(out)
 
 
-
-
 out_dir = Path(args.out_dir)
 out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -65,12 +63,17 @@ tags = {}
 answers = {}
 tfs = set()
 
+ds_names = set()
 for ds in datasets:
     tfs.add(ds.tf)
     ans = ds.answer()
     for tag, label in ans.items():
         tags[tag] = label
         answers[(ds.tf, tag)] = label
+    if ds.name in ds_names: 
+        raise Exception(f"Some datasets in benchmark have the same name {ds.name}")
+    ds_names.add(ds.name)
+
 
 cfg = BenchmarkConfig(
     name=args.benchmark_name,
@@ -124,14 +127,23 @@ for path in sub_fasta_paths:
     entries = read_fasta(path)
     for e in entries:
         unique_entries[e.tag] = e
-        
+   
 final_entries = list(unique_entries.values())
-final_entries.sort(key=seqentry2interval_key)
+if args.benchmark_kind in ("GHTS", "CHS"): 
+    final_entries.sort(key=seqentry2interval_key)
+elif args.benchmark_kind == "PBM":
+    final_entries.sort(key=lambda pe: pe.tag)
+else:
+    raise Exception("No ordering implemented for benchmark {args.benchmark_kind}")
+
 
 participants_fasta_path = out_dir / "participants.fasta"
 write_fasta(entries=final_entries, 
             handle=participants_fasta_path)
+
 participants_tsv_path = out_dir / "participants.bed"
+
 entries2tsv(entries=final_entries, 
-            path=participants_tsv_path)
+            path=participants_tsv_path,
+            kind=args.benchmark_kind)
 
