@@ -11,7 +11,6 @@ from bibis.pbm.config import PBMConfig
 LEADERBOARD_EXCEL = "/home_local/dpenzar/IBIS TF Selection - Nov 2022 _ Feb 2023.xlsx"
 SPLIT_SHEET_NAME = "v3 TrainTest marked (2023)"
 PBM_DIR = Path("/home_local/vorontsovie/greco-data/release_8d.2022-07-31/full/")
-
 EXPTP2SPLIT = {"PBM.ME": "Train",
                "PBM.HK": "Val"}
 STAGES = ('Final', 'Leaderboard')
@@ -94,9 +93,11 @@ for stage in STAGES:
             split = split.lower()
             for norm, in_paths in norm_dt.items():            
                 for ind, in_p in enumerate(in_paths, 1):
+                    pbm_id = in_p.name.split("@", maxsplit=3)[2]
+                    pbm_id = pbm_id.split(".")[0]
                     out_dir = OUT_DIR / tf / split / norm / exp_type
                     out_dir.mkdir(parents=True, exist_ok=True)
-                    out_path = out_dir / f"replic_{ind}.tsv"
+                    out_path = out_dir / f"{pbm_id}.tsv"
                     shutil.copy(in_p, out_path)
                     if split == "train":
                         cfg.train_paths.append(str(out_path))

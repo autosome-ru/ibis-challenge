@@ -220,6 +220,8 @@ class Benchmark:
     
     def run(self):
         ds_mapping = {ds.name: ds for ds in self.datasets}
+        if len(ds_mapping) != len(self.datasets):
+            raise Exception("Dataset names must be unique")
         results = []
         with tqdm.tqdm(total=len(self.submits)) as pbar:
             for sub in self.submits:
@@ -254,6 +256,12 @@ class Benchmark:
                                    "background",
                                    "score",
                                    "value"])
+        if self.kind == "PBM":
+            back = [x.split("_")[0] for x in df['background'].values]
+            exp = [x.split("_")[1] for x in df['background'].values]
+            df['background'] = back
+            df['experiment_id'] = exp
+        
         return df
     
     @classmethod

@@ -10,7 +10,7 @@ from ..scoring.label import Label
 class DatasetInfo:
     name: str
     tf: str
-    background: str
+    background: str 
     fasta_path: str
     answer_path: str | None
     
