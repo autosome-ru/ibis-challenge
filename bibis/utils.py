@@ -1,3 +1,5 @@
+import gzip 
+from Bio import SeqIO
 from typing import overload
 from pathlib import Path
 
@@ -32,3 +34,13 @@ def replace_path2str(obj: list | dict) -> list | dict:
                     el = str(el)
                 new_lst.append(el)
         return new_lst
+    
+def merge_fastqgz(in_paths, out_path):
+    recs = []
+    for path in in_paths:
+        with gzip.open(path, "rt") as inp:
+            for rec in SeqIO.parse(inp, 'fastq'):
+                #print(rec.id, rec.description, rec.seq)
+                recs.append(rec)
+    with  gzip.open(out_path, "wt") as out:
+        SeqIO.write(recs, out, 'fastq')

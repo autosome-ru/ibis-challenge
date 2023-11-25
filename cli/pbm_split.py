@@ -7,6 +7,7 @@ from pathlib import Path
 import argparse
 import sys
 
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--benchmark_out_dir", 
@@ -42,6 +43,8 @@ from bibis.sampling.gc import SetGCSampler
 from bibis.benchmark.dataset import DatasetInfo, entries2tsv
 from bibis.pbm.pbm import PBMExperiment
 from bibis.pbm.pbm_protocol import IbisProtocol
+from bibis.scoring.label import NO_LABEL
+
 
 PBM_BENCH_DIR = Path(args.benchmark_out_dir)
 PBM_BENCH_DIR.mkdir(parents=True, exist_ok=True)
@@ -137,4 +140,5 @@ if len(cfg.test_paths) != 0:
     
     participants_file_path = participants_dir / "submission.fasta"
     entries = [pe.to_seqentry() for pe in experiments[0]]
+
     seq_write(entries, participants_file_path)

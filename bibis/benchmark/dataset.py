@@ -13,6 +13,8 @@ class DatasetInfo:
     background: str 
     fasta_path: str
     answer_path: str | None
+    left_flank: str | None = None # valid for SMS and HT-SELEX
+    right_flank: str | None = None # valid for SMS and HT-SELEX
     
     @classmethod
     def from_dict(cls, dt: dict[str, str | Path]):
@@ -70,6 +72,8 @@ def entries2tsv(entries: list[SeqEntry], path: str | Path, kind: str):
         return peaks_entries2tsv(entries, path)
     elif kind == "PBM":
         return pbm_entries2tsv(entries, path)
+    elif kind == "SMS":
+        return sms_entries2tsv(entries, path)
     else:
         raise Exception(f"entries2tsv is not implemented for benchmark {kind}")
 
@@ -98,4 +102,8 @@ def pbm_entries2tsv(entries: list[SeqEntry], path: str | Path):
             tag = e.tag
             print(id_spot, row, col, tag, sep="\t", file=out)
 
-        
+def sms_entries2tsv(entries: list[SeqEntry], path: str | Path):
+    with open(path, "w") as out:
+        for e in entries:
+            tag = e.tag
+            print(tag, file=out)

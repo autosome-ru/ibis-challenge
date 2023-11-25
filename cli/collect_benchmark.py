@@ -3,7 +3,7 @@ import argparse
 import glob
 import json
 import sys
-
+import random
 import numpy as np
 
 from pathlib import Path
@@ -44,17 +44,19 @@ from bibis.seq.seqentry import SeqEntry, read_fasta, write_fasta
 
 benchmark = Path(args.benchmark_root)
 
-ds_cfg_paths = benchmark / "valid" / "*" / "answer" / "*" / "config.json"
+if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS"):   
+    ds_cfg_paths = benchmark / "valid" / "*" / "answer" / "*" / "config.json"
 
-config_paths = glob.glob(str(ds_cfg_paths))
+    config_paths = glob.glob(str(ds_cfg_paths))
+    assert len(config_paths) > 0
+else:
+    raise Exception("No config collection implemented for benchmark {args.benchmark_kind}")
 
 with open(args.scorers, "r") as out:
     scorers_dt = json.load(out)
 
-
 out_dir = Path(args.out_dir)
 out_dir.mkdir(parents=True, exist_ok=True)
-
 
 datasets = [DatasetInfo.load(p) for p in config_paths]
 
@@ -74,6 +76,8 @@ for ds in datasets:
         raise Exception(f"Some datasets in benchmark have the same name {ds.name}")
     ds_names.add(ds.name)
 
+all_tags = list(tags.keys())
+random.shuffle(all_tags)
 
 cfg = BenchmarkConfig(
     name=args.benchmark_name,
@@ -82,13 +86,12 @@ cfg = BenchmarkConfig(
     scorers=[ScorerInfo.from_dict(sc) for sc in scorers_dt],
     pwmeval_path=args.pwmeval,
     tfs=list(tfs),
-    tags=list(tags.keys()),
+    tags=all_tags,
     metainfo={}    
 )
 
 cfg_path = out_dir / f"benchmark.json"
 cfg.save(cfg_path)
-
 
 score_template = ScoreSubmission.template(tag_col_name="peaks",
                                           tf_names=cfg.tfs,
@@ -120,19 +123,25 @@ with open(pwm_submission_path, "w") as out:
                 p = PWMSubmission.MAX_PRECISION
                 print(f"{a:.0{p}f} {t:.0{p}f} {g:.0{p}f} {c:.0{p}f}", file=out)
             print(file=out)
-            
-sub_fasta_paths = glob.glob(str(benchmark / "valid" / "*" / "participants" / "*.fasta"))
-unique_entries: dict[str, SeqEntry] = {}
-for path in sub_fasta_paths:
-    entries = read_fasta(path)
-    for e in entries:
-        unique_entries[e.tag] = e
+
+if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS"):          
+    sub_fasta_paths = glob.glob(str(benchmark / "valid" / "*" / "participants" / "*.fasta"))
+    assert len(sub_fasta_paths) > 0
+    unique_entries: dict[str, SeqEntry] = {}
+    for path in sub_fasta_paths:
+        entries = read_fasta(path)
+        for e in entries:
+            unique_entries[e.tag] = e
+else:
+    raise Exception("No sequence collection implemented for benchmark {args.benchmark_kind}")
    
 final_entries = list(unique_entries.values())
 if args.benchmark_kind in ("GHTS", "CHS"): 
     final_entries.sort(key=seqentry2interval_key)
 elif args.benchmark_kind == "PBM":
     final_entries.sort(key=lambda pe: pe.tag)
+elif args.benchmark_kind == "SMS":
+    random.shuffle(final_entries)
 else:
     raise Exception("No ordering implemented for benchmark {args.benchmark_kind}")
 

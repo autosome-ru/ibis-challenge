@@ -178,7 +178,7 @@ class Benchmark:
     def score_prediction(self, ds: DatasetInfo, prediction: Prediction) -> dict[str, float]:
         #labelled_seqs = read_fasta(ds.path)
         answer = ds.answer()
-        if self.kind in ("CHS",  "GHTS", "PBM"):
+        if self.kind in ("CHS",  "GHTS", "PBM", "SMS"):
             true_y = list(map(int, answer.values()))
             pred_y: list[float] = []
             for tag in answer.keys():
