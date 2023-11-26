@@ -86,7 +86,7 @@ class BedData:
             self.write(store)
             out_path = tempdir / 'out.bed'
             self.executor.merge(store, out_path=out_path)
-        return self.from_file(out_path, presorted=True)
+            return self.from_file(out_path, presorted=True)
 
     def subtract(self, other: 'BedData', full: bool) -> 'BedData':
         with tempfile.TemporaryDirectory() as tempdir:
@@ -184,14 +184,6 @@ class BedData:
             if s is not None:
                 new_entries.append(s)
         return BedData(new_entries)
-    
-    #def map(self, fn : Callable[[BedEntry], Optional[U]]) -> list[U]:
-    #    lst = []
-    #    for s in self.entries:
-    #        s = fn(s)
-    #        if s is not None:
-    #            lst.append(s)
-    #    return lst
 
     def filter(self, predicate: Callable[[BedEntry], bool]) -> 'BedData':
         flt_entries = []

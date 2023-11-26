@@ -60,7 +60,41 @@ out_dir.mkdir(parents=True, exist_ok=True)
 
 datasets = [DatasetInfo.load(p) for p in config_paths]
 
-# collect tags 
+
+# WRITING PARTICIPANTS INFO
+if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS"):          
+    sub_fasta_paths = glob.glob(str(benchmark / "valid" / "*" / "participants" / "*.fasta"))
+    assert len(sub_fasta_paths) > 0
+    unique_entries: dict[str, SeqEntry] = {}
+    for path in sub_fasta_paths:
+        entries = read_fasta(path)
+        for e in entries:
+            unique_entries[e.tag] = e
+else:
+    raise Exception("No sequence collection implemented for benchmark {args.benchmark_kind}")
+
+final_entries = list(unique_entries.values())
+if args.benchmark_kind in ("GHTS", "CHS"): 
+    final_entries.sort(key=seqentry2interval_key)
+elif args.benchmark_kind == "PBM":
+    final_entries.sort(key=lambda pe: pe.tag)
+elif args.benchmark_kind == "SMS":
+    random.shuffle(final_entries)
+else:
+    raise Exception("No ordering implemented for benchmark {args.benchmark_kind}")
+
+
+participants_fasta_path = out_dir / "participants.fasta"
+write_fasta(entries=final_entries, 
+            handle=participants_fasta_path)
+
+participants_tsv_path = out_dir / "participants.bed"
+
+entries2tsv(entries=final_entries, 
+            path=participants_tsv_path,
+            kind=args.benchmark_kind)
+
+# WRITING BENCHMARK CONFIG
 tags = {}
 answers = {}
 tfs = set()
@@ -76,7 +110,13 @@ for ds in datasets:
         raise Exception(f"Some datasets in benchmark have the same name {ds.name}")
     ds_names.add(ds.name)
 
-all_tags = list(tags.keys())
+if args.benchmark_kind in ("GHTS", "CHS", "SMS"):   
+    all_tags = list(tags.keys())
+elif args.benchmark_kind  == "PBM":
+    all_tags = list(unique_entries.keys()) 
+else:
+    raise Exception("No config collection implemented for benchmark {args.benchmark_kind}")
+
 random.shuffle(all_tags)
 
 cfg = BenchmarkConfig(
@@ -92,6 +132,8 @@ cfg = BenchmarkConfig(
 
 cfg_path = out_dir / f"benchmark.json"
 cfg.save(cfg_path)
+
+## WRITING TEMPLATES
 
 score_template = ScoreSubmission.template(tag_col_name="peaks",
                                           tf_names=cfg.tfs,
@@ -123,36 +165,3 @@ with open(pwm_submission_path, "w") as out:
                 p = PWMSubmission.MAX_PRECISION
                 print(f"{a:.0{p}f} {t:.0{p}f} {g:.0{p}f} {c:.0{p}f}", file=out)
             print(file=out)
-
-if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS"):          
-    sub_fasta_paths = glob.glob(str(benchmark / "valid" / "*" / "participants" / "*.fasta"))
-    assert len(sub_fasta_paths) > 0
-    unique_entries: dict[str, SeqEntry] = {}
-    for path in sub_fasta_paths:
-        entries = read_fasta(path)
-        for e in entries:
-            unique_entries[e.tag] = e
-else:
-    raise Exception("No sequence collection implemented for benchmark {args.benchmark_kind}")
-   
-final_entries = list(unique_entries.values())
-if args.benchmark_kind in ("GHTS", "CHS"): 
-    final_entries.sort(key=seqentry2interval_key)
-elif args.benchmark_kind == "PBM":
-    final_entries.sort(key=lambda pe: pe.tag)
-elif args.benchmark_kind == "SMS":
-    random.shuffle(final_entries)
-else:
-    raise Exception("No ordering implemented for benchmark {args.benchmark_kind}")
-
-
-participants_fasta_path = out_dir / "participants.fasta"
-write_fasta(entries=final_entries, 
-            handle=participants_fasta_path)
-
-participants_tsv_path = out_dir / "participants.bed"
-
-entries2tsv(entries=final_entries, 
-            path=participants_tsv_path,
-            kind=args.benchmark_kind)
-
