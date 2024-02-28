@@ -188,7 +188,13 @@ class Benchmark:
                           file=sys.stderr)
                     return self.skipped_prediction
                 pred_y.append(score)
-            
+
+            pred_y = np.array(pred_y)
+            true_y = np.array(true_y)
+            ord = np.argsort(pred_y)
+            pred_y = pred_y[ord]
+            true_y = true_y[ord]
+
             scores: dict[str, float] = {}
             for sc in self.scorers:
                 if self.kind == "HTS":
