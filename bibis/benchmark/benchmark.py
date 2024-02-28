@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import ClassVar
 from pathlib import Path
 
-from ..scoring.scorer import SklearnROCAUC, SklearnPRAUC, PRROC_ROCAUC, PRROC_PRAUC, ConstantScorer
+from ..scoring.scorer import Scorer
 from .prediction import Prediction
 from .score_submission import ScoreSubmission
 from ..matrix.pwmeval import MatrixSumPredictor, MatrixMaxPredictor
@@ -108,7 +108,7 @@ class Benchmark:
     name: str
     kind: str
     datasets: list[DatasetInfo]
-    scorers: list[SklearnROCAUC | SklearnPRAUC | PRROC_ROCAUC | PRROC_PRAUC | ConstantScorer]
+    scorers: list[Scorer]
     submits: list[Submit]
     
     results_dir: Path
@@ -178,7 +178,7 @@ class Benchmark:
     def score_prediction(self, ds: DatasetInfo, prediction: Prediction) -> dict[str, float]:
         #labelled_seqs = read_fasta(ds.path)
         answer = ds.answer()
-        if self.kind in ("CHS",  "GHTS", "PBM", "SMS"):
+        if self.kind in ("CHS",  "GHTS", "PBM", "SMS", "HTS"):
             true_y = list(map(int, answer.values()))
             pred_y: list[float] = []
             for tag in answer.keys():
@@ -191,6 +191,9 @@ class Benchmark:
             
             scores: dict[str, float] = {}
             for sc in self.scorers:
+                if self.kind == "HTS":
+                    if sc.name == "kendalltau" and ds.background == "input":
+                        continue # TODO: move this logic to config    
                 scores[sc.name] = sc.score(y_score=pred_y, y_real=true_y)
             return scores
         else:

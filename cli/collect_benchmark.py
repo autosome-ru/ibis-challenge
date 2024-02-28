@@ -44,13 +44,15 @@ from bibis.seq.seqentry import SeqEntry, read_fasta, write_fasta
 
 benchmark = Path(args.benchmark_root)
 
-if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS"):   
+HTS_CYCLE_CNT = 4
+
+if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS", "HTS"):   
     ds_cfg_paths = benchmark / "valid" / "*" / "answer" / "*" / "config.json"
 
     config_paths = glob.glob(str(ds_cfg_paths))
     assert len(config_paths) > 0
 else:
-    raise Exception("No config collection implemented for benchmark {args.benchmark_kind}")
+    raise Exception(f"No config collection implemented for benchmark {args.benchmark_kind}")
 
 with open(args.scorers, "r") as out:
     scorers_dt = json.load(out)
@@ -62,7 +64,7 @@ datasets = [DatasetInfo.load(p) for p in config_paths]
 
 
 # WRITING PARTICIPANTS INFO
-if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS"):          
+if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS", "HTS"):          
     sub_fasta_paths = glob.glob(str(benchmark / "valid" / "*" / "participants" / "*.fasta"))
     assert len(sub_fasta_paths) > 0
     unique_entries: dict[str, SeqEntry] = {}
@@ -78,7 +80,7 @@ if args.benchmark_kind in ("GHTS", "CHS"):
     final_entries.sort(key=seqentry2interval_key)
 elif args.benchmark_kind == "PBM":
     final_entries.sort(key=lambda pe: pe.tag)
-elif args.benchmark_kind == "SMS":
+elif args.benchmark_kind in ("SMS", 'HTS'):
     random.shuffle(final_entries)
 else:
     raise Exception("No ordering implemented for benchmark {args.benchmark_kind}")
@@ -110,7 +112,7 @@ for ds in datasets:
         raise Exception(f"Some datasets in benchmark have the same name {ds.name}")
     ds_names.add(ds.name)
 
-if args.benchmark_kind in ("GHTS", "CHS", "SMS"):   
+if args.benchmark_kind in ("GHTS", "CHS", "SMS", 'HTS'):   
     all_tags = list(tags.keys())
 elif args.benchmark_kind  == "PBM":
     all_tags = list(unique_entries.keys()) 
@@ -149,7 +151,9 @@ score_template.write(random_aaa_path)
 
 for tf in score_template.tf_names:
     for tag in score_template.tags:
-        score_template[tf][tag] = answers.get((tf, tag), 0)
+        score = answers.get((tf, tag), 0)
+        if args.benchmark_kind == "HTS":
+            score_template[tf][tag] = score / HTS_CYCLE_CNT
 
 ideal_aaa_path = out_dir / "aaa_ideal.tsv"
 score_template.write(ideal_aaa_path)    

@@ -74,6 +74,8 @@ def entries2tsv(entries: list[SeqEntry], path: str | Path, kind: str):
         return pbm_entries2tsv(entries, path)
     elif kind == "SMS":
         return sms_entries2tsv(entries, path)
+    elif kind == "HTS":
+        return hts_entries2tsv(entries, path)
     else:
         raise Exception(f"entries2tsv is not implemented for benchmark {kind}")
 
@@ -103,6 +105,12 @@ def pbm_entries2tsv(entries: list[SeqEntry], path: str | Path):
             print(id_spot, row, col, tag, sep="\t", file=out)
 
 def sms_entries2tsv(entries: list[SeqEntry], path: str | Path):
+    with open(path, "w") as out:
+        for e in entries:
+            tag = e.tag
+            print(tag, file=out)
+
+def hts_entries2tsv(entries: list[SeqEntry], path: str | Path):
     with open(path, "w") as out:
         for e in entries:
             tag = e.tag

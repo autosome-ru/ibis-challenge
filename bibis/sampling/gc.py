@@ -44,7 +44,7 @@ class SetGCSampler:
              negatives: list[SeqEntry],
              sample_per_object: int = 1,
              seed: int =777) -> 'SetGCSampler':
-        negatives = filter_unique(negatives)
+        negatives = filter_unique(negatives) # TODO move uniqueness to other parts of pipeline
         
         neg = [-np.inf]
         neg.extend(s.gc for s in negatives)
@@ -546,3 +546,172 @@ class GenomeGCSampler:
             print("No parallel")
             return self._sample_noparallel(positives=positives)
         return self._sample_parallel(positives=positives)
+
+
+
+@dataclass
+class GCProfileMatcher:
+    rng: np.random.Generator
+    sample_per_object: int = 1
+    
+    @classmethod
+    def make(cls,
+             sample_per_object: int = 1,
+             seed: int =777) -> 'GCProfileMatcher':
+        rng = np.random.default_rng(seed=seed)
+        return cls(sample_per_object=sample_per_object, 
+                   rng=rng)
+    
+    
+    def process_dt(self, dt: dict[float, int]):
+        items = sorted([it for it in dt.items() if it[1] != 0], key=lambda x: x[0])
+        vals = [x[0] for x in items]
+        counts = [x[1] for x in items]
+        return vals, counts 
+    
+    def process_positive_profile(self, dt: dict[float, int]):
+        vals, counts = self.process_dt(dt)
+        vals = np.array(vals, dtype=np.float64)
+        counts = np.array(counts, dtype=np.int64)
+        return vals, counts
+    
+    def process_negative_profile(self, dt: dict[float, int]):
+        vals, counts = self.process_dt(dt)
+        vals = [-np.inf, *vals, np.inf]
+        counts = [0, *counts, 0]
+        
+        vals = np.array(vals, dtype=np.float64)
+        counts = np.array(counts, dtype=np.int64)
+        return vals, counts
+    
+    def match(self, 
+              positives_profile: dict[float, int],
+              negatives_profile: dict[float, int],
+              return_loss: bool = False) -> dict[float, int]:
+        
+        
+        gc_values = np.array(sorted(set(positives_profile.keys()) | set(negatives_profile.keys())), dtype=np.float32)
+        
+        negative_vals, negative_counts = self.process_negative_profile(negatives_profile)
+        positive_vals, positive_counts = self.process_positive_profile(positives_profile)
+        
+        requested_size = positive_counts.sum() * self.sample_per_object
+        negative_size = negative_counts.sum()
+        
+        if requested_size > negative_size:
+            print("Can't sample requested number of positives, just returning negatives profile")
+            return copy(negatives_profile)
+        
+        positive_counts = positive_counts * self.sample_per_object 
+        pos_clusters = np.searchsorted(negative_vals, positive_vals) - 1
+    
+        # add all positive non-zero values to min-heap (count, closest non-zero gc in negatives, loss for adding one sample)
+        # heapify
+        # extract min triplet 
+        # if negatives are enough -- reduce their count, save that you have taken this negatives, remove item from the heap
+        # else -- reduce both positives and negatives count, save that you have taken this negatives, find next closest gc-sample, 
+        #         add item to the heap
+        
+        
+        taken_profile = {}
+        
+        disjoint = DisjointSet.of_size(negative_vals.shape[0])
+
+        heap = []
+        for i in range(positive_vals.shape[0]):
+            val = positive_vals[i]
+            cl = pos_clusters[i]
+            p = disjoint.root(cl)
+            l = disjoint.left(p)
+            r = disjoint.right(p)
+
+            d1 = abs(negative_vals[l] - val)
+            d2 = abs(negative_vals[r] - val)
+
+            if d1 < d2:
+                pair = (d1, i, l)
+            elif d1 > d2:
+                pair = (d2, i, r)
+            else:
+                if self.rng.random() < 0.5:
+                    pair = (d1, i, l)
+                else:
+                    pair = (d2, i, r)
+
+            heap.append(pair)
+
+        heapq.heapify(heap)
+            
+        taken_profile = {val: 0 for val in negatives_profile.keys()}
+        
+        loss = 0
+        for _ in range(requested_size): # can't be more steps
+            if len(heap) == 0:
+                break
+            d, i, pos = heapq.heappop(heap)
+
+            if not disjoint.is_taken[pos]: # negatives are not exhausted 
+                pc = positive_counts[i]
+                nc = negative_counts[pos]
+                ngc = negative_vals[pos]
+                if pc <= nc: # enough negatives
+                    negative_counts[pos] = nc - pc
+                    positive_counts[i] = 0
+                    taken_profile[ngc] += pc
+                    loss += d * pc
+                    
+                    if pc == nc: # if negatives are exhausted - mark them as taken
+                        _ = disjoint.take(pos)
+                    
+                    continue # remove item from the heap
+                else: # not enough negatives
+                    negative_counts[pos] = 0
+                    positive_counts[i] = pc - nc 
+                    taken_profile[ngc] += nc
+                    loss += d * nc
+                    
+                    _ = disjoint.take(pos) # negatives are exhausted - mark them as taken
+                    
+                    # update item and push back to the heap
+                    cl = pos_clusters[i]
+                    p = disjoint.root(cl)
+                    val = positive_vals[i]
+                    l = disjoint.left(p)
+                    r = disjoint.right(p)
+                    d1 = abs(negative_vals[l] - val)
+                    d2 = abs(negative_vals[r] - val)
+
+                    if d1 < d2:
+                        pair = (d1, i, l)
+                    elif d1 > d2:
+                        pair = (d2, i, r)
+                    else:
+                        if self.rng.random() < 0.5:
+                            pair = (d1, i, l)
+                        else:
+                            pair = (d2, i, r)
+                    heapq.heappush(heap, pair)
+            else:
+                cl = pos_clusters[i]
+                p = disjoint.root(cl)
+                val = positive_vals[i]
+                l = disjoint.left(p)
+                r = disjoint.right(p)
+                d1 = abs(negative_vals[l] - val)
+                d2 = abs(negative_vals[r] - val)
+
+                if d1 < d2:
+                    pair = (d1, i, l)
+                elif d1 > d2:
+                    pair = (d2, i, r)
+                else:
+                    if self.rng.random() < 0.5:
+                        pair = (d1, i, l)
+                    else:
+                        pair = (d2, i, r)
+                heapq.heappush(heap, pair)
+                
+        if return_loss:
+            return taken_profile, loss
+        else:
+            return taken_profile

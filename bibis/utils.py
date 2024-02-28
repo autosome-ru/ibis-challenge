@@ -2,6 +2,7 @@ import gzip
 from Bio import SeqIO
 from typing import overload
 from pathlib import Path
+import tqdm
 
 END_LINE_CHARS = "\r\n"
 
@@ -39,8 +40,21 @@ def merge_fastqgz(in_paths, out_path):
     recs = []
     for path in in_paths:
         with gzip.open(path, "rt") as inp:
-            for rec in SeqIO.parse(inp, 'fastq'):
+            for rec in tqdm.tqdm(SeqIO.parse(inp, 'fastq')):
                 #print(rec.id, rec.description, rec.seq)
                 recs.append(rec)
     with  gzip.open(out_path, "wt") as out:
+        SeqIO.write(recs, out, 'fastq')
+        
+
+def merge_fastqgz_unique(in_paths, out_path):
+    recs = []
+    seq_set = set()
+    for path in tqdm.tqdm(in_paths):
+        with gzip.open(path, "rt") as inp:
+            for rec in tqdm.tqdm(SeqIO.parse(inp, 'fastq')):
+                if rec.seq not in seq_set:
+                    seq_set.add(rec.seq)                    
+                    recs.append(rec)
+    with gzip.open(out_path, "wt") as out:
         SeqIO.write(recs, out, 'fastq')

@@ -104,6 +104,9 @@ for stage in STAGES:
         uniq_cfg.save(out_cfg_path)
     
     flanked_seq_path = data_out_stage_dir / "unique_with_flanks.json"
+
+    unique_seqs_with_flanks = {seq: flanks for seq, flanks in unique_seqs_with_flanks.items() \
+                                   if len(seq) == TEST_SEQ_LENGTH}
     with open(flanked_seq_path, "w") as out:
         json.dump(unique_seqs_with_flanks, out, indent=4)
 

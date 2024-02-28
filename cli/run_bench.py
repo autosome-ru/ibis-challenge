@@ -7,6 +7,7 @@ from pathlib import Path
 
 from rpy2.rinterface_lib.callbacks import logger as rpy2_logger
 import logging
+import numpy as np 
 rpy2_logger.setLevel(logging.ERROR)
 
 from bibis.benchmark.benchmark import Benchmark
@@ -94,6 +95,8 @@ else:
     print("Wrong submission type", file=sys.stderr)
     sys.exit(INTERNAL_ERROR_CODE)
 
+#if bench.kind == "HTS":
+#    scores = scores[np.logical_or(scores.background != 'foreign', scores.score_type != 'kendalltau')]
 
 scores.to_csv(args.scores_path, 
               index=False,
