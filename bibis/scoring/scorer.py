@@ -5,6 +5,7 @@ from typing import List
 from sklearn.metrics import roc_auc_score, average_precision_score
 import numpy as np
 from scipy.stats import kendalltau
+import pandas as pd 
 
 @dataclass
 class Scorer(metaclass=ABCMeta):
@@ -40,28 +41,20 @@ class SklearnPRAUC(SklearnScorer):
     def score(self, y_score: np.ndarray[float], y_real: np.ndarray[float]) -> float:
         return float(average_precision_score(y_true=y_real, y_score=y_score))
 
-def import_stats():
-    '''
-    import stats R package 
-    '''
-    from rpy2.robjects.packages import importr, isinstalled
-    pkg = importr("stats")
-    return pkg
 
 class KendallRank(RegressionScorer):
     def score(self, y_score: np.ndarray[float], y_real: np.ndarray[float]) -> float: 
-        from rpy2.rinterface_lib import openrlib
-        from rpy2.robjects.vectors import FloatVector
-
+      
         mask = np.logical_not(np.isclose(y_real, 0))
         y_score = y_score[mask]
         y_real = y_real[mask]
-        with openrlib.rlock:
-            y_score = FloatVector(y_score)
-            y_real = FloatVector(y_real)
-            stats = import_stats()
-            corr = stats.cor(y_score, y_real)[0]
-        return corr
+        cor =  kendalltau(y_score, y_real).correlation
+        if pd.isnull(cor):
+            if len(set(y_score)) == 1 or len(set(y_real)) == 1 :
+                return 0
+            else:
+                raise Exception("Unknown bug with correlation calculation occured")
+        return cor
 
 def import_PRROC():
     '''
