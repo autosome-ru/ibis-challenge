@@ -7,7 +7,7 @@ TAG_DB_CFG=${BECNHMARK_PROCESSED}/tag.json
 DATA_TYPE="SMS"
 echo $DATA_TYPE
 python make_db.py --tagdb ${TAG_DB} --tagdb_cfg ${TAG_DB_CFG}
-for type in "Final" "Leaderboard"; do
+for type in "Leaderboard" "Final"; do
     echo $type
     for config_path in /home_local/dpenzar/BENCH_FULL_DATA/${DATA_TYPE}/configs/${type}/*.json; do
         echo ${config_path}

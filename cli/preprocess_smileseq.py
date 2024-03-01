@@ -13,7 +13,6 @@ sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
 
 from bibis.sms.config import RAW_SMSConfig
 from bibis.sms.dataset import SMSRawDataset
-from bibis.utils import merge_fastqgz
 TEST_SEQ_LENGTH = 40
 RAW_DIR =  Path("/home_local/dpenzar/BENCH_FULL_DATA/SMS/RAW/")
 STAGES = ('Leaderboard', 'Final')
@@ -61,13 +60,16 @@ for stage in STAGES:
         
         for cfg_path in tqdm.tqdm(configs_dir.glob("*.json")):
             cfg = RAW_SMSConfig.load(cfg_path)
-            for ds in cfg.datasets:
-                with gzip.open(ds.path, "rt") as inp:
-                    seqs = [str(rec.seq).upper() for rec in SeqIO.parse(inp, format="fastq")]
-                    seq_counter.update(seqs)
+            if 'test' in cfg.splits: 
+                # including only unique sequences from test as they will be used for negatives sampling
+                for ds in cfg.splits['test']:
+                    with gzip.open(ds.path, "rt") as inp:
+                        seqs = [str(rec.seq).upper() for rec in SeqIO.parse(inp, format="fastq")]
+                        seq_counter.update(seqs)
 
         unique_seqs = set(seq for seq, cnt in seq_counter.items() if cnt == 1)
-        unique_seqs = unique_seqs - zero_seqs
+        unique_seqs = unique_seqs - zero_seqs#
+        zero_seqs = zero_seqs - unique_seqs
         with open(unique_path, "w") as out:
             json.dump(list(unique_seqs), out)
     total_stage_seqs[stage] = len(unique_seqs) 
@@ -80,26 +82,39 @@ for stage in STAGES:
         cfg = RAW_SMSConfig.load(cfg_path)
         tf_out_dir = data_out_stage_dir / cfg.tf_name 
         tf_out_dir.mkdir(exist_ok=True, parents=True)
-        uniq_datasets = []
-        for ds in cfg.datasets:
-            with gzip.open(ds.path, "rt") as inp:
-                recs = [rec for rec in SeqIO.parse(inp, format="fastq")]
-                recs = [rec for rec in recs if str(rec.seq).upper() in unique_seqs]
-            unique_ds_path = tf_out_dir / Path(ds.path).name
-            with gzip.open(unique_ds_path, "wt") as out:
-                 SeqIO.write(recs, out, 'fastq')
+        
+        uniq_datasets_splits = {}
 
-            for rec in recs:
-                seq = str(rec.seq).upper()
-                unique_seqs_with_flanks[seq] = (ds.left_flank, ds.right_flank)
+        train_list = cfg.splits.get('train', None)
+        if train_list is not None: # no filtering done for train
+            uniq_datasets_splits['train'] = train_list
 
-            unique_ds = SMSRawDataset(path=str(unique_ds_path),
-                                      left_flank=ds.left_flank,
-                                      right_flank=ds.right_flank)
-            uniq_datasets.append(unique_ds)
+        test_list = cfg.splits.get('test', None)
+        if test_list is not None:
+            test_uniq_datasets = []
+            for ds in test_list:
+                with gzip.open(ds.path, "rt") as inp:
+                    recs = [rec for rec in SeqIO.parse(inp, format="fastq")]
+                    recs = [rec for rec in recs if str(rec.seq).upper() in unique_seqs]
+                unique_ds_size = len(recs)
+                unique_ds_path = tf_out_dir / Path(ds.path).name
+                with gzip.open(unique_ds_path, "wt") as out:
+                    SeqIO.write(recs, out, 'fastq')
+
+                for rec in recs:
+                    seq = str(rec.seq).upper()
+                    unique_seqs_with_flanks[seq] = (ds.left_flank, ds.right_flank)
+
+                unique_ds = SMSRawDataset(path=str(unique_ds_path),
+                                          size=unique_ds_size,
+                                          left_flank=ds.left_flank,
+                                          right_flank=ds.right_flank)
+                test_uniq_datasets.append(unique_ds)
+            uniq_datasets_splits['test'] = test_uniq_datasets
+        
+
         uniq_cfg = RAW_SMSConfig(tf_name=cfg.tf_name,
-                                 split=cfg.split,
-                                 datasets=uniq_datasets)
+                                 splits=uniq_datasets_splits)
         out_cfg_path = configs_out_stage_dir / f"{uniq_cfg.tf_name}.json"
         uniq_cfg.save(out_cfg_path)
     

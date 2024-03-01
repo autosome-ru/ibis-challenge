@@ -8,7 +8,7 @@ import tqdm
 
 sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
 
-from bibis.sms.config import RAW_SMSConfig
+from bibis.sms.config import RAW_SMSConfig, split_datasets
 from bibis.sms.dataset import SMSRawDataset
 from bibis.utils import merge_fastqgz
 LEADERBOARD_EXCEL = "/home_local/dpenzar/IBIS TF Selection - Nov 2022 _ Feb 2023.xlsx"
@@ -81,16 +81,19 @@ for stage in STAGES:
         ibis_split = tf2split[tf]
         datasets = []
         for rep, path_cands, out_path, left_flank, right_flank in exps:
-            merge_fastqgz(in_paths=path_cands,
+            ds_size = merge_fastqgz(in_paths=path_cands,
                           out_path=out_path)
-            ds = SMSRawDataset(str(out_path), left_flank=left_flank, right_flank=right_flank)
+            ds = SMSRawDataset(path=str(out_path),
+                               size=ds_size,
+                               left_flank=left_flank, 
+                               right_flank=right_flank)
             datasets.append(ds)
+
         cfg = RAW_SMSConfig(tf_name=tf,
-                            split=ibis_split,
-                            datasets=datasets)
+                            splits=split_datasets(datasets=datasets, 
+                                                  split=ibis_split))
         cfg_path = OUT_DIR / "{tf}.cfg" 
         configs.append(cfg)
-
 
     configs_dir = OUT_DIR / "configs" / stage
     configs_dir.mkdir(exist_ok=True, parents=True)

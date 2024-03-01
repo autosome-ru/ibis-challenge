@@ -45,6 +45,7 @@ def merge_fastqgz(in_paths, out_path):
                 recs.append(rec)
     with  gzip.open(out_path, "wt") as out:
         SeqIO.write(recs, out, 'fastq')
+    return len(recs)
         
 
 def merge_fastqgz_unique(in_paths, out_path):
@@ -58,3 +59,4 @@ def merge_fastqgz_unique(in_paths, out_path):
                     recs.append(rec)
     with gzip.open(out_path, "wt") as out:
         SeqIO.write(recs, out, 'fastq')
+    return len(recs)

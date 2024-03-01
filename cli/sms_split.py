@@ -82,34 +82,9 @@ assert cfg.split in ("Train", "Test", "Train/Test"), "wrong split"
 
 friend_seqs = set()
 datasets = copy(cfg.datasets)
-if cfg.split == "Train":
-    train_datasets = datasets
-    test_datasets = None
-else:
-    if cfg.split == "Train/Test":
-        for ds in datasets:
-            if Path(ds.path).name.startswith("SRR"):
-                 raise Exception("No public datasets should be in factors used for test")
-        
-        sizes = []
-        for ind, ds in enumerate(datasets):
-            with gzip.open(ds.path) as inp:
-                sz = 0
-                with gzip.open(ds.path, "rt") as inp:
-                    for rec in SeqIO.parse(inp, format="fastq"):
-                        sz += 1
-                        s = str(rec.seq).upper()
-                        friend_seqs.add(s)
-                sizes.append((sz, ind))
 
-        test_ind = max(sizes, key=lambda x: x[0])[1]
-        test_datasets = [datasets.pop(test_ind)]
-        print(f"Selected dataset {test_datasets[0].path} for testing")
-
-        train_datasets = datasets 
-    else: # cfg.split == "Test"
-         train_datasets = None
-         test_datasets = datasets 
+train_datasets = cfg.splits.get('train')
+test_datasets = cfg.splits.get('test')
 
 if train_datasets is not None:
     train_dir = SMS_BENCH_DIR / "train" / cfg.tf_name  
@@ -189,9 +164,10 @@ for entry in samples:
                              tag=entry.tag,
                              label=entry.label)
     flanked_samples.append(flanked_entry)
+
+# for answer, we write flanked sequences
 seq_write(flanked_samples, fasta_path)
 
-        
 answer = {pe.tag: pe.label for pe in samples}
 answer_path = foreign_ds_dir   / "data_answer.json"
 with open(answer_path, "w") as out:
@@ -206,8 +182,6 @@ ds_info = DatasetInfo(name = f"{cfg.tf_name}_foreign",
                       left_flank=left_flank,
                       right_flank=right_flank)
 ds_info.save(config_path)
-
-
 
 # zero seqs 
 print("Generating input dataset")
@@ -254,6 +228,8 @@ ds_info = DatasetInfo(name = f"{cfg.tf_name}_input",
 ds_info.save(config_path)
 
 # write sequences for user
+# we write them without flanks as they are masked to be identical for each datasets
+# and will be provided separately 
 participants_fasta_path = participants_valid_dir / "submission.fasta"
 random.shuffle(user_known_samples)
 for entry in user_known_samples:
