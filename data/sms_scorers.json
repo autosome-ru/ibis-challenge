@@ -1,6 +1,6 @@
 [
     {
-        "name": "prroc_rocauc",
+        "name": "prroc_rocauc_top25",
         "alias": "rocauc",
         "params": {}
     },

@@ -6,3 +6,4 @@ class SMSRawDataset:
     size: int
     left_flank: str
     right_flank: str
+    rep: str 

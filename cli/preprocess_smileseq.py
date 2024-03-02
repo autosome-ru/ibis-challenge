@@ -108,7 +108,8 @@ for stage in STAGES:
                 unique_ds = SMSRawDataset(path=str(unique_ds_path),
                                           size=unique_ds_size,
                                           left_flank=ds.left_flank,
-                                          right_flank=ds.right_flank)
+                                          right_flank=ds.right_flank,
+                                          rep=ds.rep)
                 test_uniq_datasets.append(unique_ds)
             uniq_datasets_splits['test'] = test_uniq_datasets
         

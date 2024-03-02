@@ -5,6 +5,7 @@ TAG_DB=${BECNHMARK_PROCESSED}/tag.db
 TAG_DB_CFG=${BECNHMARK_PROCESSED}/tag.json
 
 DATA_TYPE="SMS"
+LOGS_PATH="${DATA_TYPE}_logs.txt"
 echo $DATA_TYPE
 python make_db.py --tagdb ${TAG_DB} --tagdb_cfg ${TAG_DB_CFG}
 for type in "Leaderboard" "Final"; do
@@ -17,6 +18,6 @@ for type in "Leaderboard" "Final"; do
                              --tagdb_cfg ${TAG_DB_CFG}\
                              --type $type\
                              --zero_seqs_path ~/BENCH_FULL_DATA/SMS/data/${type}/zeros.json\
-                             --unique_seqs_path ~/BENCH_FULL_DATA/SMS/data/${type}/unique_with_flanks.json 
+                             --unique_seqs_path ~/BENCH_FULL_DATA/SMS/data/${type}/unique_with_flanks.json >> $LOGS_PATH  
     done
 done

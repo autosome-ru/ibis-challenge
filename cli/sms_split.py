@@ -87,14 +87,23 @@ train_datasets = cfg.splits.get('train')
 test_datasets = cfg.splits.get('test')
 
 if train_datasets is not None:
+    print(f"For factor {cfg.tf_name} the following replics are going to train:")
     train_dir = SMS_BENCH_DIR / "train" / cfg.tf_name  
     train_dir.mkdir(parents=True, exist_ok=True)
     for ds in train_datasets:
+        print(f"\t{ds.rep}")
         path = Path(ds.path)
         shutil.copy(path, train_dir / path.name)
+else:
+    print(f"For factor {cfg.tf_name} no replics are going to train")
 
 if test_datasets is None:
+    print(f"For factor {cfg.tf_name} no replics are going to test")
     exit(0)
+else:
+    print(f"For factor {cfg.tf_name} the following replics are going to test:")
+    for ds in test_datasets:
+        print(f"\t{ds.rep}")
 
 left_flank=test_datasets[0].left_flank[1:]
 left_flank = left_flank[:args.keep_left_cnt] + "N" * (len(left_flank) - args.keep_left_cnt)

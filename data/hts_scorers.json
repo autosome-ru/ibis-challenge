@@ -1,7 +1,7 @@
 [
     {
-        "name": "prroc_rocauc_htselex",
-        "alias": "rocauc",
+        "name": "prroc_rocauc_top25",
+        "alias": "rocauc_top25",
         "params": {}
     },
     {

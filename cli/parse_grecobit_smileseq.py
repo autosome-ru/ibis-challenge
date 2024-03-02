@@ -86,7 +86,8 @@ for stage in STAGES:
             ds = SMSRawDataset(path=str(out_path),
                                size=ds_size,
                                left_flank=left_flank, 
-                               right_flank=right_flank)
+                               right_flank=right_flank,
+                               rep=rep)
             datasets.append(ds)
 
         cfg = RAW_SMSConfig(tf_name=tf,

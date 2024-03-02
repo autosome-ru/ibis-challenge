@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
 
-from typing import List
+import sys
 from sklearn.metrics import roc_auc_score, average_precision_score
 import numpy as np
 from scipy.stats import kendalltau
@@ -141,7 +141,33 @@ class PRROC_ROCAUC_HTSELEX(PRROCScorer):
             scores = FloatVector(y_score)
             auroc = pkg.roc_curve(scores, weights_class0=labels, sorted=True)
             auroc = auroc[1][0]
-            return auroc       
+            return auroc     
+
+@dataclass 
+class PRROC_ROCAUC_TOP25(PRROCScorer):
+    def score(self, y_score:  np.ndarray[float], y_real:  np.ndarray[float]) -> float:
+        from rpy2.rinterface_lib import openrlib
+
+        positives = y_score[np.isclose(y_real, 1)]
+        quart, mod = divmod(positives.shape[0], 4)
+        if mod != 0:
+            quart += 1
+        positives = positives[-quart:] 
+
+        negatives = y_score[np.isclose(y_real, 0)]
+        quart, mod = divmod(negatives.shape[0], 4)
+        if mod != 0:
+            quart += 1
+        negatives = negatives[-quart:] 
+
+        with openrlib.rlock:
+            pkg = import_PRROC()
+            from rpy2.robjects.vectors import FloatVector
+            auroc = pkg.roc_curve(scores_class0=FloatVector(positives), 
+                                  scores_class1=FloatVector(negatives), 
+                                  sorted=True)
+            auroc = auroc[1][0]
+            return auroc  
 
 @dataclass
 class ScorerInfo:
@@ -164,6 +190,8 @@ class ScorerInfo:
             return SklearnPRAUC(self.alias)
         elif self.name == "prroc_rocauc":
             return PRROC_ROCAUC(self.alias)
+        elif self.name == 'prroc_rocauc_top25':
+            return PRROC_ROCAUC_TOP25(self.alias)
         elif self.name == "prroc_rocauc_htselex":
             return PRROC_ROCAUC_HTSELEX(self.alias)
         elif self.name == "prroc_prauc":
