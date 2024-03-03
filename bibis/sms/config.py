@@ -23,7 +23,7 @@ class RAW_SMSConfig:
             dt = json.load(inp)
 
         restored_splits = {}
-        for split, ds_list in dt['splits']:
+        for split, ds_list in dt['splits'].items():
             restored_splits[split] = [SMSRawDataset(**d) for d in ds_list]
         dt['splits'] = restored_splits
 
@@ -41,7 +41,7 @@ def split_datasets(datasets: list[SMSRawDataset], split: str) -> dict[str, list[
             else:
                 assign_datasets.append(ds)
 
-        test_ind = max( enumerate(assign_datasets), key=lambda x: x[1].size)
+        test_ind = max( enumerate(assign_datasets), key=lambda x: x[1].size)[0]
         test_datasets = [assign_datasets.pop(test_ind)]
         train_datasets.extend(assign_datasets) 
         

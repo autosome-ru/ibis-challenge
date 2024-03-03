@@ -36,8 +36,8 @@ class AAASubmit(Submit):
     
     def __post_init__(self):
         self.parent_name = self.name 
-    
-    
+
+
 @dataclass
 class MatrixSumbit(Submit):
     name: str
@@ -144,7 +144,7 @@ class Benchmark:
                                tf=tf,
                                parent_name=parent_name)
         self.submits.append(mat_sub)
-        
+
     def submit_pfm_info(self, 
                         pfm_info: PFMInfo,
                         parent_name: str = ""):
@@ -179,7 +179,14 @@ class Benchmark:
         #labelled_seqs = read_fasta(ds.path)
         answer = ds.answer()
         if self.kind in ("CHS",  "GHTS", "PBM", "SMS", "HTS"):
-            true_y = list(map(int, answer.values()))
+            if 'labels' in answer: 
+                true_y = list(map(int, answer['labels'].values()))
+                y_group = np.array(list(answer['groups'].values()), 
+                                   dtype=np.float32)
+                answer = answer['labels']
+            else:
+                true_y = list(map(int, answer.values()))
+                y_group = None
             pred_y: list[float] = []
             for tag in answer.keys():
                 score = prediction.get(tag)
@@ -194,13 +201,15 @@ class Benchmark:
             ord = np.argsort(pred_y)
             pred_y = pred_y[ord]
             true_y = true_y[ord]
+            if y_group is not None:
+                y_group = y_group[ord]
 
             scores: dict[str, float] = {}
             for sc in self.scorers:
                 if self.kind == "HTS":
                     if sc.name == "kendalltau" and ds.background == "input":
-                        continue # TODO: move this logic to config    
-                scores[sc.name] = sc.score(y_score=pred_y, y_real=true_y)
+                        continue # TODO: move this logic to config   
+                scores[sc.name] = sc.score(y_score=pred_y, y_real=true_y, y_group=y_group)
             return scores
         else:
             raise NotImplementedError(f"Benchmark scoring is not implemented for {self.kind}")
@@ -290,4 +299,3 @@ class Benchmark:
                          results_dir=results_dir,
                          metainfo=cfg.metainfo,
                          pwmeval_path=cfg.pwmeval_path)
-    

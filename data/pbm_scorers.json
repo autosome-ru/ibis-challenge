@@ -1,12 +1,12 @@
 [
     {
         "name": "prroc_rocauc",
-        "alias": "rocauc",
+        "alias": "ROCAUC",
         "params": {}
     },
     {
         "name": "prroc_prauc",
-        "alias": "prauc",
+        "alias": "PRAUC",
         "params": {"type": "integral"}
 
     }

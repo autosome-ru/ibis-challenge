@@ -237,9 +237,8 @@ LEADERBOARD_EXCEL = "/home_local/dpenzar/IBIS TF Selection - Nov 2022 _ Feb 2023
 SPLIT_SHEET_NAME = "v3 TrainTest marked (2023)"
 HTS_DIR = Path("/home_local/vorontsovie/greco-data/release_8d.2022-07-31/full/HTS")
 STAGES = ('Final', 'Leaderboard')
-STAGES_IDS = {'Final': 1, 'Leaderboard': 2}
 ZEROS_CYCLE_DIR = Path("/mnt/space/hughes/GHT-SELEXFeb2023/")
-OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/HTS/RAW3/")
+OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/HTS/RAW/")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 parser = argparse.ArgumentParser()

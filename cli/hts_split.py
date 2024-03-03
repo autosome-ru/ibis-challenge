@@ -75,22 +75,7 @@ from bibis.hts.seqentry import SeqAssignEntry
 from bibis.hts.utils import dispatch_samples
 from bibis.utils import merge_fastqgz
 from bibis.sampling.reservoir import (AllSelector,  
-                                      PredefinedSizeUniformSelector, 
-                                      UniformSampler, 
-                                      WeightSampler)
-
-EPS = 1e-10
-BENCH_SEQDB_CFG = Path(args.tagdb_cfg)
-CYCLE_CNT = 4
-main_seed = args.seed
-
-HTS_BENCH_DIR = Path(args.benchmark_out_dir)
-HTS_BENCH_DIR.mkdir(parents=True, exist_ok=True)
-
-cfg = HTSRawConfig.load(args.config_file)
-
-assert cfg.split in ("Train", "Test", "Train/Test"), "wrong split"
-
+                                      PredefinedSizeUniformSelector)
 
 def split_datasets(cfg: HTSRawConfig):
     datasets = cfg.datasets
@@ -116,6 +101,18 @@ def split_by_rep(datasets: list[HTSRawDataset]):
         spl[ds.rep][ds.cycle] = ds
     return spl
     
+
+EPS = 1e-10
+BENCH_SEQDB_CFG = Path(args.tagdb_cfg)
+CYCLE_CNT = 4
+main_seed = args.seed
+
+HTS_BENCH_DIR = Path(args.benchmark_out_dir)
+HTS_BENCH_DIR.mkdir(parents=True, exist_ok=True)
+
+cfg = HTSRawConfig.load(args.config_file)
+
+assert cfg.split in ("Train", "Test", "Train/Test"), "wrong split"
 
 datasets = copy(cfg.datasets)
 #print(datasets)
@@ -159,10 +156,8 @@ positives_path = answer_valid_dir / "positives.seqs"
 foreigns_path = answer_valid_dir / "foreigns.seqs"
 inputs_path = answer_valid_dir / "inputs.seqs"
 
-
-
+print(positives_path)
 if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exists()) or args.recalc:
-
     positive_cycle_sizes = {cycle: 0 for cycle in range(1, CYCLE_CNT+1)}
     test_rep_ids = set()
     for _, (_, rep_info) in enumerate(test_datasets.items()):
@@ -260,8 +255,17 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
         for gc, sel in gc_samplers.items():
             if sel.count != sel.total_size:
                 raise Exception(f"Foreigns selector for cycle {cycle} for gc {gc} has not recieved all {sel.total_size} entries: {sel.count}")
-            else:
-                print(cycle, gc, sel.count, sel.total_size)
+            #else:
+            #    print(cycle, gc, sel.count, sel.total_size)
+
+
+for _, (_, rep_info) in enumerate(test_datasets.items()):
+    for _, ds in rep_info.items():
+        break
+    break
+else:
+    ds = None
+assert ds is not None
 
 left_flank = ds.left_flank[1:]
 right_flank = ds.right_flank[1:]
@@ -278,7 +282,9 @@ with open(positives_path, "r") as inp:
     for line in inp:
         entry = SeqAssignEntry.from_line(line)
 
-        seq_entry = SeqEntry(sequence=Seq(entry.seq), label=entry.cycle)
+        seq_entry = SeqEntry(sequence=Seq(entry.seq), 
+                             label=entry.cycle, 
+                             metainfo={'rep': entry.rep_ind})
         pos_samples.append(seq_entry)
         
 pos_samples = db.taggify_entries(pos_samples)
@@ -292,10 +298,8 @@ with open(foreigns_path, "r") as inp:
     neg_samples = []
     for line in inp:
         entry = SeqAssignEntry.from_line(line)
-
-        seq_entry = SeqEntry(sequence=Seq(entry.seq), label=0) # always zero cycle 
+        seq_entry = SeqEntry(sequence=Seq(entry.seq), label=0, metainfo={'rep': None}) # always zero cycle 
         neg_samples.append(seq_entry)
-
 
 neg_samples = db.taggify_entries(neg_samples)
 user_known_samples.extend(neg_samples)
@@ -308,7 +312,7 @@ fasta_path = foreign_ds_dir  / "data.fasta"
 
 flanked_samples = []
 for entry in samples:
-    flanked_seq = left_flank + str(entry.sequence) + right_flank
+    flanked_seq = str(entry.sequence) #left_flank + str(entry.sequence) + right_flank
     flanked_entry = SeqEntry(sequence=Seq(flanked_seq),
                              tag=entry.tag,
                              label=entry.label)
@@ -316,7 +320,9 @@ for entry in samples:
 seq_write(flanked_samples, fasta_path)
 
         
-answer = {pe.tag: pe.label for pe in samples}
+answer = {'labels': {pe.tag: pe.label for pe in samples},
+          'groups': {pe.tag: pe.metainfo['rep'] for pe in samples}}
+
 answer_path = foreign_ds_dir   / "data_answer.json"
 with open(answer_path, "w") as out:
     json.dump(answer, fp=out, indent=4)
@@ -337,7 +343,9 @@ with open(inputs_path, "r") as inp:
     for line in inp:
         entry = SeqAssignEntry.from_line(line)
 
-        seq_entry = SeqEntry(sequence=Seq(entry.seq), label=0) # always zero cycle 
+        seq_entry = SeqEntry(sequence=Seq(entry.seq), 
+                             label=0,
+                             metainfo={'rep': None}) # always zero cycle 
         neg_samples.append(seq_entry)
 
 neg_samples = db.taggify_entries(neg_samples)
@@ -351,14 +359,15 @@ fasta_path = zeros_ds_dir  / "data.fasta"
 flanked_samples = []
 
 for entry in samples:
-    flanked_seq = left_flank + str(entry.sequence) + right_flank
+    flanked_seq = str(entry.sequence) # left_flank + str(entry.sequence) + right_flank
     flanked_entry = SeqEntry(sequence=Seq(flanked_seq),
                              tag=entry.tag,
                              label=entry.label)
     flanked_samples.append(flanked_entry)
 seq_write(flanked_samples, fasta_path)
         
-answer = {pe.tag: pe.label for pe in samples}
+answer = {'labels': {pe.tag: pe.label for pe in samples},
+          'groups': {pe.tag: pe.metainfo['rep'] for pe in samples}}
 answer_path = zeros_ds_dir   / "data_answer.json"
 with open(answer_path, "w") as out:
     json.dump(answer, fp=out, indent=4)

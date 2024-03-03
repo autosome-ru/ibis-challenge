@@ -1,12 +1,33 @@
-[
-    {
+[  {
         "name": "prroc_rocauc_top25",
-        "alias": "rocauc_top25",
+        "alias": "ROCAUC25",
         "params": {}
     },
     {
+        "name": "prroc_rocauc_top50",
+        "alias": "ROCAUC50",
+        "params": {}
+    },
+    {
+        "name": "prroc_rocauc_htselex",
+        "alias": "ROCAUC",
+        "params": {}
+    },
+    {
+        "name": "prroc_prauc_top25",
+        "alias": "PRAUC25",
+        "params": {"type": "integral"}
+
+    },
+    {
+        "name": "prroc_prauc_top50",
+        "alias": "PRAUC50",
+        "params": {"type": "integral"}
+
+    },
+    {
         "name": "prroc_prauc_htselex",
-        "alias": "prauc",
+        "alias": "PRAUC",
         "params": {"type": "integral"}
 
     },

@@ -103,10 +103,13 @@ class TagDatabase:
                 print(f"Waiting: database unique exception ({exc}), waiting for unlock")
                 wait_for_unlock=True
                 time.sleep(self.wait_time)
+            except Exception as exc:
+                raise Exception("fUknown exception occured: {exc}")
             else:
                 break
                 
-        existing.update(rest)
+            existing.update(rest)
+
         return {s: existing[s] for s in seqs}
     
     def taggify_entries(self, entries: list[SeqEntry]):

@@ -76,12 +76,7 @@ cfg = RAW_SMSConfig.load(args.config_file)
 with open(args.unique_seqs_path, "r") as inp:
     unique_seqs2flanks = json.load(inp)
 
-# if split is train/test then select test replic as replic with the most 
-# sequences left (check also that no replic in such case starts with SRR)
-assert cfg.split in ("Train", "Test", "Train/Test"), "wrong split"
-
 friend_seqs = set()
-datasets = copy(cfg.datasets)
 
 train_datasets = cfg.splits.get('train')
 test_datasets = cfg.splits.get('test')
@@ -105,10 +100,10 @@ else:
     for ds in test_datasets:
         print(f"\t{ds.rep}")
 
-left_flank=test_datasets[0].left_flank[1:]
-left_flank = left_flank[:args.keep_left_cnt] + "N" * (len(left_flank) - args.keep_left_cnt)
-right_flank=test_datasets[0].right_flank[1:]
-
+left_flank=test_datasets[0].left_flank
+#left_flank = left_flank[:args.keep_left_cnt] + "N" * (len(left_flank) - args.keep_left_cnt)
+right_flank=test_datasets[0].right_flank
+ZERO_FLANKS = (left_flank, right_flank)
 
 valid_dir = SMS_BENCH_DIR / "valid" / cfg.tf_name  
 valid_dir.mkdir(exist_ok=True, parents=True)
@@ -165,10 +160,11 @@ foreign_ds_dir.mkdir(parents=True, exist_ok=True)
 samples: list[SeqEntry] = pos_samples + neg_samples    
 
 fasta_path = foreign_ds_dir  / "data.fasta"
-
 flanked_samples = []
 for entry in samples:
-    flanked_seq = left_flank + str(entry.sequence) + right_flank
+    seq = str(entry.sequence)
+    left_flank, right_flank = unique_seqs2flanks[seq]
+    flanked_seq = left_flank[1:] + seq + right_flank[1:]
     flanked_entry = SeqEntry(sequence=Seq(flanked_seq),
                              tag=entry.tag,
                              label=entry.label)
@@ -214,7 +210,9 @@ fasta_path = zeros_ds_dir  / "data.fasta"
 flanked_samples = []
 
 for entry in samples:
-    flanked_seq = left_flank + str(entry.sequence) + right_flank
+    seq = str(entry.sequence)
+    left_flank, right_flank = unique_seqs2flanks.get(seq, ZERO_FLANKS)
+    flanked_seq = left_flank[1:] + seq + right_flank[1:]
     flanked_entry = SeqEntry(sequence=Seq(flanked_seq),
                              tag=entry.tag,
                              label=entry.label)
