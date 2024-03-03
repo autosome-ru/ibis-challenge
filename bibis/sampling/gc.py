@@ -25,12 +25,6 @@ from ..bedtools.bedentry import BedEntry
 from ..bedtools.constants import CHROM_ORDER
 from ..seq.genome import Genome
 
-def filter_unique(seqs: list[SeqEntry]) -> list[SeqEntry]:
-    unique = dict()
-    for s in seqs:
-        if s.sequence not in unique:
-            unique[s.sequence] = s
-    return list(unique.values()) 
 
 @dataclass
 class SetGCSampler:
@@ -44,7 +38,6 @@ class SetGCSampler:
              negatives: list[SeqEntry],
              sample_per_object: int = 1,
              seed: int =777) -> 'SetGCSampler':
-        negatives = filter_unique(negatives) # TODO move uniqueness to other parts of pipeline
         
         neg = [-np.inf]
         neg.extend(s.gc for s in negatives)

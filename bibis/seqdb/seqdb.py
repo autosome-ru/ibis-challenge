@@ -80,8 +80,6 @@ class TagDatabase:
         seqs = self.seqs2strs(seqs)
     
         wait_for_unlock = False
-        existing = {}
-        rest = {}
         while True:
             try:
                 with self.get_connection() as con:
@@ -96,6 +94,7 @@ class TagDatabase:
                                 continue
                             rest[s] = self.tagger.tag()
                     self.update_db(cur, self.TAG_TABLE_NAME, rest)  
+                    existing.update(rest)
             except sqlite3.IntegrityError as exc:
                 print(f"Waiting: database lock exception ({exc}), regenerating keys")
                 wait_for_unlock=False
@@ -108,8 +107,6 @@ class TagDatabase:
             else:
                 break
                 
-            existing.update(rest)
-
         return {s: existing[s] for s in seqs}
     
     def taggify_entries(self, entries: list[SeqEntry]):
