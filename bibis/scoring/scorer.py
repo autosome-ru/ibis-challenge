@@ -1,25 +1,28 @@
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass, field
-from operator import neg
-
-import sys
+from curses import meta
+from dataclasses import dataclass, field, asdict
 from sklearn.metrics import roc_auc_score, average_precision_score
 import numpy as np
 from scipy.stats import kendalltau
 import pandas as pd 
 
 @dataclass
+class ScorerResult:
+    value: float 
+    metainfo: dict | None = None # any json-compatible dict with metainfo  
+
+@dataclass
 class Scorer(metaclass=ABCMeta):
     name: str
     @abstractmethod
-    def score(self, *args, **kwargs) -> float:
+    def score(self, *args, **kwargs) -> ScorerResult:
         pass
 
 @dataclass
 class ConstantScorer(Scorer):
     const: float
     def score(self, *args, **kwargs) -> float:
-        return self.const
+        return ScorerResult(value=self.const)
 
 class BinaryScorer(Scorer):
     @abstractmethod
@@ -36,11 +39,13 @@ class SklearnScorer(BinaryScorer):
 
 class SklearnROCAUC(SklearnScorer):
     def score(self, y_score: np.ndarray[float], y_real:  np.ndarray[float], **kwargs) -> float:
-        return float(roc_auc_score(y_true=y_real, y_score=y_score))
+        val = float(roc_auc_score(y_true=y_real, y_score=y_score))
+        return ScorerResult(value=val)
     
 class SklearnPRAUC(SklearnScorer):
     def score(self, y_score: np.ndarray[float], y_real: np.ndarray[float], **kwargs) -> float:
-        return float(average_precision_score(y_true=y_real, y_score=y_score))
+        val = float(average_precision_score(y_true=y_real, y_score=y_score))
+        return ScorerResult(value=val)
 
 
 class KendallRank(RegressionScorer):
@@ -51,8 +56,9 @@ class KendallRank(RegressionScorer):
               **kwargs) -> float: 
       
         if y_group is None:
-            return self._calc(y_score=y_score, 
+            val =  self._calc(y_score=y_score, 
                               y_real=y_real)
+            metainfo = None
         else:
             nonanmask = ~np.isnan(y_group)
             y_score = y_score[nonanmask]
@@ -65,7 +71,9 @@ class KendallRank(RegressionScorer):
                 scores[g] = self._calc(y_score=y_score[gr_mask],
                                        y_real=y_real[gr_mask])
             #print(scores, file=sys.stderr)
-            return sum(scores.values()) / len(groups)
+            val =  sum(scores.values()) / len(groups)
+            metainfo = scores
+        return ScorerResult(value=val, metainfo=metainfo)
             
     def _calc(self,
               y_score: np.ndarray[float], 
@@ -99,34 +107,11 @@ class PRROCScorer(BinaryScorer):
 @dataclass
 class PRROC_PRAUC(PRROCScorer):
     type: str
-
     def score(self, y_score: np.ndarray[float], y_real: np.ndarray[float], **kwargs) -> float:
         from rpy2.rinterface_lib import openrlib
         with openrlib.rlock:
             pkg = import_PRROC()
             from rpy2.robjects.vectors import FloatVector
-            labels = FloatVector(y_real)
-            scores = FloatVector(y_score)
-
-            if self.type == "integral":
-                auroc = pkg.pr_curve(scores, weights_class0=labels, dg_compute=False, sorted=True)
-                auroc = auroc[1][0]
-            elif self.type == "davisgoadrich":
-                auroc = pkg.pr_curve(scores, weights_class0=labels, dg_compute=True, sorted=True)
-                auroc = auroc[2][0]
-            else:
-                raise Exception()
-            return auroc
-
-@dataclass
-class PRROC_PRAUC_HTSELEX(PRROCScorer):
-    type: str
-    def score(self, y_score: np.ndarray[float], y_real: np.ndarray[float], **kwargs) -> float:
-        from rpy2.rinterface_lib import openrlib
-        with openrlib.rlock:
-            pkg = import_PRROC()
-            from rpy2.robjects.vectors import FloatVector
-
             y_real = np.where(np.isclose(y_real, 0), 0, 1) # convert to binary task
 
             labels = FloatVector(y_real)
@@ -139,7 +124,7 @@ class PRROC_PRAUC_HTSELEX(PRROCScorer):
                 auroc = auroc[2][0]
             else:
                 raise Exception()
-            return auroc
+        return ScorerResult(value=auroc)
         
 @dataclass
 class PRROC_PRAUC_TOP25(PRROCScorer):
@@ -177,7 +162,7 @@ class PRROC_PRAUC_TOP25(PRROCScorer):
                 auroc = auroc[2][0]
             else:
                 raise Exception()
-            return auroc
+        return ScorerResult(value=auroc)
 
 @dataclass
 class PRROC_PRAUC_TOP50(PRROCScorer):
@@ -215,9 +200,7 @@ class PRROC_PRAUC_TOP50(PRROCScorer):
                 auroc = auroc[2][0]
             else:
                 raise Exception()
-            return auroc
-#for the current implementation it is safe to use them for htselex, where positive label >=1
-PRROC_PRAUC_HTSELEX_TOP25 = PRROC_PRAUC_TOP25
+        return ScorerResult(value=auroc)
 
 @dataclass 
 class PRROC_ROCAUC(PRROCScorer):
@@ -230,10 +213,10 @@ class PRROC_ROCAUC(PRROCScorer):
             scores = FloatVector(y_score)
             auroc = pkg.roc_curve(scores, weights_class0=labels, sorted=True)
             auroc = auroc[1][0]
-            return auroc
+        return ScorerResult(value=auroc)
 
 @dataclass 
-class PRROC_ROCAUC_HTSELEX(PRROCScorer):
+class PRROC_ROCAUC(PRROCScorer):
     def score(self, y_score:  np.ndarray[float], y_real:  np.ndarray[float], **kwargs) -> float:
         from rpy2.rinterface_lib import openrlib
         with openrlib.rlock:
@@ -244,7 +227,7 @@ class PRROC_ROCAUC_HTSELEX(PRROCScorer):
             scores = FloatVector(y_score)
             auroc = pkg.roc_curve(scores, weights_class0=labels, sorted=True)
             auroc = auroc[1][0]
-            return auroc     
+        return ScorerResult(value=auroc)    
 
 @dataclass 
 class PRROC_ROCAUC_TOP25(PRROCScorer):
@@ -272,11 +255,7 @@ class PRROC_ROCAUC_TOP25(PRROCScorer):
                                   scores_class1=FloatVector(negatives), 
                                   sorted=True)
             auroc = auroc[1][0]
-            return auroc  
-
-#for the current implementation it is safe to use them for htselex, where positive label >=1
-PRROC_ROCAUC_HTSELEX_TOP25 = PRROC_ROCAUC_TOP25
-
+        return ScorerResult(value=auroc) 
 
 @dataclass 
 class PRROC_ROCAUC_TOP50(PRROCScorer):
@@ -304,7 +283,7 @@ class PRROC_ROCAUC_TOP50(PRROCScorer):
                                   scores_class1=FloatVector(negatives), 
                                   sorted=True)
             auroc = auroc[1][0]
-            return auroc  
+        return ScorerResult(value=auroc)
 
 
 @dataclass
@@ -312,6 +291,7 @@ class ScorerInfo:
     name: str
     alias: str = ""
     params: dict = field(default_factory=dict)
+    backgrounds: list[str] = field(default_factory=lambda: ['all']) # by default -- run for all benchmarks
 
     @classmethod
     def from_dict(cls, dt: dict):
@@ -332,8 +312,6 @@ class ScorerInfo:
             return PRROC_ROCAUC_TOP25(self.alias)
         elif self.name == 'prroc_rocauc_top50':
             return PRROC_ROCAUC_TOP50(self.alias)
-        elif self.name == "prroc_rocauc_htselex":
-            return PRROC_ROCAUC_HTSELEX(self.alias)
         elif self.name == "prroc_prauc":
             tp = self.params.get("type")
             if tp is None:
@@ -352,12 +330,6 @@ class ScorerInfo:
                 raise Exception("type must be specified for prauc scorer from PRROC package")
             tp = tp.lower()
             return PRROC_PRAUC_TOP50(self.alias, tp)
-        elif self.name == "prroc_prauc_htselex":
-            tp = self.params.get("type")
-            if tp is None:
-                raise Exception("type must be specified for prauc scorer from PRROC package")
-            tp = tp.lower()
-            return PRROC_PRAUC_HTSELEX(self.alias, tp)
         elif self.name == "kendalltau":
             return KendallRank(self.alias)
         elif self.name == "constant_scorer":
@@ -369,8 +341,4 @@ class ScorerInfo:
         raise Exception(f"Wrong scorer: {self.name}")
     
     def to_dict(self) -> dict:
-        dt = {}
-        dt['name'] = self.name
-        dt['alias'] = self.alias
-        dt['params'] = self.params
-        return dt
+        return asdict(self)

@@ -11,17 +11,20 @@ class MatrixSumPredictor:
     matrix_path: Path
     pwmeval_path: Path
     PWMEvalSeparator: ClassVar[str] = "\t"
+    pseudocount: float
 
     @classmethod
     def from_pfm(cls, 
                  pfm_path: Union[Path, str], 
-                 pwmeval_path: Union[Path, str]):
+                 pwmeval_path: Union[Path, str],
+                 pseudocount: float = 0.0):
         if isinstance(pfm_path, str):
             pfm_path = Path(pfm_path)
         if isinstance(pwmeval_path, str):
             pwmeval_path = Path(pwmeval_path)
         return cls(matrix_path=pfm_path, 
-                   pwmeval_path=pwmeval_path)
+                   pwmeval_path=pwmeval_path,
+                   pseudocount=pseudocount)
     
     def score(self, X: Iterator[SeqEntry]) -> dict[str, float]:
         dt = self.score_dataset(X)
@@ -38,7 +41,7 @@ class MatrixSumPredictor:
         return prediction
 
     def get_cmd(self, path: str| Path | None) -> str:
-        return f"{self.pwmeval_path} -m {self.matrix_path} {path}"
+        return f"{self.pwmeval_path} -m {self.matrix_path} {path} -w {self.pseudocount}"
     
     def process_query(self, query: str) -> str:
         cmd = self.get_cmd(None)

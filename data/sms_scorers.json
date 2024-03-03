@@ -2,12 +2,14 @@
     {
         "name": "prroc_rocauc_top25",
         "alias": "ROCAUC25",
-        "params": {}
+        "params": {},
+        "backgrounds": ["all"]
     },
     {
         "name": "prroc_prauc_top25",
         "alias": "PRAUC25",
-        "params": {"type": "integral"}
+        "params": {"type": "integral"},
+        "backgrounds": ["all"]
 
     }
 ]

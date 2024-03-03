@@ -1,39 +1,46 @@
 [  {
         "name": "prroc_rocauc_top25",
         "alias": "ROCAUC25",
-        "params": {}
+        "params": {},
+        "backgrounds": ["all"]
     },
     {
         "name": "prroc_rocauc_top50",
         "alias": "ROCAUC50",
-        "params": {}
+        "params": {},
+        "backgrounds": ["all"]
     },
     {
         "name": "prroc_rocauc_htselex",
         "alias": "ROCAUC",
-        "params": {}
+        "params": {},
+        "backgrounds": ["all"]
     },
     {
         "name": "prroc_prauc_top25",
         "alias": "PRAUC25",
-        "params": {"type": "integral"}
+        "params": {"type": "integral"},
+        "backgrounds": ["all"]
 
     },
     {
         "name": "prroc_prauc_top50",
         "alias": "PRAUC50",
-        "params": {"type": "integral"}
+        "params": {"type": "integral"},
+        "backgrounds": ["all"]
 
     },
     {
         "name": "prroc_prauc_htselex",
         "alias": "PRAUC",
-        "params": {"type": "integral"}
+        "params": {"type": "integral"},
+        "backgrounds": ["all"]
 
     },
     {
         "name": "kendalltau",
         "alias": "kendalltau",
-        "params": {}
+        "params": {},
+        "backgrounds": ["positives"]
     }
 ]
