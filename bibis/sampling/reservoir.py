@@ -82,6 +82,22 @@ class PredefinedSizeUniformSelector:
         self.count += 1
         return selected
     
+class PredefinedIndicesSelector:
+    def __init__(self, indices):
+        self.count = 0
+        self.sample_size = len(indices)
+        self.selected_ids = indices
+        self.cur_pos = 0
+
+    def add(self, _):
+        selected = False
+        if self.cur_pos < self.sample_size and\
+                self.count == self.selected_ids[self.cur_pos]:
+            self.cur_pos += 1
+            selected = True
+        self.count += 1
+        return selected
+    
 class AllSelector:
     '''
     no sampling, just collect seen data

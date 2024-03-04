@@ -8,7 +8,7 @@ from .dataset import SMSRawDataset
 @dataclass
 class RAW_SMSConfig:
     tf_name: str
-    splits: dict[str, list[SMSRawDataset]] # path to tsvs with train/test chips
+    splits: dict[str, list[SMSRawDataset]]
 
     def save(self, path: str | Path):
         dt = asdict(self)

@@ -103,7 +103,7 @@ class TagDatabase:
                 wait_for_unlock=True
                 time.sleep(self.wait_time)
             except Exception as exc:
-                raise Exception("fUknown exception occured: {exc}")
+                raise Exception(f"Uknown exception occured: {exc}")
             else:
                 break
                 

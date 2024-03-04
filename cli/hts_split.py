@@ -1,8 +1,6 @@
-from collections import defaultdict
 import sys 
 import json
 from pathlib import Path
-from copy import copy
 import tqdm 
 
 import argparse
@@ -11,6 +9,17 @@ import sys
 from Bio.Seq import Seq
 import random
 import numpy as np 
+
+def load_ds2flanks(path):
+    with open(path) as inp:
+        dt = json.load(inp)
+    ds2flanks = {}
+    for rep_id, rep_info in dt.items():
+        rep_rest = {}
+        for cycle, flanks in rep_info.items():
+            rep_rest[int(cycle)] = flanks
+        ds2flanks[int(rep_id)] = rep_rest
+    return ds2flanks
 
 parser = argparse.ArgumentParser()
 
@@ -31,20 +40,17 @@ parser.add_argument("--tagdb_cfg",
 parser.add_argument("--config_file", 
                     required=True, 
                     type=str)
+parser.add_argument("--flanks", 
+                    required=True, 
+                    type=str)
 parser.add_argument("--type", 
                     choices=['Leaderboard', 'Final'], 
                     required=True, type=str)
 parser.add_argument("--bibis_root",
                     default="/home_local/dpenzar/bibis_git/ibis-challenge",
                     type=str)
-parser.add_argument("--keep_left_cnt",
-                    default=18,
-                    type=int)
-parser.add_argument("--keep_right_cnt",
-                    default=14,
-                    type=int)
 parser.add_argument("--sample_count",
-                    default=200_000,
+                    default=100_000,
                     type=sample_count_conv)
 parser.add_argument("--foreign_neg2pos_ratio",
                     default=2,
@@ -64,42 +70,17 @@ args = parser.parse_args()
 
 sys.path.append(args.bibis_root) # temporary solution while package is in development
 
-from bibis.sampling.gc import GCProfileMatcher, SetGCSampler
+from bibis.sampling.gc import GCProfileMatcher
 from bibis.benchmark.dataset import DatasetInfo
 from bibis.seq.seqentry import SeqEntry, write as seq_write
-from bibis.scoring.label import NO_LABEL, POSITIVE_LABEL, NEGATIVE_LABEL
+from bibis.scoring.label import NO_LABEL
 from bibis.seqdb.config import DBConfig 
 from bibis.hts.config import HTSRawConfig
-from bibis.hts.dataset import HTSRawDataset
 from bibis.hts.seqentry import SeqAssignEntry
 from bibis.hts.utils import dispatch_samples
 from bibis.utils import merge_fastqgz
 from bibis.sampling.reservoir import (AllSelector,  
                                       PredefinedSizeUniformSelector)
-
-def split_datasets(cfg: HTSRawConfig):
-    datasets = cfg.datasets
-    groups = defaultdict(lambda: defaultdict(dict))
-
-    for ds in datasets:
-        groups[ds.exp_tp][ds.rep][ds.cycle] = ds
-
-    train_datasets = {}
-    test_datasets = {}
-
-    cur = test_datasets
-    nxt = train_datasets
-    for _, rep_dt in groups.items():
-        for rep, ds_cycles in rep_dt.items():
-            cur[rep] = ds_cycles
-            cur, nxt = nxt, cur
-    return train_datasets, test_datasets
-
-def split_by_rep(datasets: list[HTSRawDataset]):
-    spl = defaultdict(dict)
-    for ds in datasets:
-        spl[ds.rep][ds.cycle] = ds
-    return spl
     
 
 EPS = 1e-10
@@ -112,38 +93,33 @@ HTS_BENCH_DIR.mkdir(parents=True, exist_ok=True)
 
 cfg = HTSRawConfig.load(args.config_file)
 
-assert cfg.split in ("Train", "Test", "Train/Test"), "wrong split"
-
-datasets = copy(cfg.datasets)
 #print(datasets)
-
-if cfg.split == "Train":
-    train_datasets = split_by_rep(datasets)
-    test_datasets = None
-else:
-    if cfg.split == "Train/Test":
-        train_datasets, test_datasets = split_datasets(cfg)
-    else: # cfg.split == "Test"
-        train_datasets = None
-        test_datasets = split_by_rep(datasets) 
-
-
+train_datasets = cfg.splits.get('train')
+test_datasets = cfg.splits.get('test')
 
 if train_datasets is not None:
-    print("Train datasets: ", train_datasets.keys())
+    print(f"For factor {cfg.tf_name} the following replics are going to train:")
     train_dir = HTS_BENCH_DIR / "train" / cfg.tf_name  
     train_dir.mkdir(parents=True, exist_ok=True)
 
     for rep_ind, (rep, rep_info) in enumerate(train_datasets.items()):
+        print(f"\t{rep}")
         for cycle, ds in rep_info.items():
             
             out_path = train_dir / f"{cfg.tf_name}_R{rep_ind}_C{ds.cycle}_lf{ds.left_flank}_rf{ds.right_flank}.fastq.gz"
             if not out_path.exists() or args.recalc:
                 merge_fastqgz(in_paths=ds.raw_paths, 
                             out_path=out_path)
+else:
+    print(f"For factor {cfg.tf_name} no replics are going to train")
 
 if test_datasets is None:
+    print(f"For factor {cfg.tf_name} no replics are going to test")
     exit(0) # nothing to done
+else:
+    print(f"For factor {cfg.tf_name} the following replics are going to test:")
+    for rep_ind, (rep, rep_info) in enumerate(test_datasets.items()):
+        print(f"\t{rep}")
 
 print("Test datasets", test_datasets.keys())
 valid_dir = HTS_BENCH_DIR / "valid" / cfg.tf_name  
@@ -194,16 +170,21 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
     with open(ds.path, 'r') as assign, open(positives_path, 'w') as positive_fd:
         for line in tqdm.tqdm(assign):
             entry = SeqAssignEntry.from_line(line)
-            if entry.rep_ind in test_rep_ids:
-                to_take = positive_selectors[entry.cycle].add(entry)
-                if to_take:
-                    positive_gc_profiles[entry.cycle][entry.gc_content] += 1
-                    total_positive_gc_profile[entry.gc_content] += 1
-                    print(entry.to_line(), file=positive_fd)
-            elif entry.cycle == 0:
-                zero_gc_profile[entry.gc_content] += 1
-            elif entry.tf_ind != cfg.tf_id and entry.stage_ind == cfg.stage_id: # foreigns
-                foreigns_gc_profiles[entry.cycle][entry.gc_content] += 1
+            if entry.stage_ind == cfg.stage_id:
+                if entry.rep_ind in test_rep_ids:
+                    to_take = positive_selectors[entry.cycle].add(entry)
+                    if to_take:
+                        positive_gc_profiles[entry.cycle][entry.gc_content] += 1
+                        total_positive_gc_profile[entry.gc_content] += 1
+                        print(line, file=positive_fd, end="")
+                elif entry.cycle == 0:
+                    zero_gc_profile[entry.gc_content] += 1
+                elif entry.tf_ind != cfg.tf_id: # foreigns
+                    foreigns_gc_profiles[entry.cycle][entry.gc_content] += 1
+                else:
+                    raise Exception(f"Wrong entry in assign file: {entry}")
+            else:
+                raise Exception(f"Assign file contains irrelevant stage id: {cfg.stage_id}")
     for cycle, sel in positive_selectors.items():
         if sel.count != sel.total_size:
             raise Exception(f"Positive selector for cycle {cycle} has not recieved all {sel.total_size} entries: {sel.count}")
@@ -216,6 +197,7 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
 
     foreign_matcher = GCProfileMatcher.make(sample_per_object=args.foreign_neg2pos_ratio)
     foreigns_samplers = {}
+
     print("Foreigns")
     for cycle, pos_gc_counts in positive_gc_profiles.items():
         foreign_gc_counts = foreigns_gc_profiles[cycle]
@@ -239,14 +221,17 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
     with open(ds.path, 'r') as assign, open(foreigns_path, 'w') as foreigns_fd, open(inputs_path, 'w') as inputs_fd:
         for line in tqdm.tqdm(assign):
             entry = SeqAssignEntry.from_line(line)
-            if entry.cycle == 0:
-                to_take = input_samplers[entry.gc_content].add(entry)
-                if to_take:
-                    print(entry.to_line(), file=inputs_fd)
-            elif entry.tf_ind != cfg.tf_id and entry.stage_ind == cfg.stage_id: # foreigns
-                to_take = foreigns_samplers[entry.cycle][entry.gc_content].add(entry)
-                if to_take:
-                    print(entry.to_line(), file=foreigns_fd)
+            if entry.stage_ind == cfg.stage_id:
+                if entry.cycle == 0:
+                    to_take = input_samplers[entry.gc_content].add(entry)
+                    if to_take:
+                        print(line, file=inputs_fd, end="")
+                elif entry.tf_ind != cfg.tf_id: # foreigns
+                    to_take = foreigns_samplers[entry.cycle][entry.gc_content].add(entry)
+                    if to_take:
+                        print(line, file=foreigns_fd, end="")
+            else:
+                raise Exception(f"Wrong entry in assign file: {entry}")
     for gc, sel in input_samplers.items():
         if sel.count != sel.total_size:
             raise Exception(f"Zeros selector for gc {gc} has not recieved all {sel.total_size} entries: {sel.count}")
@@ -255,9 +240,6 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
         for gc, sel in gc_samplers.items():
             if sel.count != sel.total_size:
                 raise Exception(f"Foreigns selector for cycle {cycle} for gc {gc} has not recieved all {sel.total_size} entries: {sel.count}")
-            #else:
-            #    print(cycle, gc, sel.count, sel.total_size)
-
 
 for _, (_, rep_info) in enumerate(test_datasets.items()):
     for _, ds in rep_info.items():
@@ -267,26 +249,23 @@ else:
     ds = None
 assert ds is not None
 
-left_flank = ds.left_flank[1:]
-right_flank = ds.right_flank[1:]
 
-left_flank = left_flank[:args.keep_left_cnt] + (len(left_flank) - args.keep_left_cnt) * 'N'
-right_flank = (len(right_flank) - args.keep_right_cnt) * 'N' + right_flank[-args.keep_right_cnt:]
-print(left_flank, args.keep_left_cnt)
-print(right_flank, args.keep_right_cnt)
+ds2flanks = load_ds2flanks(args.flanks)
+
 db = DBConfig.load(BENCH_SEQDB_CFG).build()
 
 # benchmark part files
 with open(positives_path, "r") as inp:
-    pos_samples = []
+    pos_samples: list[SeqEntry] = []
     for line in inp:
         entry = SeqAssignEntry.from_line(line)
-
+        lf, rf = ds2flanks[entry.rep_ind][entry.cycle]
         seq_entry = SeqEntry(sequence=Seq(entry.seq), 
                              label=entry.cycle, 
-                             metainfo={'rep': entry.rep_ind})
+                             metainfo={'rep': entry.rep_ind,
+                                       'flanks': (lf, rf)})
         pos_samples.append(seq_entry)
-        
+
 pos_samples = db.taggify_entries(pos_samples)
 
 user_known_samples: list[SeqEntry] = []
@@ -298,7 +277,11 @@ with open(foreigns_path, "r") as inp:
     neg_samples = []
     for line in inp:
         entry = SeqAssignEntry.from_line(line)
-        seq_entry = SeqEntry(sequence=Seq(entry.seq), label=0, metainfo={'rep': None}) # always zero cycle 
+        lf, rf = ds2flanks[entry.rep_ind][entry.cycle]
+        seq_entry = SeqEntry(sequence=Seq(entry.seq), 
+                             label=0, 
+                             metainfo={'rep': None,
+                                       'flanks': (lf,rf) }) # always zero cycle 
         neg_samples.append(seq_entry)
 
 neg_samples = db.taggify_entries(neg_samples)
@@ -312,7 +295,8 @@ fasta_path = foreign_ds_dir  / "data.fasta"
 
 flanked_samples = []
 for entry in samples:
-    flanked_seq = str(entry.sequence) #left_flank + str(entry.sequence) + right_flank
+    lf, rf = entry.metainfo['flanks']
+    flanked_seq = lf[1:] + str(entry.sequence) + rf[1:] 
     flanked_entry = SeqEntry(sequence=Seq(flanked_seq),
                              tag=entry.tag,
                              label=entry.label)
@@ -332,20 +316,22 @@ ds_info = DatasetInfo(name = f"{cfg.tf_name}_foreign",
                       tf = cfg.tf_name,
                       background="foreign",
                       fasta_path=str(fasta_path),
-                      answer_path=str(answer_path),
-                      left_flank=left_flank,
-                      right_flank=right_flank)
+                      answer_path=str(answer_path))
 ds_info.save(config_path)
 
 # zero seqs 
+
+zero_flanks = [en.metainfo['flanks'] for en in pos_samples] * args.zero_neg2pos_ratio
+rng = random.Random(args.seed)
+rng.shuffle(zero_flanks)
 with open(inputs_path, "r") as inp:
     neg_samples = []
-    for line in inp:
+    for ind, line in enumerate(inp):
         entry = SeqAssignEntry.from_line(line)
-
         seq_entry = SeqEntry(sequence=Seq(entry.seq), 
                              label=0,
-                             metainfo={'rep': None}) # always zero cycle 
+                             metainfo={'rep': None,
+                                       'flanks': zero_flanks[ind]}) # always zero cycle 
         neg_samples.append(seq_entry)
 
 neg_samples = db.taggify_entries(neg_samples)
@@ -359,7 +345,8 @@ fasta_path = zeros_ds_dir  / "data.fasta"
 flanked_samples = []
 
 for entry in samples:
-    flanked_seq = str(entry.sequence) # left_flank + str(entry.sequence) + right_flank
+    lf, rf = entry.metainfo['flanks']
+    flanked_seq = lf[1:] + str(entry.sequence) + rf[1:] 
     flanked_entry = SeqEntry(sequence=Seq(flanked_seq),
                              tag=entry.tag,
                              label=entry.label)
@@ -377,9 +364,7 @@ ds_info = DatasetInfo(name = f"{cfg.tf_name}_input",
                       tf = cfg.tf_name,
                       background="input",
                       fasta_path=str(fasta_path),
-                      answer_path=str(answer_path),
-                      left_flank=left_flank,
-                      right_flank=right_flank)
+                      answer_path=str(answer_path))
 ds_info.save(config_path)
 
 # write sequences for user

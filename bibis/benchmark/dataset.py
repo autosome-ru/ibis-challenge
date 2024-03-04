@@ -13,8 +13,6 @@ class DatasetInfo:
     background: str 
     fasta_path: str
     answer_path: str | None
-    left_flank: str | None = None # valid for SMS and HT-SELEX
-    right_flank: str | None = None # valid for SMS and HT-SELEX
     
     @classmethod
     def from_dict(cls, dt: dict[str, str | Path]):

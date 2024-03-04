@@ -1,10 +1,12 @@
-
 import argparse
+from numpy import test, zeros
 import pandas as pd
 from pathlib import Path
-import sys 
+import sys
+from rpy2.robjects.packages import data
 import tqdm 
 import random
+import json
 
 import argparse
 
@@ -15,10 +17,12 @@ from collections import defaultdict
 
 from bibis.utils import END_LINE_CHARS
 from bibis.counting.fastqcounter import FastqGzReadsCounter
-from bibis.hts.config import HTSRawConfig
+from bibis.hts.config import HTSRawConfig, split_datasets
 from bibis.hts.dataset import HTSRawDataset
 from bibis.hts.seqentry import SeqAssignEntry
 from bibis.seq.utils import gc
+from bibis.sampling.reservoir import PredefinedIndicesSelector
+
     
 def get_cycle_flanks_from_name(path: str):
     name = path.split("@")[2]
@@ -62,8 +66,6 @@ def extract_info(ibis_table, stages):
                 #print(f"Skipping factor tf: {tf}. Its split ({ibis_split}) is not none but there is no experiments for that factor", file=sys.stderr)
                 continue
             tf2split[tf] = ibis_split
-            tf_dir = OUT_DIR / tf 
-            tf_dir.mkdir(parents=True, exist_ok=True)
             for rep in reps:
                 for cycle in ('C1', 'C2', 'C3', 'C4'):
                     path_cands = list(HTS_DIR.glob(f"*/*@{rep}.{cycle}.*"))
@@ -154,11 +156,11 @@ def assign_seqs(counter,
                     rep_mapping[ix] = rep2id[rep]
                     cycle_mapping[ix] = int(cycle.replace('C', ''))
 
-    stage_ids_opts = list(stage2id.values())
-
     ds_sizes = defaultdict(lambda: defaultdict(int))
+
+    zero_size = 0
     with open(counts_path, 'r') as inp, open(assign_path, "w") as out:
-        for line in tqdm.tqdm(inp):
+        for li, line in tqdm.tqdm(enumerate(inp)):
             seq, occs = line.strip(END_LINE_CHARS).split(counter.FIELD_SEP)
             occs = set(map(int, occs.split(indices_sep)))
             if len(occs) > 1: # non-unique read
@@ -174,8 +176,8 @@ def assign_seqs(counter,
                 rep_ind = -1 
                 tf_ind = -1
                 cycle = 0
-                stage_ind = random.choice(stage_ids_opts) # randomly assign zero read to stage
-
+                stage_ind = -1 # unfinished file, stage for zero cycles is not assigned 
+                zero_size += 1
             entry = SeqAssignEntry(seq=seq,
                                    cycle=cycle,
                                    rep_ind=rep_ind,
@@ -185,25 +187,33 @@ def assign_seqs(counter,
             print(entry.to_line(),
                   file=out)
 
-    return tf2id, rep2id, stage2id, ds_sizes
+    return tf2id, rep2id, stage2id, ds_sizes, zero_size
 
+def write_flanks(datasets: list[HTSRawDataset], flanks_path: str):
+    dsid2flank = defaultdict(dict)
+    for ds in datasets:
+        dsid2flank[ds.rep_id][ds.cycle] = [ds.left_flank, ds.right_flank]
+    dsid2flank = dict(dsid2flank)
+    with open(flanks_path, "w") as out:
+        json.dump(dsid2flank, out, indent=4)
+    return dsid2flank
 
-def write_configs(assign_path,
-                  stage_wise_copy_paths, 
+def split_data(stage_wise_copy_paths, 
                   stage_wise_tf2split,
                   tf2id,
                   rep2id,
                   stage2id,
                   ds_sizes,
-                  rep2typemap,
-                  configs_main_dir):
+                  rep2typemap):
+    all_configs = {}
     for stage, copy_paths in stage_wise_copy_paths.items():
         configs = []
         tf2split = stage_wise_tf2split[stage]
+    
+
         for tf, exps in tqdm.tqdm(copy_paths.items()):
             ibis_split = tf2split[tf]
             datasets = []
-            
             for rep, cycle, path_cands, left_flank, right_flank in exps:
                 exp_tp = rep2typemap[rep]
                 rep_id = rep2id[rep]
@@ -211,7 +221,7 @@ def write_configs(assign_path,
                 ds = HTSRawDataset(
                                 rep_id=rep_id,
                                 size=ds_sizes[rep_id][cycle_id],
-                                path=str(assign_path), 
+                                path="", # unfinished, will be asssigned only to test datasets
                                 cycle=cycle_id,
                                 rep=rep,
                                 exp_tp=exp_tp,
@@ -219,18 +229,131 @@ def write_configs(assign_path,
                                 right_flank=right_flank,
                                 raw_paths=[str(p) for p in path_cands])
                 datasets.append(ds)
+
+            splits = split_datasets(datasets=datasets, 
+                                    split=ibis_split)
             cfg = HTSRawConfig(tf_name=tf,
                                tf_id=tf2id[tf],
                                stage=stage, 
                                stage_id=stage2id[stage],
-                               split=ibis_split,
-                               datasets=datasets)
+                               splits=splits)
             configs.append(cfg)
+        all_configs[stage] = configs
+    
+    return all_configs
+
+def get_zero_selectors(stage_id_sizes: dict[int, int], 
+                 zero_size: int,
+                 seed: int = 777):
+    total_size = sum(stage_id_sizes.values())
+    stage_zero_sizes = {stage: int((size / total_size) * zero_size) for stage, 
+                         size in stage_id_sizes.items()}
+    rest = total_size - sum(stage_zero_sizes)
+    first_stage = next(iter(stage_zero_sizes.keys()))
+    stage_zero_sizes[first_stage] += rest
+    stage_zero_assigns = []
+    for stage, size in stage_zero_sizes.items():
+        for _ in range(size):
+            stage_zero_assigns.append(stage)
+    rng = random.Random(seed)
+    rng.shuffle(stage_zero_assigns)
+
+    zero_selectors = {}
+    for stage in stage_id_sizes.keys():
+        zero_stage_inds = [ind for ind, sid in enumerate(stage_zero_assigns) if sid == stage]
+        zero_selectors[stage] = PredefinedIndicesSelector(zero_stage_inds)
+
+    return zero_selectors
+
+def write_filtered_assign(in_path: str, 
+                          stage2assign: dict[int, str],
+                          stage2datasets: dict[int, list[HTSRawDataset]],
+                          stage2zero_selector: dict[int, PredefinedIndicesSelector]):
+    
+    stage2repids = {}
+    for stage, datasets in stage2datasets.items():
+        stage2repids[stage] = set(ds.rep_id for ds in datasets)
+
+    try:
+        stage_fds = {stage: open(path, "w") for stage, path in stage2assign.items()}
+        with open(in_path, 'r') as inp:
+            for line in tqdm.tqdm(inp):
+                entry = SeqAssignEntry.from_line(line)
+                if entry.cycle == 0: # zero seqs
+                    for stage_id, selector in stage2zero_selector.items():
+                        to_take = selector.add(entry)
+                        if to_take:
+                            entry.stage_ind = stage_id
+                            print(entry.to_line(), file=stage_fds[stage_id])
+                else:
+                    stage_id = entry.stage_ind
+                    repids = stage2repids[stage_id]
+                    if entry.rep_ind in repids:
+                        print(line, file=stage_fds[stage_id], end="")
+    finally:           
+        for fd in stage_fds.values():
+            fd.close()
+
+def write_final_data(stage_configs: dict[str, list[HTSRawConfig]],
+                     stage2id: dict[str, int],
+                     zero_size: int, 
+                     assign_path: str | Path, 
+                     out_dir: str, 
+                     seed=777):
+    configs_main_dir = out_dir / 'configs'
+    assign_main_dir = out_dir / 'assign'
+
+    stage_sizes = {st: 0 for st in stage_configs.keys()}
+    
+    for stage, configs in stage_configs.items():
+        for cfg in configs:
+            test_datasets = cfg.splits.get('test')
+            if test_datasets is None:
+                continue
+            else:
+                for _, rep_info in test_datasets.items():
+                    for _, ds in rep_info.items():
+                        stage_sizes[stage] += ds.size
+                      
+    stage_id_sizes = {stage2id[stage]: size for stage, size in stage_sizes.items()}
+    stage2zero_selector = get_zero_selectors(stage_id_sizes=stage_id_sizes,
+                                zero_size=zero_size,
+                                seed=seed)
+    
+    stage2test_datasets = {stage2id[st]: [] for st in stage_configs.keys()}
+    stage2assign = {}
+
+    for stage, configs in stage_configs.items():
+        stage_id = stage2id[stage]
+       
+        assign_stage_dir = assign_main_dir / stage
+        assign_stage_dir.mkdir(exist_ok=True, parents=True) 
+        assign_stage_seqs_path = assign_stage_dir / 'assign.seqs2'        
+        
         configs_stage_dir = configs_main_dir / stage
         configs_stage_dir.mkdir(exist_ok=True, parents=True)
         for cfg in configs:
+            test_datasets = cfg.splits.get('test')
+            if test_datasets is not None:
+                for _, rep_info in test_datasets.items():
+                    for _, ds in rep_info.items():
+                        ds.path = str(assign_stage_seqs_path)
+                        stage2test_datasets[stage_id].append(ds)
+
             cfg_path = configs_stage_dir /  f"{cfg.tf_name}.json"
             cfg.save(cfg_path)
+
+        assign_flanks_path = assign_stage_dir / 'flanks.json'
+        write_flanks(datasets=stage2test_datasets[stage_id],
+                     flanks_path=assign_flanks_path)
+        
+        stage2assign[stage_id] = assign_stage_seqs_path
+        
+
+    write_filtered_assign(in_path=assign_path,
+                          stage2assign=stage2assign,
+                          stage2datasets=stage2test_datasets,
+                          stage2zero_selector=stage2zero_selector)
 
 from bibis.utils import END_LINE_CHARS
 LEADERBOARD_EXCEL = "/home_local/dpenzar/IBIS TF Selection - Nov 2022 _ Feb 2023.xlsx"
@@ -238,13 +361,16 @@ SPLIT_SHEET_NAME = "v3 TrainTest marked (2023)"
 HTS_DIR = Path("/home_local/vorontsovie/greco-data/release_8d.2022-07-31/full/HTS")
 STAGES = ('Final', 'Leaderboard')
 ZEROS_CYCLE_DIR = Path("/mnt/space/hughes/GHT-SELEXFeb2023/")
-OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/HTS/RAW/")
-OUT_DIR.mkdir(parents=True, exist_ok=True)
+OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/HTS/")
+OUT_RAW_DIR = OUT_DIR / "RAW"
+OUT_RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--recalc", action="store_true")
 parser.add_argument("--calc_dir", help="Dir for calculation mapreduce operations", default="mapreduce_calc")
 parser.add_argument("--n_procs", type=int, default=20)
+parser.add_argument("--seed", type=int, default=777)
+
 
 args = parser.parse_args()
 
@@ -262,10 +388,10 @@ if not ibis_table['stage'].isin(STAGES).all():
 stage_wise_copy_paths, stage_wise_tf2split, all_nonzero_paths = extract_info(ibis_table=ibis_table,
                                                                              stages=STAGES)
 
-counter_dir = OUT_DIR / "counter"
-counter_config = OUT_DIR / 'counter.json'
-htselex_counts_path = OUT_DIR / "htselex_occs.txt"
-seq_assign_path = OUT_DIR / "seq_assign.txt"
+counter_dir = OUT_RAW_DIR / "counter"
+counter_config = OUT_RAW_DIR / 'counter.json'
+htselex_counts_path = OUT_RAW_DIR / "htselex_occs.txt"
+seq_assign_path = OUT_RAW_DIR / "seq_assign.txt"
 
 INDICES_SEP = " "
 
@@ -277,18 +403,22 @@ counter = count_seqs(counter_dir=counter_dir,
            indices_sep=INDICES_SEP,
            recalc=args.recalc)
 
-tf2id, rep2id, stage2id, ds_sizes = assign_seqs(counter=counter,
+tf2id, rep2id, stage2id, ds_sizes, zero_size = assign_seqs(counter=counter,
             counts_path=htselex_counts_path,
             stage_wise_copy_paths=stage_wise_copy_paths,
             assign_path=seq_assign_path)
-print(ds_sizes)
-configs_dir = OUT_DIR / 'configs'
-write_configs(stage_wise_copy_paths=stage_wise_copy_paths,
-              stage_wise_tf2split=stage_wise_tf2split,
-              tf2id=tf2id,
-              rep2id=rep2id,
-              stage2id=stage2id,
-              ds_sizes=ds_sizes,
-              rep2typemap=rep2typemap,
-              configs_main_dir=configs_dir,
-              assign_path=seq_assign_path)
+
+stage_configs = split_data(stage_wise_copy_paths=stage_wise_copy_paths,
+                               stage_wise_tf2split=stage_wise_tf2split,
+                               tf2id=tf2id,
+                               rep2id=rep2id,
+                               stage2id=stage2id,
+                               ds_sizes=ds_sizes,
+                               rep2typemap=rep2typemap)
+
+write_final_data(stage_configs=stage_configs,
+                 stage2id=stage2id,
+                 zero_size=zero_size,
+                 assign_path=seq_assign_path,
+                 out_dir=OUT_DIR,
+                 seed=args.seed)

@@ -33,9 +33,6 @@ parser.add_argument("--type",
 parser.add_argument("--bibis_root",
                     default="/home_local/dpenzar/bibis_git/ibis-challenge",
                     type=str)
-parser.add_argument("--keep_left_cnt",
-                    default=10,
-                    type=int)
 parser.add_argument("--sample_count",
                     default="all",
                     type=sample_count_conv)
@@ -51,6 +48,9 @@ parser.add_argument("--foreign_neg2pos_ratio",
 parser.add_argument("--zero_neg2pos_ratio",
                     default=5,
                     type=int)
+parser.add_argument("--seed",
+                    action='store_true',
+                    default=777)
 
 args = parser.parse_args()
 
@@ -149,7 +149,8 @@ user_known_samples.extend(pos_samples)
 # foreign 
 print("Generating foreign dataset")
 negative_sampler = SetGCSampler.make(negatives=foreign_seqs,
-                                     sample_per_object=args.foreign_neg2pos_ratio)
+                                     sample_per_object=args.foreign_neg2pos_ratio,
+                                     seed=args.seed)
 neg_samples = negative_sampler.sample(positive=pos_samples, return_loss=False)
 neg_samples = db.taggify_entries(neg_samples)
 user_known_samples.extend(neg_samples)
@@ -196,7 +197,8 @@ with open(args.zero_seqs_path) as inp:
 zero_seqs = [SeqEntry(sequence=Seq(s),
                      label=NEGATIVE_LABEL) for s in zero_seqs]
 negative_sampler = SetGCSampler.make(negatives=zero_seqs,
-                                     sample_per_object=args.zero_neg2pos_ratio)
+                                     sample_per_object=args.zero_neg2pos_ratio,
+                                     seed=args.seed)
 neg_samples = negative_sampler.sample(positive=pos_samples, return_loss=False)
 neg_samples = db.taggify_entries(neg_samples)
 user_known_samples.extend(neg_samples)
