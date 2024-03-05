@@ -95,9 +95,9 @@ from bibis.hts.utils import dispatch_samples
 from bibis.utils import merge_fastqgz
 from bibis.sampling.reservoir import (AllSelector,  
                                       PredefinedSizeUniformSelector)
-from bibis.logging import get_logger, configure_bibis_logger
+from bibis.logging import get_logger, BIBIS_LOGGER_CFG
 
-configure_bibis_logger(path=args.log_path)
+BIBIS_LOGGER_CFG.set_path(path=args.log_path)
 logger = get_logger(name=args.logger_name, path=args.log_path)
     
 
@@ -336,8 +336,8 @@ for dataset_name, samples in seq_datasets.items():
                           answer_path=str(answer_path))
     ds_info.save(config_path)
 
-logger.info(f"Writing participants sequence file")
 # write sequences for user
+logger.info(f"Writing participants sequence file")
 participants_fasta_path = participants_valid_dir / "submission.fasta"
 random.shuffle(user_known_samples)
 for entry in user_known_samples:

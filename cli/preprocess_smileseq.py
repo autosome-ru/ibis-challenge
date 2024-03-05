@@ -9,10 +9,7 @@ import argparse
 import math
 import random 
 
-sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
 
-from bibis.sms.config import RAW_SMSConfig
-from bibis.sms.dataset import SMSRawDataset
 TEST_SEQ_LENGTH = 40
 RAW_DIR =  Path("/home_local/dpenzar/BENCH_FULL_DATA/SMS/RAW/")
 STAGES = ('Leaderboard', 'Final')
@@ -23,17 +20,35 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--recalc_unique", action="store_true")
+parser.add_argument("--bibis_root",
+                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
+                    type=str)
+parser.add_argument("--log_path",
+                    default='log.txt')
+parser.add_argument("--logger_name",
+                    default="preprocess_sms")
+parser.add_argument("--seed", type=int, default=777)
+
 args = parser.parse_args()
 
+sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
+
+from bibis.sms.config import SMSRawConfig
+from bibis.sms.dataset import SMSRawDataset
+from bibis.logging import get_logger, BIBIS_LOGGER_CFG
+
+BIBIS_LOGGER_CFG.set_path(path=args.log_path)
+logger = get_logger(name=args.logger_name, path=args.log_path)
+    
 
 zero_seq_path = OUT_DIR / "zeros.json"
 if zero_seq_path.exists() and not args.recalc_unique:
-    print("Loading zero seqs")
+    logger.info("Loading zero seqs")
     with open(zero_seq_path, "r") as inp:
         zero_seqs = set(json.load(inp))
 else:
     zero_seqs_cnt = Counter()
-    print("Deducing zero seqs")
+    logger.info("Deducing zero seqs")
     for zero_path in tqdm.tqdm(ZERO_DIR.glob("*.fastq")):
         with open(zero_path, "rt") as inp:
             seqs = (str(rec.seq).upper() for rec in SeqIO.parse(inp, format="fastq"))
@@ -45,21 +60,21 @@ else:
 
 total_stage_seqs = {}
 for stage in STAGES:
-    print(f"Stage {stage}")
+    logger.info(f"Stage {stage}")
     data_out_stage_dir = OUT_DIR /  "data" / stage
     data_out_stage_dir.mkdir(parents=True, exist_ok=True)
     unique_path = data_out_stage_dir / "unique.json"
     configs_dir = RAW_DIR / "configs" / stage
     if unique_path.exists() and not args.recalc_unique:
-        print("Loading unique seqs")
+        logger.info("Loading unique seqs")
         with open(unique_path, "r") as inp:
             unique_seqs = set(json.load(inp))
     else:
-        print("Deducing unique seqs")
+        logger.info("Deducing unique seqs")
         seq_counter = Counter()
         
         for cfg_path in tqdm.tqdm(configs_dir.glob("*.json")):
-            cfg = RAW_SMSConfig.load(cfg_path)
+            cfg = SMSRawConfig.load(cfg_path)
             if 'test' in cfg.splits: 
                 # including only unique sequences from test as they will be used for negatives sampling
                 for ds in cfg.splits['test']:
@@ -76,10 +91,10 @@ for stage in STAGES:
 
     configs_out_stage_dir = OUT_DIR /  "configs" / stage
     configs_out_stage_dir.mkdir(exist_ok=True, parents=True)
-    print("Writing filtered datases")
+    logger.info("Writing filtered datases")
     unique_seqs_with_flanks = {}
     for cfg_path in tqdm.tqdm(configs_dir.glob("*.json")):
-        cfg = RAW_SMSConfig.load(cfg_path)
+        cfg = SMSRawConfig.load(cfg_path)
         tf_out_dir = data_out_stage_dir / cfg.tf_name 
         tf_out_dir.mkdir(exist_ok=True, parents=True)
         
@@ -114,7 +129,7 @@ for stage in STAGES:
             uniq_datasets_splits['test'] = test_uniq_datasets
         
 
-        uniq_cfg = RAW_SMSConfig(tf_name=cfg.tf_name,
+        uniq_cfg = SMSRawConfig(tf_name=cfg.tf_name,
                                  splits=uniq_datasets_splits)
         out_cfg_path = configs_out_stage_dir / f"{uniq_cfg.tf_name}.json"
         uniq_cfg.save(out_cfg_path)
@@ -126,10 +141,11 @@ for stage in STAGES:
     with open(flanked_seq_path, "w") as out:
         json.dump(unique_seqs_with_flanks, out, indent=4)
 
+logger.info("Assigning zeros to stages")
 total_seqs = sum(total_stage_seqs.values())
-
 inds = list(range(0, len(zero_seqs)))
-random.shuffle(inds)
+rng = random.Random(args.seed)
+rng.shuffle(inds)
 leader_end = math.ceil(len(zero_seqs) * total_stage_seqs['Leaderboard'] / total_seqs)
 zero_seqs = list(zero_seqs)
 

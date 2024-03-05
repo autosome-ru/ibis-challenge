@@ -217,7 +217,7 @@ def assign_seqs(counter,
                                    gc_content=gc(seq))
             print(entry.to_line(),
                   file=out)
-
+    meta = {}
     meta['tf2id'] = tf2id
     meta['rep2id'] = rep2id
     meta['stage2id'] = stage2id

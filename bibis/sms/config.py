@@ -6,7 +6,7 @@ from .dataset import SMSRawDataset
 
 
 @dataclass
-class RAW_SMSConfig:
+class SMSRawConfig:
     tf_name: str
     splits: dict[str, list[SMSRawDataset]]
 
