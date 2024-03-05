@@ -215,9 +215,9 @@ class PRROC_PRAUC_AVERAGED(PRROCScorer):
         }
 
     def score(self, y_score: np.ndarray[float], y_real:  np.ndarray[float], **kwargs) -> float:
-        inner_scores = {name: scorer.score(y_score=y_score, y_real=y_real) for\
+        inner_scores = {name: scorer.score(y_score=y_score, y_real=y_real).value for\
                             name, scorer in self.inner_scorers.items()}
-        score = sum(inner_scores.values) / len(inner_scores)
+        score = sum(inner_scores.values()) / len(inner_scores)
         
         return ScorerResult(value=score,
                             metainfo=inner_scores)
@@ -319,9 +319,9 @@ class PRROC_ROCAUC_AVERAGED(PRROCScorer):
 
     def score(self, y_score:  np.ndarray[float], y_real:  np.ndarray[float], **kwargs) -> float:
 
-        inner_scores = {name: scorer.score(y_score=y_score, y_real=y_real) for\
+        inner_scores = {name: scorer.score(y_score=y_score, y_real=y_real).value for\
                             name, scorer in self.inner_scorers.items()}
-        score = sum(inner_scores.values) / len(inner_scores)
+        score = sum(inner_scores.values()) / len(inner_scores)
         
         return ScorerResult(value=score,
                             metainfo=inner_scores)
@@ -352,7 +352,7 @@ class ScorerInfo:
             return PRROC_ROCAUC_TOP25(self.alias)
         elif self.name == 'prroc_rocauc_top50':
             return PRROC_ROCAUC_TOP50(self.alias)
-        elif self.name == "prroc_averaged":
+        elif self.name == "prroc_rocauc_averaged":
             return PRROC_ROCAUC_AVERAGED(self.alias)
         elif self.name == "prroc_prauc":
             tp = self.params.get("type")

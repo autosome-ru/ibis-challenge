@@ -79,18 +79,18 @@ with tempfile.TemporaryDirectory() as tempdir:
 
 if args.sub_type == "aaa":
     if bench.kind == "PBM":
-        scores = scores[['tf', 'background', 'experiment_id', 'score', 'value', ]]    
-        scores.columns = ['tf', 'preprocessing', 'experiment_id', 'score_type', 'value']
+        scores = scores[['tf', 'background', 'experiment_id', 'score', 'value', 'metainfo']]    
+        scores.columns = ['tf', 'preprocessing', 'experiment_id', 'score_type', 'value', 'metainfo']
     else:
-        scores = scores[['tf', 'background', 'score', 'value']]    
-        scores.columns = ['tf', 'background', 'score_type', 'value']
+        scores = scores[['tf', 'background', 'score', 'value', 'metainfo']]    
+        scores.columns = ['tf', 'background', 'score_type', 'value', 'metainfo']
 elif args.sub_type == "pwm":
     if bench.kind == "PBM":
-        scores = scores[['tf', 'part_name', 'scoring_type', 'background', 'experiment_id', 'score', 'value']]    
-        scores.columns = ['tf', 'matrix_name', 'scoring_type', 'background', 'experiment_id', 'score_type', 'value']
+        scores = scores[['tf', 'part_name', 'scoring_type', 'background', 'experiment_id', 'score', 'value', 'metainfo']]    
+        scores.columns = ['tf', 'matrix_name', 'scoring_type', 'background', 'experiment_id', 'score_type', 'value', 'metainfo']
     else:
-         scores = scores[['tf', 'part_name', 'scoring_type', 'background', 'score', 'value']]    
-         scores.columns = ['tf', 'matrix_name', 'scoring_type', 'background', 'score_type', 'value']
+         scores = scores[['tf', 'part_name', 'scoring_type', 'background', 'score', 'value', 'metainfo']]    
+         scores.columns = ['tf', 'matrix_name', 'scoring_type', 'background', 'score_type', 'value', 'metainfo']
 else:
     print("Wrong submission type", file=sys.stderr)
     sys.exit(INTERNAL_ERROR_CODE)

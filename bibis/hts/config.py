@@ -12,6 +12,8 @@ class HTSRawConfig:
     stage: str
     stage_id: int
     splits: dict[str, dict[int, list[HTSRawDataset]]] 
+    flanks: str
+    assign_path: str 
 
     def save(self, path: str | Path):
         dt = asdict(self)

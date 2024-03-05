@@ -1,19 +1,27 @@
 import argparse
-from numpy import test, zeros
 import pandas as pd
 from pathlib import Path
 import sys
-from rpy2.robjects.packages import data
 import tqdm 
 import random
 import json
-
 import argparse
+from collections import defaultdict
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--recalc", action="store_true")
+parser.add_argument("--calc_dir", help="Dir for calculation mapreduce operations", default="mapreduce_calc")
+parser.add_argument("--n_procs", type=int, default=20)
+parser.add_argument("--seed", type=int, default=777)
+parser.add_argument("--bibis_path", default='/home_local/dpenzar/bibis_git/ibis-challenge')
+parser.add_argument("--log_path",
+                    default='log.txt')
+parser.add_argument("--logger_name",
+                    default="parse_hts")
+
+args = parser.parse_args()
 
 sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
-
-from collections import defaultdict
 
 from bibis.utils import END_LINE_CHARS
 from bibis.counting.fastqcounter import FastqGzReadsCounter
@@ -22,8 +30,12 @@ from bibis.hts.dataset import HTSRawDataset
 from bibis.hts.seqentry import SeqAssignEntry
 from bibis.seq.utils import gc
 from bibis.sampling.reservoir import PredefinedIndicesSelector
+from bibis.logging import get_logger, BIBIS_LOGGER_CFG
 
+BIBIS_LOGGER_CFG.set_path(path=args.log_path)
+logger = get_logger(name=args.logger_name, path=args.log_path)
     
+
 def get_cycle_flanks_from_name(path: str):
     name = path.split("@")[2]
     _, cycle, left_flank, right_flank = name.split(sep=".")
@@ -60,17 +72,17 @@ def extract_info(ibis_table, stages):
         tf2split = {}
         for ind, tf, reps, ibis_split in stage_ibis_table[['tf', 'replics', 'split'] ].itertuples():
             if ibis_split == "-":
-                #print(f"Skipping factor tf: {tf}. No split provided")
+                logger.warning(f"Skipping factor tf: {tf}. No split provided")
                 continue
             if isinstance(reps, float): # skip tf without pbms
-                #print(f"Skipping factor tf: {tf}. Its split ({ibis_split}) is not none but there is no experiments for that factor", file=sys.stderr)
+                logger.warning(f"Skipping factor tf: {tf}. Its split ({ibis_split}) is not none but there is no experiments for that factor", file=sys.stderr)
                 continue
             tf2split[tf] = ibis_split
             for rep in reps:
                 for cycle in ('C1', 'C2', 'C3', 'C4'):
                     path_cands = list(HTS_DIR.glob(f"*/*@{rep}.{cycle}.*"))
                     if len(path_cands) == 0:
-                        print(f'No {cycle} found for replic {rep} for tf {tf}')
+                        logger.info(f'No {cycle} found for replic {rep} for tf {tf}')
                         continue
                     elif len(path_cands) != 2:
                         raise Exception('Unexpected data')
@@ -106,6 +118,7 @@ def count_seqs(counter_dir: Path,
     zero_set = set(s for s in zeros_paths)
    
     assert indices_sep != counter.FIELD_SEP
+
     if not htselex_counts_path.exists() or recalc:
         def reduce_store(grp):
             exist = set()
@@ -120,6 +133,8 @@ def count_seqs(counter_dir: Path,
             return s 
 
         counter.reduce(counts_path, reduce_fn=reduce_store)
+    else:
+        logger.info("Skipping sequence counting as file exists and recalc flag is not specified")
     return counter 
 
 
@@ -128,7 +143,23 @@ def assign_seqs(counter,
                 counts_path,
                 stage_wise_copy_paths, 
                 assign_path, 
+                meta_info_path: str | Path,
+                recalc: bool, 
                 indices_sep=" "):
+    
+  
+    if not recalc and Path(meta_info_path).exists():
+        logger.info("Skipping sequences assigning as all files already exist and recalc is not specified")
+
+        with open(meta_info_path) as inp:
+            meta = json.load(inp)
+        tf2id = meta['tf2id']
+        rep2id = meta['rep2id']
+        stage2id = meta['stage2id']
+        ds_sizes = meta['ds_sizes']
+        zero_size = meta['zero_size']
+        return tf2id, rep2id, stage2id, ds_sizes, zero_size    
+
     reverse_index = {p: x for x, p in enumerate(counter.index)}
     tf2id = {}
     rep2id = {}
@@ -187,6 +218,14 @@ def assign_seqs(counter,
             print(entry.to_line(),
                   file=out)
 
+    meta['tf2id'] = tf2id
+    meta['rep2id'] = rep2id
+    meta['stage2id'] = stage2id
+    meta['ds_sizes'] = ds_sizes
+    meta['zero_size'] = zero_size
+    with open(meta_info_path, "w") as out:
+        json.dump(meta, out)
+
     return tf2id, rep2id, stage2id, ds_sizes, zero_size
 
 def write_flanks(datasets: list[HTSRawDataset], flanks_path: str):
@@ -197,6 +236,19 @@ def write_flanks(datasets: list[HTSRawDataset], flanks_path: str):
     with open(flanks_path, "w") as out:
         json.dump(dsid2flank, out, indent=4)
     return dsid2flank
+
+def log_splits(cfg: HTSRawConfig, splits: list[str]=None):
+    if splits is None:
+        splits = ['train', 'test']
+
+    for split in splits:
+        datasets = cfg.splits.get(split)
+        if datasets is None:
+            logger.info(f"For factor {cfg.tf_name} no replics are going to {split}")
+        else:
+            reps = ", ".join(datasets.keys())
+            logger.info(f"For factor {cfg.tf_name} the following replics are going to {split}: {reps}")    
+    
 
 def split_data(stage_wise_copy_paths, 
                   stage_wise_tf2split,
@@ -221,11 +273,10 @@ def split_data(stage_wise_copy_paths,
                 ds = HTSRawDataset(
                                 rep_id=rep_id,
                                 size=ds_sizes[rep_id][cycle_id],
-                                path="", # unfinished, will be asssigned only to test datasets
                                 cycle=cycle_id,
                                 rep=rep,
                                 exp_tp=exp_tp,
-                                left_flank=left_flank, 
+                                left_flank=left_flank,
                                 right_flank=right_flank,
                                 raw_paths=[str(p) for p in path_cands])
                 datasets.append(ds)
@@ -236,7 +287,9 @@ def split_data(stage_wise_copy_paths,
                                tf_id=tf2id[tf],
                                stage=stage, 
                                stage_id=stage2id[stage],
-                               splits=splits)
+                               splits=splits,
+                               flanks="", # unfinished, will be asssigned only to test datasets
+                               assign_path="") # unfinished, will be asssigned only to test datasets
             configs.append(cfg)
         all_configs[stage] = configs
     
@@ -266,9 +319,13 @@ def get_zero_selectors(stage_id_sizes: dict[int, int],
     return zero_selectors
 
 def write_filtered_assign(in_path: str, 
-                          stage2assign: dict[int, str],
+                          stage2assign: dict[int, Path],
                           stage2datasets: dict[int, list[HTSRawDataset]],
-                          stage2zero_selector: dict[int, PredefinedIndicesSelector]):
+                          stage2zero_selector: dict[int, PredefinedIndicesSelector],
+                          recalc: bool):
+    if not recalc and all(path.exists() for path in stage2assign.values()):
+        logger.info("Skipping stage-specific assign files writing as they are already exist and no recalc option specified")
+        return 
     
     stage2repids = {}
     for stage, datasets in stage2datasets.items():
@@ -294,11 +351,12 @@ def write_filtered_assign(in_path: str,
         for fd in stage_fds.values():
             fd.close()
 
-def write_final_data(stage_configs: dict[str, list[HTSRawConfig]],
+def write_data(stage_configs: dict[str, list[HTSRawConfig]],
                      stage2id: dict[str, int],
                      zero_size: int, 
                      assign_path: str | Path, 
                      out_dir: str, 
+                     recalc: bool,
                      seed=777):
     configs_main_dir = out_dir / 'configs'
     assign_main_dir = out_dir / 'assign'
@@ -332,18 +390,20 @@ def write_final_data(stage_configs: dict[str, list[HTSRawConfig]],
         
         configs_stage_dir = configs_main_dir / stage
         configs_stage_dir.mkdir(exist_ok=True, parents=True)
+        
+        assign_flanks_path = assign_stage_dir / 'flanks.json'
         for cfg in configs:
+            cfg.assign_path = assign_stage_seqs_path
+            cfg.flanks = assign_flanks_path
             test_datasets = cfg.splits.get('test')
             if test_datasets is not None:
                 for _, rep_info in test_datasets.items():
                     for _, ds in rep_info.items():
-                        ds.path = str(assign_stage_seqs_path)
                         stage2test_datasets[stage_id].append(ds)
 
             cfg_path = configs_stage_dir /  f"{cfg.tf_name}.json"
             cfg.save(cfg_path)
 
-        assign_flanks_path = assign_stage_dir / 'flanks.json'
         write_flanks(datasets=stage2test_datasets[stage_id],
                      flanks_path=assign_flanks_path)
         
@@ -353,9 +413,10 @@ def write_final_data(stage_configs: dict[str, list[HTSRawConfig]],
     write_filtered_assign(in_path=assign_path,
                           stage2assign=stage2assign,
                           stage2datasets=stage2test_datasets,
-                          stage2zero_selector=stage2zero_selector)
+                          stage2zero_selector=stage2zero_selector,
+                          recalc=recalc)
 
-from bibis.utils import END_LINE_CHARS
+
 LEADERBOARD_EXCEL = "/home_local/dpenzar/IBIS TF Selection - Nov 2022 _ Feb 2023.xlsx"
 SPLIT_SHEET_NAME = "v3 TrainTest marked (2023)"
 HTS_DIR = Path("/home_local/vorontsovie/greco-data/release_8d.2022-07-31/full/HTS")
@@ -364,20 +425,11 @@ ZEROS_CYCLE_DIR = Path("/mnt/space/hughes/GHT-SELEXFeb2023/")
 OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/HTS/")
 OUT_RAW_DIR = OUT_DIR / "RAW"
 OUT_RAW_DIR.mkdir(parents=True, exist_ok=True)
+INDICES_SEP = " "
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--recalc", action="store_true")
-parser.add_argument("--calc_dir", help="Dir for calculation mapreduce operations", default="mapreduce_calc")
-parser.add_argument("--n_procs", type=int, default=20)
-parser.add_argument("--seed", type=int, default=777)
-
-
-args = parser.parse_args()
-
+logger.info("Reading ibis meta information for htselex")
 ibis_table, rep2typemap = parse_ibis_table(path=LEADERBOARD_EXCEL, 
                               sheet_name=SPLIT_SHEET_NAME)
-print(ibis_table.head())
-print(rep2typemap)
 
 zeros_paths = list(ZEROS_CYCLE_DIR.glob("*Cycle0_R1.fastq.gz"))
 zeros_paths = sorted([str(x) for x in zeros_paths])
@@ -388,12 +440,12 @@ if not ibis_table['stage'].isin(STAGES).all():
 stage_wise_copy_paths, stage_wise_tf2split, all_nonzero_paths = extract_info(ibis_table=ibis_table,
                                                                              stages=STAGES)
 
+logger.info("Calculating file with sequence counts")
 counter_dir = OUT_RAW_DIR / "counter"
 counter_config = OUT_RAW_DIR / 'counter.json'
 htselex_counts_path = OUT_RAW_DIR / "htselex_occs.txt"
 seq_assign_path = OUT_RAW_DIR / "seq_assign.txt"
-
-INDICES_SEP = " "
+meta_info_path = OUT_RAW_DIR / "meta.json"
 
 counter = count_seqs(counter_dir=counter_dir,
            counter_config=counter_config,
@@ -403,11 +455,16 @@ counter = count_seqs(counter_dir=counter_dir,
            indices_sep=INDICES_SEP,
            recalc=args.recalc)
 
+logger.info("Filtering non-unique seqs and calculating info for next steps")
 tf2id, rep2id, stage2id, ds_sizes, zero_size = assign_seqs(counter=counter,
             counts_path=htselex_counts_path,
             stage_wise_copy_paths=stage_wise_copy_paths,
-            assign_path=seq_assign_path)
+            assign_path=seq_assign_path,
+            meta_info_path=meta_info_path,
+            recalc=args.recalc,
+            indices_sep=INDICES_SEP)
 
+logger.info("Splitting data into train-test and writing configs")
 stage_configs = split_data(stage_wise_copy_paths=stage_wise_copy_paths,
                                stage_wise_tf2split=stage_wise_tf2split,
                                tf2id=tf2id,
@@ -416,9 +473,11 @@ stage_configs = split_data(stage_wise_copy_paths=stage_wise_copy_paths,
                                ds_sizes=ds_sizes,
                                rep2typemap=rep2typemap)
 
-write_final_data(stage_configs=stage_configs,
+logger.info("Writing raw datasets")
+write_data(stage_configs=stage_configs,
                  stage2id=stage2id,
                  zero_size=zero_size,
                  assign_path=seq_assign_path,
                  out_dir=OUT_DIR,
+                 recalc=args.recalc,
                  seed=args.seed)

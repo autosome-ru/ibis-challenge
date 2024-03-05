@@ -14,6 +14,9 @@ from typing import ClassVar
 from pathlib import Path 
 from copy import copy 
 from ..utils import END_LINE_CHARS
+from ..logging import get_bibis_logger
+
+logger = get_bibis_logger()
 
 @dataclass(slots=True, order=True)
 class CounterEntry:
@@ -98,7 +101,7 @@ class FastqGzReadsCounter:
         filtered_entries = []
         for en in entries:
             if en in self.db:
-                print(f"Skipping {en}, calculated", file=sys.stdout)  
+                logger.info(f"Skipping {en}, calculated")  
             else:
                 filtered_entries.append(en)
         entries = filtered_entries

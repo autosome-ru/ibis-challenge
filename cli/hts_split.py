@@ -10,6 +10,19 @@ from Bio.Seq import Seq
 import random
 import numpy as np 
 
+# duplicated code with parse_grecobit_htselex.py
+def log_splits(cfg: HTSRawConfig, splits: list[str]=None):
+    if splits is None:
+        splits = ['train', 'test']
+
+    for split in splits:
+        datasets = cfg.splits.get(split)
+        if datasets is None:
+            logger.info(f"For factor {cfg.tf_name} no replics are going to {split}")
+        else:
+            reps = ", ".join(datasets.keys())
+            logger.info(f"For factor {cfg.tf_name} the following replics are going to {split}: {reps}")    
+
 def load_ds2flanks(path):
     with open(path) as inp:
         dt = json.load(inp)
@@ -40,9 +53,6 @@ parser.add_argument("--tagdb_cfg",
 parser.add_argument("--config_file", 
                     required=True, 
                     type=str)
-parser.add_argument("--flanks", 
-                    required=True, 
-                    type=str)
 parser.add_argument("--type", 
                     choices=['Leaderboard', 'Final'], 
                     required=True, type=str)
@@ -63,6 +73,10 @@ parser.add_argument("--recalc",
 parser.add_argument("--seed",
                     action='store_true',
                     default=777)
+parser.add_argument("--log_path",
+                    default='log.txt')
+parser.add_argument("--logger_name",
+                    default="hts_split")
 
 
 args = parser.parse_args()
@@ -81,9 +95,10 @@ from bibis.hts.utils import dispatch_samples
 from bibis.utils import merge_fastqgz
 from bibis.sampling.reservoir import (AllSelector,  
                                       PredefinedSizeUniformSelector)
-from bibis.logging import get_bibis_logger
+from bibis.logging import get_logger, configure_bibis_logger
 
-logger = get_bibis_logger()
+configure_bibis_logger(path=args.log_path)
+logger = get_logger(name=args.logger_name, path=args.log_path)
     
 
 EPS = 1e-10
@@ -95,34 +110,25 @@ HTS_BENCH_DIR = Path(args.benchmark_out_dir)
 HTS_BENCH_DIR.mkdir(parents=True, exist_ok=True)
 
 cfg = HTSRawConfig.load(args.config_file)
-
+print(log_splits(cfg))
 #print(datasets)
 train_datasets = cfg.splits.get('train')
 test_datasets = cfg.splits.get('test')
 
 if train_datasets is not None:
-    logger.info(f"For factor {cfg.tf_name} the following replics are going to train:")
     train_dir = HTS_BENCH_DIR / "train" / cfg.tf_name  
     train_dir.mkdir(parents=True, exist_ok=True)
 
     for rep_ind, (rep, rep_info) in enumerate(train_datasets.items()):
-        logger.info(f"\t{rep}")
         for cycle, ds in rep_info.items():
             
             out_path = train_dir / f"{cfg.tf_name}_R{rep_ind}_C{ds.cycle}_lf{ds.left_flank}_rf{ds.right_flank}.fastq.gz"
             if not out_path.exists() or args.recalc:
                 merge_fastqgz(in_paths=ds.raw_paths, 
                             out_path=out_path)
-else:
-    logger.info(f"For factor {cfg.tf_name} no replics are going to train")
 
 if test_datasets is None:
-    logger.info(f"For factor {cfg.tf_name} no replics are going to test")
     exit(0) # nothing to done
-else:
-    logger.info(f"For factor {cfg.tf_name} the following replics are going to test:")
-    for rep_ind, (rep, rep_info) in enumerate(test_datasets.items()):
-        logger.info(f"\t{rep}")
 
 valid_dir = HTS_BENCH_DIR / "valid" / cfg.tf_name  
 valid_dir.mkdir(exist_ok=True, parents=True)
@@ -166,7 +172,7 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
     zero_gc_profile = dict.fromkeys(gc_bins, 0)
     
     logger.info("Processing positives")
-    with open(ds.path, 'r') as assign, open(positives_path, 'w') as positive_fd:
+    with open(cfg.assign_path, 'r') as assign, open(positives_path, 'w') as positive_fd:
         for line in tqdm.tqdm(assign):
             entry = SeqAssignEntry.from_line(line)
             if entry.stage_ind == cfg.stage_id:
@@ -213,7 +219,7 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
                                                             for ind, (gc, size) in enumerate(inputs_assign.items())}
     main_seed += len(inputs_assign)
 
-    with open(ds.path, 'r') as assign, open(foreigns_path, 'w') as foreigns_fd, open(inputs_path, 'w') as inputs_fd:
+    with open(cfg.assign_path, 'r') as assign, open(foreigns_path, 'w') as foreigns_fd, open(inputs_path, 'w') as inputs_fd:
         for line in tqdm.tqdm(assign):
             entry = SeqAssignEntry.from_line(line)
             if entry.stage_ind == cfg.stage_id:
@@ -239,7 +245,7 @@ else:
     logger.info("Skipping step as files already exists")
 
 
-ds2flanks = load_ds2flanks(args.flanks)
+ds2flanks = load_ds2flanks(cfg.flanks)
 
 db = DBConfig.load(BENCH_SEQDB_CFG).build()
 
