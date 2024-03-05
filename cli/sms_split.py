@@ -119,7 +119,7 @@ answer_valid_dir.mkdir(exist_ok=True)
 participants_valid_dir = valid_dir / "participants"
 participants_valid_dir.mkdir(exist_ok=True)
 
-logger.info('Deducing alien pool')
+logger.info('Deducing aliens pool')
 test_sequences = []
 for ds in test_datasets:
     with gzip.open(ds.path, "rt") as inp:
@@ -158,7 +158,7 @@ user_known_samples.extend(pos_samples)
 
 seq_datasets: dict[str, list[SeqEntry]] = {}
 
-logger.info("Generating alien dataset")
+logger.info("Generating aliens dataset")
 alien_sampler = SetGCSampler.make(negatives=alien_seqs,
                                   sample_per_object=args.foreign_neg2pos_ratio,
                                   seed=args.seed)
@@ -166,7 +166,7 @@ alien_sampler = SetGCSampler.make(negatives=alien_seqs,
 alien_samples = alien_sampler.sample(positive=pos_samples, return_loss=False)
 alien_samples = db.taggify_entries(alien_samples)
 user_known_samples.extend(alien_samples)
-seq_datasets['alien'] =  pos_samples + alien_samples    
+seq_datasets['aliens'] =  pos_samples + alien_samples    
 
 # zero seqs 
 logger.info("Generating input dataset")

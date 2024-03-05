@@ -9,7 +9,6 @@ import argparse
 import math
 import random 
 
-
 TEST_SEQ_LENGTH = 40
 RAW_DIR =  Path("/home_local/dpenzar/BENCH_FULL_DATA/SMS/RAW/")
 STAGES = ('Leaderboard', 'Final')
@@ -39,6 +38,19 @@ from bibis.logging import get_logger, BIBIS_LOGGER_CFG
 
 BIBIS_LOGGER_CFG.set_path(path=args.log_path)
 logger = get_logger(name=args.logger_name, path=args.log_path)
+
+def log_splits(cfg: SMSRawConfig, splits: list[str]=None):
+    if splits is None:
+        splits = ['train', 'test']
+
+    for split in splits:
+        datasets = cfg.splits.get(split)
+        if datasets is None:
+            logger.info(f"For factor {cfg.tf_name} no replics are going to {split}")
+        else:
+            reps = ", ".join([ds.rep for ds in datasets])
+            logger.info(f"For factor {cfg.tf_name} the following replics are going to {split}: {reps}")    
+
     
 
 zero_seq_path = OUT_DIR / "zeros.json"
@@ -127,10 +139,12 @@ for stage in STAGES:
                                           rep=ds.rep)
                 test_uniq_datasets.append(unique_ds)
             uniq_datasets_splits['test'] = test_uniq_datasets
+            
         
 
         uniq_cfg = SMSRawConfig(tf_name=cfg.tf_name,
                                  splits=uniq_datasets_splits)
+        log_splits(uniq_cfg)
         out_cfg_path = configs_out_stage_dir / f"{uniq_cfg.tf_name}.json"
         uniq_cfg.save(out_cfg_path)
     

@@ -285,7 +285,7 @@ with open(foreigns_path, "r") as inp:
 alien_samples = db.taggify_entries(alien_samples)
 user_known_samples.extend(alien_samples)
 
-seq_datasets['alien'] = pos_samples + alien_samples
+seq_datasets['aliens'] = pos_samples + alien_samples
 
 logger.info("Collectiong input dataset")
 zero_flanks = [en.metainfo['flanks'] for en in pos_samples] * args.zero_neg2pos_ratio
