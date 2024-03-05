@@ -68,7 +68,7 @@ class KendallRank(RegressionScorer):
             scores = {}
             for g in groups:
                 gr_mask = y_group == g
-                scores[g] = self._calc(y_score=y_score[gr_mask],
+                scores[int(g)] = self._calc(y_score=y_score[gr_mask],
                                        y_real=y_real[gr_mask])
             val =  sum(scores.values()) / len(groups)
             metainfo = scores

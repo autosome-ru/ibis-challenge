@@ -24,16 +24,13 @@ parser = argparse.ArgumentParser(description="Python script to locally validate 
 parser.add_argument("--benchmark", 
                     help="benchmark config file (all dataset paths must be valid)",
                     required=True)
-
 parser.add_argument("--sub", 
                     help="path to submission file",
                     required=True)
-
 parser.add_argument("--sub_type",
                     choices=["aaa", "pwm"],
                     help="submission type",
                     required=True)
-
 parser.add_argument("--scores_path",
                     default=sys.stdout,
                     help="Path to write output. By default - stdout")
@@ -94,9 +91,6 @@ elif args.sub_type == "pwm":
 else:
     print("Wrong submission type", file=sys.stderr)
     sys.exit(INTERNAL_ERROR_CODE)
-
-#if bench.kind == "HTS":
-#    scores = scores[np.logical_or(scores.background != 'foreign', scores.score_type != 'kendalltau')]
 
 scores.to_csv(args.scores_path, 
               index=False,

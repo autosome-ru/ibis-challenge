@@ -137,7 +137,14 @@ def count_seqs(counter_dir: Path,
         logger.info("Skipping sequence counting as file exists and recalc flag is not specified")
     return counter 
 
-
+def restore_int_keys(dt):
+    int_dt = {}
+    for key, value in dt.items():
+        key = int(key)
+        if isinstance(value, dict):
+            value = restore_int_keys(value)
+        int_dt[key] = value
+    return int_dt
 
 def assign_seqs(counter,
                 counts_path,
@@ -156,7 +163,8 @@ def assign_seqs(counter,
         tf2id = meta['tf2id']
         rep2id = meta['rep2id']
         stage2id = meta['stage2id']
-        ds_sizes = meta['ds_sizes']
+        ds_sizes = restore_int_keys(meta['ds_sizes'])
+        
         zero_size = meta['zero_size']
         return tf2id, rep2id, stage2id, ds_sizes, zero_size    
 
@@ -191,7 +199,7 @@ def assign_seqs(counter,
 
     zero_size = 0
     with open(counts_path, 'r') as inp, open(assign_path, "w") as out:
-        for li, line in tqdm.tqdm(enumerate(inp)):
+        for line in tqdm.tqdm(inp):
             seq, occs = line.strip(END_LINE_CHARS).split(counter.FIELD_SEP)
             occs = set(map(int, occs.split(indices_sep)))
             if len(occs) > 1: # non-unique read
@@ -321,12 +329,20 @@ def get_zero_selectors(stage_id_sizes: dict[int, int],
 def write_filtered_assign(in_path: str, 
                           stage2assign: dict[int, Path],
                           stage2datasets: dict[int, list[HTSRawDataset]],
-                          stage2zero_selector: dict[int, PredefinedIndicesSelector],
+                          stage_id_sizes: dict[int,int],
+                          zero_size: int,
+                          seed: int,
                           recalc: bool):
     if not recalc and all(path.exists() for path in stage2assign.values()):
         logger.info("Skipping stage-specific assign files writing as they are already exist and no recalc option specified")
-        return 
+        return
     
+    logger.info("Creating zero seqs selectors for stage-specific assign files")
+    stage2zero_selector = get_zero_selectors(stage_id_sizes=stage_id_sizes,
+                                zero_size=zero_size,
+                                seed=seed)
+    
+    logger.info("Writing stage-specific assign files with train datasets omitted")
     stage2repids = {}
     for stage, datasets in stage2datasets.items():
         stage2repids[stage] = set(ds.rep_id for ds in datasets)
@@ -374,9 +390,7 @@ def write_data(stage_configs: dict[str, list[HTSRawConfig]],
                         stage_sizes[stage] += ds.size
                       
     stage_id_sizes = {stage2id[stage]: size for stage, size in stage_sizes.items()}
-    stage2zero_selector = get_zero_selectors(stage_id_sizes=stage_id_sizes,
-                                zero_size=zero_size,
-                                seed=seed)
+    
     
     stage2test_datasets = {stage2id[st]: [] for st in stage_configs.keys()}
     stage2assign = {}
@@ -393,8 +407,8 @@ def write_data(stage_configs: dict[str, list[HTSRawConfig]],
         
         assign_flanks_path = assign_stage_dir / 'flanks.json'
         for cfg in configs:
-            cfg.assign_path = assign_stage_seqs_path
-            cfg.flanks = assign_flanks_path
+            cfg.assign_path = str(assign_stage_seqs_path)
+            cfg.flanks = str(assign_flanks_path)
             test_datasets = cfg.splits.get('test')
             if test_datasets is not None:
                 for _, rep_info in test_datasets.items():
@@ -409,11 +423,12 @@ def write_data(stage_configs: dict[str, list[HTSRawConfig]],
         
         stage2assign[stage_id] = assign_stage_seqs_path
         
-
     write_filtered_assign(in_path=assign_path,
                           stage2assign=stage2assign,
                           stage2datasets=stage2test_datasets,
-                          stage2zero_selector=stage2zero_selector,
+                          stage_id_sizes=stage_id_sizes,
+                          zero_size=zero_size,
+                          seed=seed,
                           recalc=recalc)
 
 

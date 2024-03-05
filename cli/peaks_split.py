@@ -60,6 +60,7 @@ from bibis.seq.genome import Genome
 from bibis.seq.seqentry import write as seq_write
 from bibis.bedtools.bedtoolsexecutor import BedtoolsExecutor
 from bibis.logging import get_logger, BIBIS_LOGGER_CFG
+
 BIBIS_LOGGER_CFG.set_path(path=args.log_path)
 logger = get_logger(name=args.logger_name, path=args.log_path)
 

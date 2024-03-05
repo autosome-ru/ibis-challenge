@@ -104,7 +104,7 @@ tfs = set()
 ds_names = set()
 for ds in datasets:
     tfs.add(ds.tf)
-    ans = ds.answer()
+    ans = ds.answer()['labels']
     for tag, label in ans.items():
         tags[tag] = label
         answers[(ds.tf, tag)] = label
@@ -137,7 +137,7 @@ cfg.save(cfg_path)
 
 ## WRITING TEMPLATES
 
-score_template = ScoreSubmission.template(tag_col_name="peaks",
+score_template = ScoreSubmission.template(tag_col_name="tag",
                                           tf_names=cfg.tfs,
                                           tags=cfg.tags)
 aaa_template_path = out_dir / "aaa_template.tsv"
