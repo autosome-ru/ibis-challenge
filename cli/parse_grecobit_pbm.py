@@ -1,12 +1,33 @@
 
 import argparse
 import pandas as pd
-from pathlib import Path
 import sys 
 import shutil
 
-sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
+from collections import defaultdict
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("--bibis_root",
+                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
+                    type=str)
+parser.add_argument("--log_path",
+                    default='log.txt')
+parser.add_argument("--logger_name",
+                    default="parse_pbm")
+parser.add_argument("--neg2pos_ratio",
+                    type=int, 
+                    default=10)
+
+
+args = parser.parse_args()
+sys.path.append(args.bibis_root)
+
 from bibis.pbm.config import PBMConfig
+from bibis.logging import get_logger, BIBIS_LOGGER_CFG
+BIBIS_LOGGER_CFG.set_path(path=args.log_path)
+logger = get_logger(name=args.logger_name, path=args.log_path)
 
 LEADERBOARD_EXCEL = "/home_local/dpenzar/IBIS TF Selection - Nov 2022 _ Feb 2023.xlsx"
 SPLIT_SHEET_NAME = "v3 TrainTest marked (2023)"
@@ -18,25 +39,20 @@ STAGES = ('Final', 'Leaderboard')
 OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/PBM")
 
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--neg2pos_ratio",
-                    type=int, 
-                    default=10)
 args = parser.parse_args()
 
+logger.info("Reading ibis metainfo for PBM data")
 ibis_table = pd.read_excel(LEADERBOARD_EXCEL, sheet_name=SPLIT_SHEET_NAME)
 ibis_table = ibis_table[['Transcription factor', 'PBM', 'PBM.1', 'Stage']]
 ibis_table.columns = ['tf', 'replics', 'split', 'stage']
 ibis_table['replics'] = ibis_table['replics'].str.split(',')
 
-from collections import defaultdict
-
-
 if not ibis_table['stage'].isin(STAGES).all():
     raise Exception(f"Some tfs has invalid stage: {ibis_table[~(ibis_table['stage'].isin(STAGES))]}")
 
+
 for stage in STAGES:
+    logger.info(f"Preparing {stage} datasets for furher processing")
     copy_paths = defaultdict(lambda : {"train": {"QNZS": [], "SD": []}, 
                                    "test": {"QNZS": [], "SD": []}})
     stage_ibis_table =  ibis_table[ibis_table['stage'] == stage]
@@ -45,7 +61,7 @@ for stage in STAGES:
         if ibis_split == "-":
             continue
         if isinstance(reps, float): # skip tf without pbms
-            print(f"Skipping factor tf: {tf}. Its split ({ibis_split}) is not none but there is no experiments for that factor", file=sys.stderr)
+            logger.info(f"Skipping factor tf: {tf}. Its split ({ibis_split}) is not none but there is no experiments for that factor")
             continue
         for rep in reps:
             for norm in ["QNZS", "SD"]:
@@ -62,10 +78,10 @@ for stage in STAGES:
                                 raise Exception(f"Wrong split {split}")
                             
                             if real_split == "train" and ibis_split == "Test":
-                                print(f"Skipping file {path} for {tf} as it is from wrong split", file=sys.stderr)
+                                logger.info(f"Skipping file {path} for {tf} as it is from wrong split")
                                 continue
                             if real_split == "test" and ibis_split == "Train":
-                                print(f"Skipping file {path} for {tf} as it is from wrong split", file=sys.stderr)
+                                logger.info(f"Skipping file {path} for {tf} as it is from wrong split")
                                 continue
                             name = path.name
                             exp_type = exp_type.replace("PBM.", "")
