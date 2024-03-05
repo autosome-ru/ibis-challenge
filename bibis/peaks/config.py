@@ -136,10 +136,9 @@ class PeakSeqDatasetConfig:
         seq_write(total, 
                   fasta_path) 
 
-        
         if not hide_labels:
             answer_path = self.answer_path(path_pref=path_pref)
-            answers = {e.tag: e.label for e in total}
+            answers = {'labels': {e.tag: e.label for e in total}}
             with open(answer_path, "w") as out:
                 json.dump(obj=answers, 
                           fp=out,
