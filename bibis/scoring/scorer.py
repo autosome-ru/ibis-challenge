@@ -203,6 +203,27 @@ class PRROC_PRAUC_TOP50(PRROCScorer):
         return ScorerResult(value=auroc)
 
 @dataclass 
+class PRROC_PRAUC_AVERAGED(PRROCScorer):
+    type: str
+    inner_scorers: dict[str, PRROCScorer] = field(init=False)
+
+    def __post_init__(self):
+        self.inner_scorers = {
+            'full': PRROC_PRAUC(name=self.name, type=self.type),
+            'top50': PRROC_PRAUC_TOP50(name=self.name, type=self.type),
+            'top25': PRROC_PRAUC_TOP25(name=self.name, type=self.type)
+        }
+
+    def score(self, y_score: np.ndarray[float], y_real:  np.ndarray[float], **kwargs) -> float:
+        inner_scores = {name: scorer.score(y_score=y_score, y_real=y_real) for\
+                            name, scorer in self.inner_scorers.items()}
+        score = sum(inner_scores.values) / len(inner_scores)
+        
+        return ScorerResult(value=score,
+                            metainfo=inner_scores)
+
+
+@dataclass 
 class PRROC_ROCAUC(PRROCScorer):
     def score(self, y_score:  np.ndarray[float], y_real:  np.ndarray[float], **kwargs) -> float:
         from rpy2.rinterface_lib import openrlib
@@ -255,7 +276,7 @@ class PRROC_ROCAUC_TOP25(PRROCScorer):
                                   scores_class1=FloatVector(negatives), 
                                   sorted=True)
             auroc = auroc[1][0]
-        return ScorerResult(value=auroc) 
+        return ScorerResult(value=auroc)
 
 @dataclass 
 class PRROC_ROCAUC_TOP50(PRROCScorer):
@@ -284,7 +305,26 @@ class PRROC_ROCAUC_TOP50(PRROCScorer):
                                   sorted=True)
             auroc = auroc[1][0]
         return ScorerResult(value=auroc)
+    
+@dataclass 
+class PRROC_ROCAUC_AVERAGED(PRROCScorer):
+    inner_scorers: dict[str, PRROCScorer] = field(init=False)
 
+    def __post_init__(self):
+        self.inner_scorers = {
+            'full': PRROC_ROCAUC(self.name),
+            'top50': PRROC_ROCAUC_TOP50(self.name),
+            'top25': PRROC_ROCAUC_TOP25(self.name)
+        }
+
+    def score(self, y_score:  np.ndarray[float], y_real:  np.ndarray[float], **kwargs) -> float:
+
+        inner_scores = {name: scorer.score(y_score=y_score, y_real=y_real) for\
+                            name, scorer in self.inner_scorers.items()}
+        score = sum(inner_scores.values) / len(inner_scores)
+        
+        return ScorerResult(value=score,
+                            metainfo=inner_scores)
 
 @dataclass
 class ScorerInfo:
@@ -312,6 +352,8 @@ class ScorerInfo:
             return PRROC_ROCAUC_TOP25(self.alias)
         elif self.name == 'prroc_rocauc_top50':
             return PRROC_ROCAUC_TOP50(self.alias)
+        elif self.name == "prroc_averaged":
+            return PRROC_ROCAUC_AVERAGED(self.alias)
         elif self.name == "prroc_prauc":
             tp = self.params.get("type")
             if tp is None:
@@ -325,6 +367,12 @@ class ScorerInfo:
             tp = tp.lower()
             return PRROC_PRAUC_TOP25(self.alias, tp)
         elif self.name == "prroc_prauc_top50":
+            tp = self.params.get("type")
+            if tp is None:
+                raise Exception("type must be specified for prauc scorer from PRROC package")
+            tp = tp.lower()
+            return PRROC_PRAUC_TOP50(self.alias, tp)
+        elif self.name == "prroc_prauc_averaged":
             tp = self.params.get("type")
             if tp is None:
                 raise Exception("type must be specified for prauc scorer from PRROC package")
