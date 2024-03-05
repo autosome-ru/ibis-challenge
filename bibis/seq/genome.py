@@ -68,7 +68,6 @@ class Genome:
     def from_fasta(cls, fastapath: Path | str):
         dt = {}
         for rec in SeqIO.parse(fastapath, format="fasta"):
-            print(rec)
             dt[rec.name] = rec.seq
         return cls(dt)
     

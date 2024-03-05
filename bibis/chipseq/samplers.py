@@ -6,13 +6,16 @@ from ..seq.genome import Genome
 from ..bedtools.beddata import BedData, join_bed
 from ..bedtools.bedentry import BedEntry
 from ..sampling.gc import SetGCSampler, GenomeGCSampler
+from ..logging import get_bibis_logger
+
+logger = get_bibis_logger()
 
 def cut_to_window(bed: BedData, window_size: int, genome: Genome) -> BedData:
         cut_peaks = []
         for p in bed:
             if p.peak is None:
                 cnt = (p.end + p.start) // 2
-                print("Entry has no peak, will use the middle of the interval")
+                logger.info("Entry has no peak, will use the middle of the interval")
             else:
                 cnt = p.peak
             entry = BedEntry.from_center(chr=p.chr, 

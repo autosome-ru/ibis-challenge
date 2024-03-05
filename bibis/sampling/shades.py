@@ -10,6 +10,9 @@ import tempfile
 from ..bedtools.beddata import BedData
 from ..bedtools.bedentry import BedEntry
 from ..seq.genome import Genome
+from ..logging import get_bibis_logger
+
+logger = get_bibis_logger()
 
 @dataclass
 class ShadesSampler:
@@ -79,7 +82,7 @@ class ShadesSampler:
                                         k=self.sample_per_peak,
                                         genome=self.genome)
             if len(smpl) < self.sample_per_peak:
-                print(f"Warning: unable to sample more than {len(smpl)} for peak {peak_ch}")
+                logger.info(f"Warning: unable to sample more than {len(smpl)} for peak {peak_ch}")
             if save_metainfo:
                 positive = self.positives[peak_ch]
                 for e in smpl:

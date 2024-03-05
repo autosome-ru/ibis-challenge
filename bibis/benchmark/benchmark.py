@@ -20,6 +20,9 @@ from ..matrix.pwm import PCM, PFM
 from .dataset import DatasetInfo
 from .benchmarkconfig import BenchmarkConfig
 from .pwm_submission import PFMInfo, PWMSubmission
+from ..logging import get_bibis_logger
+
+logger = get_bibis_logger()
 
 class Submit:
     name: str
@@ -193,8 +196,7 @@ class Benchmark:
             for tag in answer.keys():
                 score = prediction.get(tag)
                 if score is None:
-                    print(f"Prediction doesn't contain information for sequence {tag}, skipping prediction",
-                          file=sys.stderr)
+                    logger.warning(f"Prediction doesn't contain information for sequence {tag}, skipping prediction")
                     return self.skipped_prediction(ds)
                 pred_y.append(score)
 
@@ -219,8 +221,7 @@ class Benchmark:
             if ds.tf in submit.scores:
                 scores[ds.name] = self.score_prediction(ds, submit.scores[ds.tf])
             else:
-                print(f"No predictions for {ds.name} are provided. Skipping", 
-                      file=sys.stderr)
+                logger.warning(f"No predictions for {ds.name} are provided. Skipping")
                 scores[ds.name] = self.skipped_prediction(ds)
         return scores 
     
@@ -305,8 +306,7 @@ class Benchmark:
                     backs_lst.append(back)
             if all_specified:
                 if len(backs_lst) != 0:
-                    print("'All' background specified, all background will be used, other specifications are ignored", 
-                          file=sys.stderr) 
+                    logger.warning("'All' background specified, all background will be used, other specifications are ignored") 
                 backs_lst = all_backgrounds
             
             scorer = sc_cfg.make() 

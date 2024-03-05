@@ -41,7 +41,6 @@ def merge_fastqgz(in_paths, out_path):
     for path in in_paths:
         with gzip.open(path, "rt") as inp:
             for rec in tqdm.tqdm(SeqIO.parse(inp, 'fastq')):
-                #print(rec.id, rec.description, rec.seq)
                 recs.append(rec)
     with  gzip.open(out_path, "wt") as out:
         SeqIO.write(recs, out, 'fastq')

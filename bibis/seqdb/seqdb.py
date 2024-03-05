@@ -8,6 +8,9 @@ from typing import ClassVar
 
 from .tagger import UniqueTagger
 from ..seq.seqentry import SeqEntry
+from ..logging import get_bibis_logger
+
+logger = get_bibis_logger()
 
 @dataclass
 class TagDatabase:
@@ -96,10 +99,10 @@ class TagDatabase:
                     self.update_db(cur, self.TAG_TABLE_NAME, rest)  
                     existing.update(rest)
             except sqlite3.IntegrityError as exc:
-                print(f"Waiting: database lock exception ({exc}), regenerating keys")
+                logger.info(f"Waiting: database lock exception ({exc}), regenerating keys")
                 wait_for_unlock=False
             except sqlite3.OperationalError as exc:
-                print(f"Waiting: database unique exception ({exc}), waiting for unlock")
+                logger.info(f"Waiting: database unique exception ({exc}), waiting for unlock")
                 wait_for_unlock=True
                 time.sleep(self.wait_time)
             except Exception as exc:

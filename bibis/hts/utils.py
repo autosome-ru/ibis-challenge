@@ -1,4 +1,7 @@
 from copy import copy 
+from ..logging import get_bibis_logger
+
+logger = get_bibis_logger()
 
 def dispatch_samples(cycle_counts: dict[str, int], 
                      sample_size: int):
@@ -8,7 +11,7 @@ def dispatch_samples(cycle_counts: dict[str, int],
     
     total_size = sum(cycle_counts.values())
     if  total_size < sample_size:
-        print(f"Can't sample request sample size: {sample_size}. Returning all counts")
+        logger.warning(f"Can't sample request sample size: {sample_size}. Returning all counts")
         return copy(cycle_counts)
     elif total_size == sample_size:
         return copy(cycle_counts)

@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from enum import Enum
 
+from ..logging import get_bibis_logger
+logger = get_bibis_logger()
+
 
 class BedClosestMode(Enum):
     UPSTREAM = "-fu"
@@ -102,4 +105,5 @@ class BedtoolsExecutor:
             executor = Path(executor)
         if isinstance(executor, Path):
             executor = BedtoolsExecutor(executor)
+        logger.info(f"Using {executor.bedtools_root} as bedtools executor")
         cls.DEFAULT_EXECUTOR = executor

@@ -24,7 +24,9 @@ from ..bedtools.beddata import BedData, join_bed
 from ..bedtools.bedentry import BedEntry
 from ..bedtools.constants import CHROM_ORDER
 from ..seq.genome import Genome
+from ..logging import get_bibis_logger
 
+logger = get_bibis_logger()
 
 @dataclass
 class SetGCSampler:
@@ -62,7 +64,7 @@ class SetGCSampler:
         #    raise Exception(f"Can't sample: number of negatives: {len(self.negatives)}, requested: { requested_size}")
         
         if requested_size > len(self.negatives):  
-            print(f"Can't sample more than total negatives num: number of negatives: {len(self.negatives)}, requested: {requested_size}", file=sys.stderr)
+            logger.warning(f"Can't sample more than total negatives num: number of negatives: {len(self.negatives)}, requested: {requested_size}")
             loss = 0 
             neg_sampled = [copy(n) for n in self.negatives]
             if save_metainfo:
@@ -536,7 +538,6 @@ class GenomeGCSampler:
             
     def sample(self, positives: BedData) -> BedData:
         if self.n_procs == 1:
-            print("No parallel")
             return self._sample_noparallel(positives=positives)
         return self._sample_parallel(positives=positives)
 
@@ -582,9 +583,6 @@ class GCProfileMatcher:
               negatives_profile: dict[float, int],
               return_loss: bool = False) -> dict[float, int]:
         
-        
-        gc_values = np.array(sorted(set(positives_profile.keys()) | set(negatives_profile.keys())), dtype=np.float32)
-        
         negative_vals, negative_counts = self.process_negative_profile(negatives_profile)
         positive_vals, positive_counts = self.process_positive_profile(positives_profile)
         
@@ -592,7 +590,7 @@ class GCProfileMatcher:
         negative_size = negative_counts.sum()
         
         if requested_size > negative_size:
-            print("Can't sample requested number of positives, just returning negatives profile")
+            logger.warning("Can't sample requested number of positives, just returning negatives profile")
             return copy(negatives_profile)
         
         positive_counts = positive_counts * self.sample_per_object 
