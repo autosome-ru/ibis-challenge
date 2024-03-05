@@ -23,17 +23,3 @@ def get_logger(name: str, path: str | None = None) -> logging.Logger:
 
 def get_bibis_logger() -> logging.Logger:
     return get_logger(name=BIBIS_LOGGER_NAME, path=BIBIS_LOGGER_NAME)
-
-
-
-# Create formatters and add it to handlers
-c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-
-f_handler.setFormatter(f_format)
-
-# Add handlers to the logger
-logger.addHandler(c_handler)
-logger.addHandler(f_handler)
-
-logger.warning('This is a warning')
-logger.error('This is an error')
