@@ -81,6 +81,9 @@ from bibis.hts.utils import dispatch_samples
 from bibis.utils import merge_fastqgz
 from bibis.sampling.reservoir import (AllSelector,  
                                       PredefinedSizeUniformSelector)
+from bibis.logging import get_bibis_logger
+
+logger = get_bibis_logger()
     
 
 EPS = 1e-10
@@ -98,12 +101,12 @@ train_datasets = cfg.splits.get('train')
 test_datasets = cfg.splits.get('test')
 
 if train_datasets is not None:
-    print(f"For factor {cfg.tf_name} the following replics are going to train:")
+    logger.info(f"For factor {cfg.tf_name} the following replics are going to train:")
     train_dir = HTS_BENCH_DIR / "train" / cfg.tf_name  
     train_dir.mkdir(parents=True, exist_ok=True)
 
     for rep_ind, (rep, rep_info) in enumerate(train_datasets.items()):
-        print(f"\t{rep}")
+        logger.info(f"\t{rep}")
         for cycle, ds in rep_info.items():
             
             out_path = train_dir / f"{cfg.tf_name}_R{rep_ind}_C{ds.cycle}_lf{ds.left_flank}_rf{ds.right_flank}.fastq.gz"
@@ -111,17 +114,16 @@ if train_datasets is not None:
                 merge_fastqgz(in_paths=ds.raw_paths, 
                             out_path=out_path)
 else:
-    print(f"For factor {cfg.tf_name} no replics are going to train")
+    logger.info(f"For factor {cfg.tf_name} no replics are going to train")
 
 if test_datasets is None:
-    print(f"For factor {cfg.tf_name} no replics are going to test")
+    logger.info(f"For factor {cfg.tf_name} no replics are going to test")
     exit(0) # nothing to done
 else:
-    print(f"For factor {cfg.tf_name} the following replics are going to test:")
+    logger.info(f"For factor {cfg.tf_name} the following replics are going to test:")
     for rep_ind, (rep, rep_info) in enumerate(test_datasets.items()):
-        print(f"\t{rep}")
+        logger.info(f"\t{rep}")
 
-print("Test datasets", test_datasets.keys())
 valid_dir = HTS_BENCH_DIR / "valid" / cfg.tf_name  
 valid_dir.mkdir(exist_ok=True, parents=True)
 answer_valid_dir = valid_dir / "answer"
@@ -132,7 +134,7 @@ positives_path = answer_valid_dir / "positives.seqs"
 foreigns_path = answer_valid_dir / "foreigns.seqs"
 inputs_path = answer_valid_dir / "inputs.seqs"
 
-print(positives_path)
+logger.info("Creating positives and negatives .seqs files")
 if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exists()) or args.recalc:
     positive_cycle_sizes = {cycle: 0 for cycle in range(1, CYCLE_CNT+1)}
     test_rep_ids = set()
@@ -155,10 +157,6 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
     
     main_seed += CYCLE_CNT
 
-    print(total_cycle_sizes)
-    print(positive_cycle_sizes)
-    print(test_rep_ids)
-
     gc_bins = np.arange(0, args.seq_length+EPS, 0.5) / args.seq_length
 
     positive_gc_profiles = {cycle: dict.fromkeys(gc_bins, 0) for cycle in range(1, CYCLE_CNT+1)}
@@ -166,7 +164,8 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
 
     foreigns_gc_profiles = {cycle: dict.fromkeys(gc_bins, 0) for cycle in range(1, CYCLE_CNT+1)}
     zero_gc_profile = dict.fromkeys(gc_bins, 0)
-
+    
+    logger.info("Processing positives")
     with open(ds.path, 'r') as assign, open(positives_path, 'w') as positive_fd:
         for line in tqdm.tqdm(assign):
             entry = SeqAssignEntry.from_line(line)
@@ -189,16 +188,11 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
         if sel.count != sel.total_size:
             raise Exception(f"Positive selector for cycle {cycle} has not recieved all {sel.total_size} entries: {sel.count}")
 
-    
-    print('Positive', positive_gc_profiles)
-    print('Zero', zero_gc_profile)
-    print('Foreigns', foreigns_gc_profiles)
-
 
     foreign_matcher = GCProfileMatcher.make(sample_per_object=args.foreign_neg2pos_ratio)
     foreigns_samplers = {}
 
-    print("Foreigns")
+    logger.info("Processing negatives")
     for cycle, pos_gc_counts in positive_gc_profiles.items():
         foreign_gc_counts = foreigns_gc_profiles[cycle]
         foreign_assign = foreign_matcher.match(positives_profile=pos_gc_counts, 
@@ -218,6 +212,7 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
                                                         seed=main_seed+ind)\
                                                             for ind, (gc, size) in enumerate(inputs_assign.items())}
     main_seed += len(inputs_assign)
+
     with open(ds.path, 'r') as assign, open(foreigns_path, 'w') as foreigns_fd, open(inputs_path, 'w') as inputs_fd:
         for line in tqdm.tqdm(assign):
             entry = SeqAssignEntry.from_line(line)
@@ -240,20 +235,18 @@ if not (positives_path.exists() and foreigns_path.exists() and inputs_path.exist
         for gc, sel in gc_samplers.items():
             if sel.count != sel.total_size:
                 raise Exception(f"Foreigns selector for cycle {cycle} for gc {gc} has not recieved all {sel.total_size} entries: {sel.count}")
-
-for _, (_, rep_info) in enumerate(test_datasets.items()):
-    for _, ds in rep_info.items():
-        break
-    break
 else:
-    ds = None
-assert ds is not None
+    logger.info("Skipping step as files already exists")
 
 
 ds2flanks = load_ds2flanks(args.flanks)
 
 db = DBConfig.load(BENCH_SEQDB_CFG).build()
 
+seq_datasets: dict[str, list[SeqEntry]] = {}
+
+user_known_samples: list[SeqEntry] = []
+logger.info("Collectiong positives dataset")
 # benchmark part files
 with open(positives_path, "r") as inp:
     pos_samples: list[SeqEntry] = []
@@ -265,16 +258,15 @@ with open(positives_path, "r") as inp:
                              metainfo={'rep': entry.rep_ind,
                                        'flanks': (lf, rf)})
         pos_samples.append(seq_entry)
-
 pos_samples = db.taggify_entries(pos_samples)
-
-user_known_samples: list[SeqEntry] = []
 user_known_samples.extend(pos_samples)
 
+seq_datasets['positives'] = pos_samples
 
+logger.info("Collectiong aliens dataset")
 # foreign 
 with open(foreigns_path, "r") as inp:
-    neg_samples = []
+    alien_samples = []
     for line in inp:
         entry = SeqAssignEntry.from_line(line)
         lf, rf = ds2flanks[entry.rep_ind][entry.cycle]
@@ -282,91 +274,63 @@ with open(foreigns_path, "r") as inp:
                              label=0, 
                              metainfo={'rep': None,
                                        'flanks': (lf,rf) }) # always zero cycle 
-        neg_samples.append(seq_entry)
+        alien_samples.append(seq_entry)
 
-neg_samples = db.taggify_entries(neg_samples)
-user_known_samples.extend(neg_samples)
+alien_samples = db.taggify_entries(alien_samples)
+user_known_samples.extend(alien_samples)
 
-foreign_ds_dir = answer_valid_dir /  "foreign"
-foreign_ds_dir.mkdir(parents=True, exist_ok=True)
-samples: list[SeqEntry] = pos_samples + neg_samples    
+seq_datasets['alien'] = pos_samples + alien_samples
 
-fasta_path = foreign_ds_dir  / "data.fasta"
-
-flanked_samples = []
-for entry in samples:
-    lf, rf = entry.metainfo['flanks']
-    flanked_seq = lf[1:] + str(entry.sequence) + rf[1:] 
-    flanked_entry = SeqEntry(sequence=Seq(flanked_seq),
-                             tag=entry.tag,
-                             label=entry.label)
-    flanked_samples.append(flanked_entry)
-seq_write(flanked_samples, fasta_path)
-
-        
-answer = {'labels': {pe.tag: pe.label for pe in samples},
-          'groups': {pe.tag: pe.metainfo['rep'] for pe in samples}}
-
-answer_path = foreign_ds_dir   / "data_answer.json"
-with open(answer_path, "w") as out:
-    json.dump(answer, fp=out, indent=4)
-
-config_path = foreign_ds_dir / "config.json"
-ds_info = DatasetInfo(name = f"{cfg.tf_name}_foreign", 
-                      tf = cfg.tf_name,
-                      background="foreign",
-                      fasta_path=str(fasta_path),
-                      answer_path=str(answer_path))
-ds_info.save(config_path)
-
-# zero seqs 
-
+logger.info("Collectiong input dataset")
 zero_flanks = [en.metainfo['flanks'] for en in pos_samples] * args.zero_neg2pos_ratio
 rng = random.Random(args.seed)
 rng.shuffle(zero_flanks)
 with open(inputs_path, "r") as inp:
-    neg_samples = []
+    input_samples = []
     for ind, line in enumerate(inp):
         entry = SeqAssignEntry.from_line(line)
         seq_entry = SeqEntry(sequence=Seq(entry.seq), 
                              label=0,
                              metainfo={'rep': None,
                                        'flanks': zero_flanks[ind]}) # always zero cycle 
-        neg_samples.append(seq_entry)
+        input_samples.append(seq_entry)
 
-neg_samples = db.taggify_entries(neg_samples)
-user_known_samples.extend(neg_samples)
+input_samples = db.taggify_entries(input_samples)
+user_known_samples.extend(input_samples)
+seq_datasets['input'] = pos_samples + input_samples
 
-zeros_ds_dir =  answer_valid_dir / "input"
-zeros_ds_dir.mkdir(parents=True, exist_ok=True)
-samples: list[SeqEntry] = pos_samples + neg_samples    
+for dataset_name, samples in seq_datasets.items():
+    logger.info(f"Writing {dataset_name} dataset")
+    ds_dir = answer_valid_dir / dataset_name
+    ds_dir.mkdir(parents=True, exist_ok=True)
+    fasta_path = ds_dir / 'data.fasta'
 
-fasta_path = zeros_ds_dir  / "data.fasta"
-flanked_samples = []
+    flanked_samples = []
+    for entry in samples:
+        lf, rf = entry.metainfo['flanks']
+        flanked_seq = lf[1:] + str(entry.sequence) + rf[1:] 
+        flanked_entry = SeqEntry(sequence=Seq(flanked_seq),
+                                 tag=entry.tag,
+                                 label=entry.label)
+        flanked_samples.append(flanked_entry)
+    seq_write(flanked_samples, fasta_path)
 
-for entry in samples:
-    lf, rf = entry.metainfo['flanks']
-    flanked_seq = lf[1:] + str(entry.sequence) + rf[1:] 
-    flanked_entry = SeqEntry(sequence=Seq(flanked_seq),
-                             tag=entry.tag,
-                             label=entry.label)
-    flanked_samples.append(flanked_entry)
-seq_write(flanked_samples, fasta_path)
-        
-answer = {'labels': {pe.tag: pe.label for pe in samples},
-          'groups': {pe.tag: pe.metainfo['rep'] for pe in samples}}
-answer_path = zeros_ds_dir   / "data_answer.json"
-with open(answer_path, "w") as out:
-    json.dump(answer, fp=out, indent=4)
+    answer = {'labels': {pe.tag: pe.label for pe in samples},
+              'groups': {pe.tag: pe.metainfo['rep'] for pe in samples}}
 
-config_path = zeros_ds_dir/ "config.json"
-ds_info = DatasetInfo(name = f"{cfg.tf_name}_input", 
-                      tf = cfg.tf_name,
-                      background="input",
-                      fasta_path=str(fasta_path),
-                      answer_path=str(answer_path))
-ds_info.save(config_path)
+    answer_path = ds_dir   / "data_answer.json"
+    with open(answer_path, "w") as out:
+        json.dump(answer, fp=out, indent=4)
 
+    config_path = ds_dir / "config.json"
+    ds_info = DatasetInfo(name = f"{cfg.tf_name}_{dataset_name}", 
+                          tf = cfg.tf_name,
+                          background=dataset_name,
+                          fasta_path=str(fasta_path),
+                          answer_path=str(answer_path))
+    ds_info.save(config_path)
+
+logger.info(f"Writing participants sequence file")
 # write sequences for user
 participants_fasta_path = participants_valid_dir / "submission.fasta"
 random.shuffle(user_known_samples)
