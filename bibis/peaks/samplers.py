@@ -29,7 +29,7 @@ def cut_to_window(bed: BedData, window_size: int, genome: Genome) -> BedData:
         
 
 @dataclass
-class ChIPForeignSampler:
+class PeakForeignSampler:
     window_size: int
     sampler: SetGCSampler
     positives: list[SeqEntry]
@@ -92,7 +92,7 @@ class ChIPForeignSampler:
 from ..sampling.shades import ShadesSampler
 
 @dataclass
-class ChIPShadesSampler:
+class PeakShadesSampler:
     sampler: ShadesSampler
     genome: Genome 
     window_size: int
@@ -144,7 +144,7 @@ class ChIPShadesSampler:
         return smpls
 
 @dataclass
-class ChIPGenomeSampler:
+class PeakGenomeSampler:
     window_size: int
     genome: Genome 
     sampler: GenomeGCSampler

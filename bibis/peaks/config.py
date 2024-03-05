@@ -1,13 +1,10 @@
 import json
-import sys
 
 from pathlib import Path
 
 from dataclasses import dataclass, asdict
 
 from typing import ClassVar
-
-from Bio import Data
 
 from ..benchmark.dataset import DatasetInfo, seqentry2interval_key
 from ..seq.seqentry import SeqEntry, read as seq_read
@@ -33,13 +30,13 @@ class GenomeSampleConfig:
     precalc_profile: bool
     
 @dataclass
-class ChipSeqSplit:
-    paths: list[str]
+class PeakSeqSplit:
+    reps: dict[str, str]
     chroms: list[str]
     hide_regions: str | None 
 
 @dataclass
-class ChipSeqConfig:
+class PeakSeqConfig:
     tf_name: str
     black_list_path: str | None
     friends_path: list[str]
@@ -49,7 +46,7 @@ class ChipSeqConfig:
     shades_cfg: ShadesConfig
     foreign_cfg: ForeignConfig
     genome_sample_cfg: GenomeSampleConfig
-    splits: dict[str, ChipSeqSplit]
+    splits: dict[str, PeakSeqSplit]
     
     SPLIT_TYPES: ClassVar[tuple[str, str, str]] = ('train', 'test', 'train/test')
     
@@ -65,14 +62,14 @@ class ChipSeqConfig:
         with open(path, "r") as inp:
             dt = json.load(inp)
         for name, split_dt in dt['splits'].items():
-            dt['splits'][name] = ChipSeqSplit(**split_dt)
+            dt['splits'][name] = PeakSeqSplit(**split_dt)
         dt["shades_cfg"] = ShadesConfig(**dt["shades_cfg"])
         dt["foreign_cfg"] = ForeignConfig(**dt["foreign_cfg"])
         dt["genome_sample_cfg"] = GenomeSampleConfig(**dt["genome_sample_cfg"])
         return cls(**dt)
     
 @dataclass
-class ChipSeqDatasetConfig:
+class PeakSeqDatasetConfig:
     tf_name: str
     tf_path: str 
     

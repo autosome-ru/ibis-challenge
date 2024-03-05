@@ -5,9 +5,8 @@ from pathlib import Path
 from bibis.bedtools.bedentry import BedEntry
 from bibis.bedtools.beddata import BedData
 
-
 @dataclass
-class ChIPPeakEntry:
+class PeakEntry:
     chrom: str
     start: int
     end: int
@@ -46,13 +45,7 @@ class ChIPPeakEntry:
                    name=name,
                    peakcallers=peakcallers)
         
-    #def to_line(self) -> str:
-    #    line = f"{self.chrom}\t{self.start}\t{self.end}\t{self.peak}\t{self.pileup}"\
-    #           f"{self.log_pvalue:.05f}\t{self.fold_enrichment:.05f}"\
-    #           f"{self.log_qvalue:.05f}\t{self.name}\t{self.CALLERS_SEP.join(self.peakcallers)}"
-    #    return line
-        
-    def to_bedentry(self, score='qValue'):
+    def to_bedentry(self):
         metainfo = dict(name=self.name,
                         pValue=self.log_pvalue,
                         qValue=self.log_qvalue)
@@ -64,8 +57,8 @@ class ChIPPeakEntry:
 
 
 @dataclass
-class ChIPPeakList:
-    entries: list[ChIPPeakEntry] = field(repr=False, default_factory=list)
+class PeakList:
+    entries: list[PeakEntry] = field(repr=False, default_factory=list)
     
     COMMENT_CHAR: ClassVar[str] = "#"
     
@@ -78,7 +71,7 @@ class ChIPPeakList:
             for line in inp:
                 if line.startswith(cls.COMMENT_CHAR):
                     continue
-                entry = ChIPPeakEntry.from_line(line)
+                entry = PeakEntry.from_line(line)
                 entries.append(entry)
         return cls(entries) #type: ignore
     
@@ -87,10 +80,10 @@ class ChIPPeakList:
         for e in self.entries:
             if cond_fn(e):
                 entrs.append(e)
-        return ChIPPeakList(entrs)
+        return PeakList(entrs)
     
     def sort(self, key_fn):
-        return ChIPPeakList(sorted(self.entries, key=key_fn))
+        return PeakList(sorted(self.entries, key=key_fn))
     
     def __len__(self):
         return len(self.entries)  

@@ -28,6 +28,9 @@ class DatasetInfo:
     def load(cls, path: str | Path) -> 'DatasetInfo':
         with open(path)  as inp:
             dt = json.load(inp)
+        if 'left_flank' in dt:
+            dt.pop('left_flank')
+            dt.pop('right_flank')
         return cls(**dt)
 
     def to_dict(self) -> dict[str, str]:
