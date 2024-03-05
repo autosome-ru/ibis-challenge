@@ -1,13 +1,13 @@
 [
     {
-        "name": "prroc_rocauc_top25",
-        "alias": "ROCAUC25",
+        "name": "prroc_rocauc_averaged",
+        "alias": "mauROC",
         "params": {},
         "backgrounds": ["all"]
     },
     {
-        "name": "prroc_prauc_top25",
-        "alias": "PRAUC25",
+        "name": "prroc_prauc_averaged",
+        "alias": "mauPRC",
         "params": {"type": "integral"},
         "backgrounds": ["all"]
 
