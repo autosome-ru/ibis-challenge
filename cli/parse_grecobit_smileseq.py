@@ -15,13 +15,14 @@ parser.add_argument("--log_path",
                     default='log.txt')
 parser.add_argument("--logger_name",
                     default="parse_sms")
-
+parser.add_argument("--recalc",
+                    action="store_true")
 args = parser.parse_args()
 sys.path.append(args.bibis_root)
 
-from bibis.sms.config import RAW_SMSConfig, SMSRawConfig, split_datasets
+from bibis.sms.config import SMSRawConfig, split_datasets
 from bibis.sms.dataset import SMSRawDataset
-from bibis.utils import merge_fastqgz
+from bibis.utils import merge_fastqgz, read_fastqz
 from bibis.logging import get_logger, BIBIS_LOGGER_CFG
 
 BIBIS_LOGGER_CFG.set_path(path=args.log_path)
@@ -54,16 +55,16 @@ if not ibis_table['stage'].isin(STAGES).all():
 
 test_left_flanks = []
 for stage in STAGES:
-    logger.info(f"Preparing {stage} sms datasets for furher processing")
+    logger.info(f"Preparing {stage} sms datasets for further processing")
     copy_paths = defaultdict(list)
     stage_ibis_table =  ibis_table[ibis_table['stage'] == stage]
     tf2split = {}
     for ind, tf, reps, ibis_split in stage_ibis_table[['tf', 'replics', 'split'] ].itertuples():
         if ibis_split == "-":
-            #print(f"Skipping factor tf: {tf}. No split provided")
+            logger.info(f"Skipping factor tf: {tf}. No split provided")
             continue
         if isinstance(reps, float): # skip tf without pbms
-            #print(f"Skipping factor tf: {tf}. Its split ({ibis_split}) is not none but there is no experiments for that factor", file=sys.stderr)
+            logger.info(f"Skipping factor tf: {tf}. Its split ({ibis_split}) is not none but there is no experiments for that factor", file=sys.stderr)
             continue
         tf2split[tf] = ibis_split
         tf_dir = OUT_DIR / tf 
@@ -88,7 +89,11 @@ for stage in STAGES:
         ibis_split = tf2split[tf]
         datasets = []
         for rep, path_cands, out_path, left_flank, right_flank in exps:
-            ds_size = merge_fastqgz(in_paths=path_cands,
+            if not args.recalc and out_path.exists():
+                logger.info(f"Skipping writing {out_path} for {rep} as it already exists and recalc flag is not provided, just reading")
+                ds_size = read_fastqz(out_path)
+            else:
+                ds_size = merge_fastqgz(in_paths=path_cands,
                           out_path=out_path)
             ds = SMSRawDataset(path=str(out_path),
                                size=ds_size,

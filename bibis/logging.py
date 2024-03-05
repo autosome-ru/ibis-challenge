@@ -11,7 +11,7 @@ def get_logger(name: str, path: str | None = None, level: int = logging.INFO) ->
         path = f"{name}.log"
 
     logger = logging.getLogger(name)
-    
+
     stream_handler = logging.StreamHandler()
     stream_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     stream_handler.setFormatter(stream_format)

@@ -153,7 +153,7 @@ VAL_INT = ILYA_DIR / "Val_intervals"
 OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/GHTS")
 
 
-logging.info("Reading ibis metainfo for AffiSeq")
+logger.info("Reading ibis metainfo for AffiSeq")
 ibis_table = pd.read_excel(LEADERBOARD_EXCEL, sheet_name=SPLIT_SHEET_NAME)
 ibis_table = ibis_table[['Transcription factor', 'AFS-GFPIVT', 'AFS-IVT', 'AFS-LYS', 'Genomic HT-SELEX', 'Stage']]
 ibis_table.columns = ['tf', 'replics1', 'replics2', 'replics3', 'split', 'stage']
@@ -214,21 +214,19 @@ for stage in ('Final', 'Leaderboard'):
             train_replics = {rep: replics[rep] for rep in rep_names}
             
             # remove peak files from the same experiment but from the different cycle
-            filtered_train_replics = {}
-            for rep, t_path in train_replics.items():
-                logger.info(f"{rep} {t_path}")
-                t_name =  Path(t_path).name 
-                no_c_t_name = t_name[:t_name.find(".")]
+            train_replics = {}
+            for rep, t_path in replics.items():
+                no_c_t_name = rep[:rep.find(".")]
+                logger.info(f"{rep} {no_c_t_name}")
                 if no_c_t_name == no_c_name:
-                    logger.info(f"Skipping {rep} as different cycle of experiment used for validation")
+                    logger.info(f"Skipping {rep} as a cycle of experiment used for validation")
                     continue
-                filtered_train_replics[rep] = t_path
-            train_replics = filtered_train_replics
+                train_replics[rep] = t_path
             
-            splits = {"train": PeakSeqSplit(paths=train_replics,
+            splits = {"train": PeakSeqSplit(reps=train_replics,
                                             chroms=args.train_chroms,
                                             hide_regions=None),
-                      "test": PeakSeqSplit(paths=[test_peak_path],
+                      "test": PeakSeqSplit(reps={test_rep: replics[test_rep]},
                                            chroms=args.valid_chroms,
                                            hide_regions=args.valid_hide_regions)}
         else:

@@ -36,6 +36,14 @@ def replace_path2str(obj: list | dict) -> list | dict:
                 new_lst.append(el)
         return new_lst
     
+def read_fastqz(path):
+    recs = []
+    with gzip.open(path, "rt") as inp:
+        for rec in SeqIO.parse(inp, 'fastq'):
+            recs.append(rec)
+    return len(recs)
+
+
 def merge_fastqgz(in_paths, out_path):
     recs = []
     for path in in_paths:

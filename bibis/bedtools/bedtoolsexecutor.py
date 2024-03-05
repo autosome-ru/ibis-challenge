@@ -1,6 +1,6 @@
 import shlex
 import subprocess
-from typing import ClassVar, Union
+from typing import ClassVar, Optional, Union
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,7 +21,7 @@ class BedClosestMode(Enum):
 class BedtoolsExecutor:
     bedtools_root: Path
 
-    DEFAULT_EXECUTOR: ClassVar['BedtoolsExecutor' | None] = None
+    DEFAULT_EXECUTOR: ClassVar[Optional['BedtoolsExecutor']] = None
 
     @property
     def merge_path(self) -> Path:
