@@ -6,7 +6,7 @@ python make_db.py --tagdb ${TAG_DB} --tagdb_cfg ${TAG_DB_CFG}
 
 DATA_TYPE="PBM"
 for type in "Leaderboard" "Final"; do
-    for config_path in /home_local/dpenzar/${BENCH_DATA}/${DATA_TYPE}/configs/${type}/*.json; do
+    for config_path in ${BENCH_DATA}/${DATA_TYPE}/configs/${type}/*.json; do
         echo ${config_path}
         out_dir="${BECNHMARK_PROCESSED}/${DATA_TYPE}/${type}"
         python pbm_split.py --benchmark_out_dir ${out_dir}\
@@ -20,7 +20,7 @@ for DATA_TYPE in "GHTS" "CHS"; do
     for type in "Leaderboard" "Final"; do
         small_tp=`echo "$type" | awk '{print tolower($0)}'`
         small_data_tp=`echo "$DATA_TYPE" | awk '{print tolower($0)}'`
-        for config_path in /home_local/dpenzar/BENCH_FULL_DATA/${DATA_TYPE}/configs/${type}/*.json; do
+        for config_path in ${BENCH_DATA}/${DATA_TYPE}/configs/${type}/*.json; do
             echo ${config_path}
             out_dir="${BECNHMARK_PROCESSED}/${DATA_TYPE}/${type}"
             python peaks_split.py --benchmark_out_dir ${out_dir}\
@@ -34,7 +34,7 @@ done
 
 DATA_TYPE="SMS"
 for type in "Leaderboard" "Final"; do
-    for config_path in /home_local/dpenzar/BENCH_FULL_DATA/${DATA_TYPE}/configs/${type}/*.json; do
+    for config_path in ${BENCH_DATA}/${DATA_TYPE}/configs/${type}/*.json; do
         echo ${config_path}
         out_dir="${BECNHMARK_PROCESSED}/${DATA_TYPE}/${type}"
         python sms_split.py  --benchmark_out_dir ${out_dir}\
@@ -49,7 +49,7 @@ done
 DATA_TYPE="HTS"
 python make_db.py --tagdb ${TAG_DB} --tagdb_cfg ${TAG_DB_CFG}
 for type in "Leaderboard" "Final"; do
-    for config_path in /home_local/dpenzar/BENCH_FULL_DATA/${DATA_TYPE}/configs/${type}/*.json; do
+    for config_path in ${BENCH_DATA}/${DATA_TYPE}/configs/${type}/*.json; do
         echo ${config_path}
         out_dir="${BECNHMARK_PROCESSED}/${DATA_TYPE}/${type}"
         python hts_split.py  --benchmark_out_dir ${out_dir}\
