@@ -27,7 +27,7 @@ for DATA_TYPE in "GHTS" "CHS"; do
                                     --config_file ${config_path}\
                                     --tagdb_cfg ${TAG_DB_CFG}\
                                     --type $type\
-                                    --logger_name ${small_tp}_split
+                                    --logger_name ${small_data_tp}_${small_tp}_split
         done
     done
 done
