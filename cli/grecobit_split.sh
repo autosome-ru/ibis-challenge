@@ -55,7 +55,6 @@ for type in "Leaderboard" "Final"; do
         python hts_split.py  --benchmark_out_dir ${out_dir}\
                              --config_file ${config_path}\
                              --tagdb_cfg ${TAG_DB_CFG}\
-                             --flanks  /home_local/dpenzar/BENCH_FULL_DATA/${DATA_TYPE}/assign/${type}/flanks.json\
                              --type $type
     done
 done
