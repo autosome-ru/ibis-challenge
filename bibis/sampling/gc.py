@@ -28,6 +28,10 @@ from ..logging import get_bibis_logger
 
 logger = get_bibis_logger()
 
+
+# Implements greedy algorithm for partial OT
+# There is no gurantee to get optimal solution 
+# In practise the solution is something suboptimal
 @dataclass
 class SetGCSampler:
     negatives: list[SeqEntry]
