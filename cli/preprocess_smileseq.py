@@ -164,13 +164,11 @@ leader_end = math.ceil(len(zero_seqs) * total_stage_seqs['Leaderboard'] / total_
 zero_seqs = list(zero_seqs)
 
 leader_zeros = [zero_seqs[i] for i in inds[:leader_end]]
-print(len(leader_zeros))
 data_out_stage_dir = OUT_DIR /  "data" / "Leaderboard"
 with open(data_out_stage_dir / "zeros.json", "w") as out:
     json.dump(leader_zeros, out)
 
 final_zeros = [zero_seqs[i] for i in inds[leader_end:]]
-print(len(final_zeros))
 data_out_stage_dir = OUT_DIR /  "data" / "Final"
 with open(data_out_stage_dir / "zeros.json", "w") as out:
     json.dump(final_zeros, out)

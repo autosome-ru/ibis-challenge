@@ -38,6 +38,7 @@ OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/SMS/RAW/")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 logger.info("Reading ibis metainfo for SMS data")
+
 ibis_table = pd.read_excel(LEADERBOARD_EXCEL, sheet_name=SPLIT_SHEET_NAME)
 ibis_table = ibis_table[['Transcription factor', 'SMS', 'SMiLE-Seq', 'Stage']]
 ibis_table.columns = ['tf', 'replics', 'split', 'stage']
