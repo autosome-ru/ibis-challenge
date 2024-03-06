@@ -1,6 +1,6 @@
 import sys 
 from pathlib import Path
-
+import random 
 import argparse
 import sys
 
@@ -57,7 +57,7 @@ from bibis.peaks.samplers import (PeakForeignSampler,
                                   PeakGenomeSampler,
                                   cut_to_window)
 from bibis.seq.genome import Genome
-from bibis.seq.seqentry import write as seq_write
+from bibis.seq.seqentry import SeqEntry, write as seq_write
 from bibis.bedtools.bedtoolsexecutor import BedtoolsExecutor
 from bibis.logging import get_logger, BIBIS_LOGGER_CFG
 
@@ -206,10 +206,12 @@ db = DBConfig.load(BENCH_SEQDB_CFG).build()
 logger.info("Writing datasets files")
 parts_dir = valid_dir / 'parts'
 parts_dir.mkdir(exist_ok=True)
+
+user_known_samples: list[SeqEntry] = []
 for name, bed in samples.items():
     fas = genome.cut(bed)
     fas = db.taggify_entries(fas)
-    
+    user_known_samples.extend(user_known_samples)
     table_path = parts_dir / f"{name}.tsv"
     with open(table_path, "w") as out:
         for entry, seq in zip(bed, fas):
@@ -242,12 +244,9 @@ for background in ('shades', 'aliens', 'random'):
     
     filepath = answer_dir / background / f"config.json"
     ds_info.save(filepath)
-  
-logger.info("Writing participants file")
-participants_dir = valid_dir / "participants"
-participants_dir.mkdir(exist_ok=True)
-participants_file_path = participants_dir / "submission"
-ds_info = ds.make_full_ds(path_pref=str(participants_file_path), 
-                            hide_labels=True)
-participants_file_path = participants_dir / "submission.tsv"
-ds_info.write_tsv(participants_file_path)
+
+participants_valid_dir = valid_dir / "participants"
+participants_valid_dir.mkdir(exist_ok=True)
+participants_fasta_path = participants_valid_dir / "submission.fasta"
+random.shuffle(user_known_samples)
+seq_write(user_known_samples, participants_fasta_path)
