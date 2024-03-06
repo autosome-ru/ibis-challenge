@@ -82,8 +82,8 @@ def log_splits(cfg: PeakSeqConfig, splits: list[str]=None):
 
 BENCH_SEQDB_CFG = Path(args.tagdb_cfg)
 
-CHS_BENCH_DIR = Path(args.benchmark_out_dir)
-CHS_BENCH_DIR.mkdir(parents=True, exist_ok=True)
+PEAK_BENCH_DIR = Path(args.benchmark_out_dir)
+PEAK_BENCH_DIR.mkdir(parents=True, exist_ok=True)
 
 cfg = PeakSeqConfig.load(args.config_file)
 
@@ -93,7 +93,7 @@ log_splits(cfg)
 if "train" in cfg.splits:
     logger.info("Writing train datasets")
     split = cfg.splits["train"]
-    train_dir = CHS_BENCH_DIR / "train" / cfg.tf_name
+    train_dir = PEAK_BENCH_DIR / "train" / cfg.tf_name
     train_dir.mkdir(exist_ok=True, parents=True)
     
     for ind, peak_path in enumerate(split.reps.values(), 1):
@@ -107,12 +107,12 @@ if "test" not in cfg.splits:
     exit(0)
 
 logger.info("Creating test datasets")
-valid_dir = CHS_BENCH_DIR / "valid" / cfg.tf_name
-valid_dir.mkdir(exist_ok=True, parents=True)
+valid_dir = PEAK_BENCH_DIR / "valid" / cfg.tf_name
 if not args.recalc and valid_dir.exists():
     logger.info("Skipping dataset writing as datasets dir already exist and recalc flag is not specified")
     exit(0)
-    
+valid_dir.mkdir(exist_ok=True, parents=True)
+
 split = cfg.splits["test"]
 
 if len(split.reps) != 1:
@@ -159,8 +159,6 @@ valid_bed = valid_bed.to_min_width(width=cfg.window_size,
 samples: dict[str, BedData] = {"positives": cut_to_window(bed=valid_bed, 
                                                           window_size=cfg.window_size,
                                                           genome=genome)}
-
-
 
 logger.info("Creating shades")    
 shades_sampler = PeakShadesSampler.make(window_size=cfg.window_size,

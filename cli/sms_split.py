@@ -53,6 +53,8 @@ parser.add_argument("--log_path",
                     default='log.txt')
 parser.add_argument("--logger_name",
                     default="sms_split")
+parser.add_argument("--recalc",
+                    action="store_true")
 
 args = parser.parse_args()
 
@@ -113,7 +115,11 @@ right_flank=test_datasets[0].right_flank
 ZERO_FLANKS = (left_flank, right_flank)
 
 valid_dir = SMS_BENCH_DIR / "valid" / cfg.tf_name  
+if not args.recalc and valid_dir.exists():
+    logger.info("Skipping dataset writing as datasets dir already exist and recalc flag is not specified")
+    exit(0)
 valid_dir.mkdir(exist_ok=True, parents=True)
+
 answer_valid_dir = valid_dir / "answer"
 answer_valid_dir.mkdir(exist_ok=True)
 participants_valid_dir = valid_dir / "participants"

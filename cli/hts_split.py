@@ -79,6 +79,7 @@ parser.add_argument("--logger_name",
                     default="hts_split")
 
 
+
 args = parser.parse_args()
 
 
@@ -131,7 +132,12 @@ if test_datasets is None:
     exit(0) # nothing to done
 
 valid_dir = HTS_BENCH_DIR / "valid" / cfg.tf_name  
+if not args.recalc and valid_dir.exists():
+    logger.info("Skipping dataset writing as datasets dir already exist and recalc flag is not specified")
+    exit(0)
 valid_dir.mkdir(exist_ok=True, parents=True)
+
+
 answer_valid_dir = valid_dir / "answer"
 answer_valid_dir.mkdir(exist_ok=True)
 participants_valid_dir = valid_dir / "participants"

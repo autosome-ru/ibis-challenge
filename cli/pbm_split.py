@@ -36,6 +36,8 @@ parser.add_argument("--log_path",
                     default='log.txt')
 parser.add_argument("--logger_name",
                     default="pbm_split")
+parser.add_argument("--recalc",
+                    action="store_true")
 
 args = parser.parse_args()
 
@@ -75,6 +77,9 @@ if len(cfg.test_paths) == 0:
     exit(0)
 
 valid_dir = PBM_BENCH_DIR / "valid" / cfg.tf_name
+if not args.recalc and valid_dir.exists():
+    logger.info("Skipping dataset writing as datasets dir already exist and recalc flag is not specified")
+    exit(0)
 valid_dir.mkdir(exist_ok=True, parents=True)
 
 joined_pos_tags = set()
