@@ -14,16 +14,19 @@ from ..scoring.label import POSITIVE_LABEL, NEGATIVE_LABEL
 @dataclass
 class ShadesConfig:
     balance: int
+    min_dist: int
     max_dist: int
     
 @dataclass
 class ForeignConfig:
     balance: int
+    min_dist: int
     foreigns_path: list[str]
     
 @dataclass
 class GenomeSampleConfig:
     balance: int
+    min_dist: int
     max_overlap: int | None 
     n_procs: int
     exact: bool

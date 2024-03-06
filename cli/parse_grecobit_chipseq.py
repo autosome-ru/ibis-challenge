@@ -36,21 +36,30 @@ parser.add_argument('--valid_chroms',
 parser.add_argument("--seqsize", 
                     type=int,
                     default=301)
-parser.add_argument("--shades_balance", 
-                    type=int, 
-                    default=1)
 parser.add_argument("--foreign_balance", 
                     type=int,
                     default=2)
+parser.add_argument("--foreign_min_dist", 
+                    type=int,
+                    default=300)
 parser.add_argument("--genome_balance",
                     type=int, 
                     default=2)
+parser.add_argument("--genome_min_dist", 
+                    type=int,
+                    default=300)
 parser.add_argument("--genome_max_overlap", 
                     type=int,
                     default=0)
-parser.add_argument("--shades_max_dist", 
+parser.add_argument("--shades_balance", 
+                    type=int, 
+                    default=1)
+parser.add_argument("--shades_min_dist", 
                     type=int,
                     default=300)
+parser.add_argument("--shades_max_dist", 
+                    type=int,
+                    default=600)
 parser.add_argument("--exact_genome", 
                     action="store_true")
 parser.add_argument("--seed", 
@@ -210,14 +219,17 @@ for stage in ('Leaderboard', 'Final'):
                                genome_path=args.genome,
                                seed=args.seed,
                                shades_cfg=ShadesConfig(balance=args.shades_balance,
-                                                            max_dist=args.shades_max_dist),
+                                                       min_dist=args.shades_min_dist,
+                                                       max_dist=args.shades_max_dist),
                                foreign_cfg=ForeignConfig(balance=args.foreign_balance,
-                                                            foreigns_path=[]), # For now we can't set foreigns without data leakage
+                                                         min_dist=args.foreign_min_dist,
+                                                         foreigns_path=[]), # For now we can't set foreigns without data leakage
                                genome_sample_cfg=GenomeSampleConfig(balance=args.genome_balance,
-                                                                        max_overlap=args.genome_max_overlap,
-                                                                        n_procs=args.n_procs,
-                                                                        exact=args.exact_genome,
-                                                                        precalc_profile=False))
+                                                                    min_dist=args.genome_min_dist,
+                                                                    max_overlap=args.genome_max_overlap,
+                                                                    n_procs=args.n_procs,
+                                                                    exact=args.exact_genome,
+                                                                    precalc_profile=False))
         log_splits(config)
         path = configs_dir / f"{tf}.json"
         to_save[tf] = (path, config)

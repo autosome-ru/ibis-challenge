@@ -94,7 +94,7 @@ if "train" in cfg.splits:
     train_dir = CHS_BENCH_DIR / "train" / cfg.tf_name
     train_dir.mkdir(exist_ok=True, parents=True)
     
-    for ind, peak_path in enumerate(split.paths, 1):
+    for ind, peak_path in enumerate(split.reps.values(), 1):
         fl_name = Path(peak_path).name
         replic_path = train_dir / fl_name
         filter_chrom(peak_file=peak_path, 
@@ -110,10 +110,10 @@ valid_dir.mkdir(exist_ok=True, parents=True)
 
 split = cfg.splits["test"]
 
-if len(split.paths) != 1:
+if len(split.reps) != 1:
     raise Exception("Only one replic can be used as validation")
 
-validation_replic_file = next(iter(split.paths.items()))
+validation_replic_file = next(iter(split.reps.values()))
 
 foreign_peaks = [PeakList.read(t) for t in cfg.foreign_cfg.foreigns_path]
 foreign_beds = [f.to_beddata() for f in foreign_peaks]
@@ -122,7 +122,7 @@ valid_bed = PeakList.read(validation_replic_file).to_beddata()
 valid_bed = valid_bed.filter(lambda e: e.chr in split.chroms) # type: ignore
 
 if "train" in cfg.splits:
-    train_peaks = [PeakList.read(t) for t in cfg.splits["train"].paths]
+    train_peaks = [PeakList.read(t) for t in cfg.splits["train"].reps.values()]
     train_beds = [f.to_beddata() for f in train_peaks]
 else:
     train_beds = []
@@ -148,20 +148,25 @@ if gpath.is_dir():
 else:
     genome = Genome.from_fasta(gpath)
 
+valid_bed = valid_bed.to_min_width(width=cfg.window_size, 
+                                   genome=genome)
+
 samples: dict[str, BedData] = {"positives": cut_to_window(bed=valid_bed, 
-                                                            window_size=cfg.window_size,
-                                                            genome=genome)}
+                                                          window_size=cfg.window_size,
+                                                          genome=genome)}
+
 
 
 logger.info("Creating shades")    
 shades_sampler = PeakShadesSampler.make(window_size=cfg.window_size,
-                                genome=genome,
-                                tf_peaks=[valid_bed], # type: ignore
-                                friend_peaks=friends_peaks,
-                                black_list_regions=valid_black_list,
-                                sample_per_object=cfg.shades_cfg.balance,
-                                max_dist=cfg.shades_cfg.max_dist,
-                                seed=cfg.seed)
+                                        genome=genome,
+                                        tf_peaks=[valid_bed], # type: ignore
+                                        friend_peaks=friends_peaks,
+                                        black_list_regions=valid_black_list,
+                                        min_dist=cfg.shades_cfg.min_dist, 
+                                        max_dist=cfg.shades_cfg.max_dist,
+                                        sample_per_object=cfg.shades_cfg.balance,
+                                        seed=cfg.seed)
 samples['shades'] = shades_sampler.sample_bed()
 friends_peaks.append(samples['shades'])
 
@@ -172,6 +177,7 @@ foreign_sampler = PeakForeignSampler.make(window_size=cfg.window_size,
                                         real_peaks=foreign_beds,
                                         friend_peaks=friends_peaks,
                                         black_list_regions=valid_black_list,
+                                        min_dist=cfg.foreign_cfg.min_dist,
                                         sample_per_object=cfg.foreign_cfg.balance,
                                         seed=cfg.seed)
 
@@ -184,6 +190,7 @@ genome_sampler = PeakGenomeSampler.make(window_size=cfg.window_size,
                                 tf_peaks=[valid_bed], # type: ignore
                                 friend_peaks=friends_peaks,
                                 black_list_regions=valid_black_list,
+                                min_dist=cfg.foreign_cfg.min_dist,
                                 sample_per_object=cfg.genome_sample_cfg.balance,
                                 exact=cfg.genome_sample_cfg.exact,
                                 max_overlap=cfg.genome_sample_cfg.max_overlap,

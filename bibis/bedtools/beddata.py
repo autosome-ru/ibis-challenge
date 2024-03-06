@@ -252,6 +252,11 @@ class BedData:
     def sort_by(self, key_fn) -> 'BedData':
         cls = type(self)
         return cls(sorted(self.entries, key=key_fn), sorted=False)
+    
+    def to_min_width(self, width: int, genome: Genome, copy_meta: bool = False):
+        return self.apply(lambda e: e.to_min_width(width=width,
+                                                   genome=genome,
+                                                   copy_meta=copy_meta))
 
 def join_bed(beds: Iterable[BedData],  sort=True) -> BedData:
     if any(not x.sorted for x in beds):
