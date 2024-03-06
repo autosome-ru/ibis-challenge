@@ -7,7 +7,9 @@ from collections import defaultdict
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
-
+parser.add_argument("--out_dir",
+                    type=str,
+                    required=True)
 parser.add_argument("--bibis_root",
                     default="/home_local/dpenzar/bibis_git/ibis-challenge",
                     type=str)
@@ -17,6 +19,7 @@ parser.add_argument("--logger_name",
                     default="parse_sms")
 parser.add_argument("--recalc",
                     action="store_true")
+
 args = parser.parse_args()
 sys.path.append(args.bibis_root)
 
@@ -34,7 +37,7 @@ UNPUBLISHED_SMS_DIR = Path("/home_local/vorontsovie/greco-data/release_8d.2022-0
 PUBLISHED_SMS_DIR = Path("/home_local/vorontsovie/greco-data/release_8d.2022-07-31/full/SMS.published")
 STAGES = ('Final', 'Leaderboard')
 
-OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/SMS/RAW/")
+OUT_DIR = Path(args.out_dir)
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 logger.info("Reading ibis metainfo for SMS data")

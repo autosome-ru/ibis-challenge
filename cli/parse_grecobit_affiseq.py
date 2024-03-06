@@ -10,6 +10,9 @@ from pathlib import Path
 import sys 
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--out_dir",
+                    type=str,
+                    required=True)
 parser.add_argument("--genome",
                     help="Genome fasta",
                     type=str,
@@ -160,7 +163,7 @@ SPLIT_SHEET_NAME = "v3 TrainTest marked (2023)"
 ILYA_DIR = Path("/home_local/vorontsovie/greco-data/release_8d.2022-07-31/full/AFS.Peaks/")
 TRAIN_INT = ILYA_DIR / "Train_intervals"
 VAL_INT = ILYA_DIR / "Val_intervals"
-OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/GHTS")
+OUT_DIR = Path(args.out_dir)
 
 
 logger.info("Reading ibis metainfo for AffiSeq")

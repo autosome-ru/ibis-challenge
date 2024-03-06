@@ -9,6 +9,9 @@ import argparse
 from collections import defaultdict
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--out_dir",
+                    type=str,
+                    required=True)
 parser.add_argument("--recalc", action="store_true")
 parser.add_argument("--calc_dir", help="Dir for calculation mapreduce operations", default="mapreduce_calc")
 parser.add_argument("--n_procs", type=int, default=20)
@@ -437,7 +440,7 @@ SPLIT_SHEET_NAME = "v3 TrainTest marked (2023)"
 HTS_DIR = Path("/home_local/vorontsovie/greco-data/release_8d.2022-07-31/full/HTS")
 STAGES = ('Final', 'Leaderboard')
 ZEROS_CYCLE_DIR = Path("/mnt/space/hughes/GHT-SELEXFeb2023/")
-OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/HTS/")
+OUT_DIR = Path(args.out_dir)
 OUT_RAW_DIR = OUT_DIR / "RAW"
 OUT_RAW_DIR.mkdir(parents=True, exist_ok=True)
 INDICES_SEP = " "

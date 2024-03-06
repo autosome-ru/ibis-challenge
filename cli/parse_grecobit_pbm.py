@@ -8,7 +8,9 @@ from collections import defaultdict
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
-
+parser.add_argument("--out_dir",
+                    type=str,
+                    required=True)
 parser.add_argument("--bibis_root",
                     default="/home_local/dpenzar/bibis_git/ibis-challenge",
                     type=str)
@@ -36,7 +38,7 @@ EXPTP2SPLIT = {"PBM.ME": "Train",
                "PBM.HK": "Val"}
 STAGES = ('Final', 'Leaderboard')
 
-OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/PBM")
+OUT_DIR = Path(args.out_dir)
 
 
 args = parser.parse_args()
