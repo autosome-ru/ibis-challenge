@@ -1,7 +1,6 @@
 # Project structure
 
 * bibis - main package, all tools for benchmarking, sampling, etc
-* safe_examples - toy examples without any possibility of data leakage
 * cli - command-line-wrappers
 
 # PWMEval
