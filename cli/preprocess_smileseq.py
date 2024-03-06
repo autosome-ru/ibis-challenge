@@ -9,15 +9,15 @@ import argparse
 import math
 import random 
 
-TEST_SEQ_LENGTH = 40
-RAW_DIR =  Path("/home_local/dpenzar/BENCH_FULL_DATA/SMS/RAW/")
-STAGES = ('Leaderboard', 'Final')
-ZERO_DIR = Path("/mnt/space/depla/INPUT_libs")
 
-OUT_DIR = Path("/home_local/dpenzar/BENCH_FULL_DATA/SMS/")
-OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--in_dir",
+                    type=str,
+                    required=True)
+parser.add_argument("--out_dir",
+                    type=str,
+                    required=True)
 parser.add_argument("--recalc_unique", action="store_true")
 parser.add_argument("--bibis_root",
                     default="/home_local/dpenzar/bibis_git/ibis-challenge",
@@ -30,6 +30,8 @@ parser.add_argument("--seed", type=int, default=777)
 
 args = parser.parse_args()
 
+
+
 sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
 
 from bibis.sms.config import SMSRawConfig
@@ -38,6 +40,15 @@ from bibis.logging import get_logger, BIBIS_LOGGER_CFG
 
 BIBIS_LOGGER_CFG.set_path(path=args.log_path)
 logger = get_logger(name=args.logger_name, path=args.log_path)
+
+TEST_SEQ_LENGTH = 40
+
+STAGES = ('Leaderboard', 'Final')
+ZERO_DIR = Path("/mnt/space/depla/INPUT_libs")
+
+RAW_DIR =  Path(args.in_dir)
+OUT_DIR = Path(args.out_dir)
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 def log_splits(cfg: SMSRawConfig, splits: list[str]=None):
     if splits is None:
