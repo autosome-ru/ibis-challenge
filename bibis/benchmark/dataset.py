@@ -34,13 +34,7 @@ class DatasetInfo:
         return cls(**dt)
 
     def to_dict(self) -> dict[str, str]:
-        return asdict(self)
-    
-    def write_tsv(self, path: str | Path):
-        entries = read_fasta(self.fasta_path)
-        entries2tsv(entries=entries,
-                    path=path)
-        
+        return asdict(self)        
                 
     def answer(self) -> dict[str, Label]:
         if self.answer_path is None:
