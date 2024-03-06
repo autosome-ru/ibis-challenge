@@ -2,7 +2,6 @@ import sys
 
 sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
 
-
 import argparse
 from dataclasses import dataclass
 from pathlib import Path

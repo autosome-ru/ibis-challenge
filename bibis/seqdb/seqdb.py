@@ -115,9 +115,10 @@ class TagDatabase:
     def taggify_entries(self, entries: list[SeqEntry]):
         entry_mapping = {self.seq2str(e.sequence) : e for e in entries}
         seq_tags = self.taggify(list(entry_mapping.keys()))
-        for s, t in seq_tags.items():
-            e = entry_mapping[s]
-            e.tag = t
+        for entry in entries:
+            s = self.seq2str(entry.sequence)
+            t = seq_tags[s]
+            entry.tag = t
         return entries
     
     

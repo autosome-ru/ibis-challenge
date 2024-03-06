@@ -106,3 +106,12 @@ def write(entries: Iterable[SeqEntry], handle: io.TextIOWrapper | Path | str, fo
             return write_fasta(entries, handle)
         case _:
             raise NotImplementedError(f"No method to write to {format}")
+        
+def drop_duplicates(entries: list[SeqEntry]) -> list[SeqEntry]:
+    """
+    remove duplicates (sequences)
+    """
+    mapping: dict[Seq, SeqEntry] = {}
+    for en in entries:
+        mapping[en.sequence] = en
+    return list(mapping.values())

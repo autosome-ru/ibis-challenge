@@ -257,6 +257,15 @@ class BedData:
         return self.apply(lambda e: e.to_min_width(width=width,
                                                    genome=genome,
                                                    copy_meta=copy_meta))
+    
+    # remove duplicate regions (in terms of start, end, chron)
+    def drop_duplicates(self) -> 'BedData':
+        mapping = {}
+        for en in self.entries:
+            mapping[(en.chr, en.start, en.end)] = en
+        entries = list(mapping.values())
+        return BedData(entries)
+
 
 def join_bed(beds: Iterable[BedData],  sort=True) -> BedData:
     if any(not x.sorted for x in beds):

@@ -93,7 +93,7 @@ cfg = SMSRawConfig.load(args.config_file)
 log_splits(cfg)
 
 with open(args.unique_seqs_path, "r") as inp:
-    unique_seqs2flanks = json.load(inp)
+    unique_seqs2flanks: dict[str, tuple[str, str]] = json.load(inp)
 
 friend_seqs = set()
 
@@ -199,8 +199,13 @@ for dataset_name, samples in seq_datasets.items():
 
     flanked_samples = []
     for entry in samples:
-        lf, rf = entry.metainfo['flanks']
-        flanked_seq = lf[1:] + str(entry.sequence) + rf[1:] 
+        seq = str(entry.sequence)
+        if dataset_name == "input":
+            lf, rf = unique_seqs2flanks.get(seq, ZERO_FLANKS) 
+        else:
+            lf, rf = unique_seqs2flanks[seq]
+
+        flanked_seq = lf[1:] + seq + rf[1:] 
         flanked_entry = SeqEntry(sequence=Seq(flanked_seq),
                                  tag=entry.tag,
                                  label=entry.label)

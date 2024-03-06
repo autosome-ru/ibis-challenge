@@ -5,11 +5,15 @@ from pathlib import Path
 from dataclasses import dataclass, asdict
 
 from typing import ClassVar
+from venv import logger
 
 from ..benchmark.dataset import DatasetInfo, seqentry2interval_key
 from ..seq.seqentry import SeqEntry, read as seq_read
 from ..seq.seqentry import write as seq_write
 from ..scoring.label import POSITIVE_LABEL, NEGATIVE_LABEL
+from ..logging import get_bibis_logger
+
+logger = get_bibis_logger()
 
 @dataclass
 class ShadesConfig:
@@ -97,13 +101,21 @@ class PeakSeqDatasetConfig:
     
     def get_negatives(self, background: str) -> list[SeqEntry]:
         if background in self.BACKGROUNDS:
-            return seq_read(self.part_path(part=background,
-                                        fmt="fasta"))
+            part_path = self.part_path(part=background,
+                                        fmt="fasta")
+            if not part_path.exists():
+                logger.warning(f"Skipping {background}: doesn't exists")
+                return []
+            return seq_read(part_path)
         elif background == self.FULL_BCK_NAME:
             seqs = []
             for bck in self.BACKGROUNDS:
-                ss = seq_read(self.part_path(part=bck,
-                                        fmt="fasta"))
+                part_path = self.part_path(part=bck,
+                                        fmt="fasta")
+                if not part_path.exists():
+                    logger.warning(f"Skipping {background}: doesn't exists")
+                    continue
+                ss = seq_read(part_path)
                 seqs.extend(ss)
             return seqs                 
         else:

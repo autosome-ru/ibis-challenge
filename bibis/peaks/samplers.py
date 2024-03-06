@@ -4,7 +4,7 @@ from copy import copy
 from pathlib import Path
 
 
-from ..seq.seqentry import SeqEntry
+from ..seq.seqentry import SeqEntry, drop_duplicates
 from ..seq.genome import Genome
 from ..bedtools.beddata import BedData, join_bed
 from ..bedtools.bedentry import BedEntry
@@ -31,7 +31,6 @@ def cut_to_window(bed: BedData, window_size: int, genome: Genome) -> BedData:
         else:
             logger.info("Skipping entry as it out of genome after resizing")
     return BedData(cut_peaks)
-    
 
 @dataclass
 class PeakForeignSampler:
@@ -76,8 +75,8 @@ class PeakForeignSampler:
         foreign = cut_to_window(foreign,
                                  window_size=window_size,
                                  genome=genome) 
-            
         foreign_seqs = genome.cut(foreign)
+        foreign_seqs = drop_duplicates(foreign_seqs)
         
         sampler = SetGCSampler.make(negatives=foreign_seqs,
                                     sample_per_object=sample_per_object,

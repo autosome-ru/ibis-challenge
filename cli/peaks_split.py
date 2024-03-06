@@ -62,6 +62,7 @@ from bibis.seq.genome import Genome
 from bibis.seq.seqentry import SeqEntry, write as seq_write
 from bibis.bedtools.bedtoolsexecutor import BedtoolsExecutor
 from bibis.logging import get_logger, BIBIS_LOGGER_CFG
+from bibis.scoring.label import NO_LABEL
 
 BIBIS_LOGGER_CFG.set_path(path=args.log_path)
 logger = get_logger(name=args.logger_name, path=args.log_path)
@@ -156,9 +157,17 @@ else:
 valid_bed = valid_bed.to_min_width(width=cfg.window_size, 
                                    genome=genome)
 
-samples: dict[str, BedData] = {"positives": cut_to_window(bed=valid_bed, 
-                                                          window_size=cfg.window_size,
-                                                          genome=genome)}
+positives_bed = cut_to_window(bed=valid_bed, 
+                              window_size=cfg.window_size,
+                              genome=genome)
+before_filter_pos_cnt = len(positives_bed)
+positives_bed = positives_bed.subtract(valid_black_list, 
+                       full=True)
+removed_cnt = before_filter_pos_cnt - len(positives_bed)
+if removed_cnt != 0:
+    logger.warning(f"Removed {removed_cnt} positive seqs as containing N")
+
+samples: dict[str, BedData] = {"positives": positives_bed}
 
 logger.info("Creating shades")    
 shades_sampler = PeakShadesSampler.make(window_size=cfg.window_size,
@@ -213,8 +222,9 @@ parts_dir.mkdir(exist_ok=True)
 user_known_samples: list[SeqEntry] = []
 for name, bed in samples.items():
     fas = genome.cut(bed)
+    assert len(fas) == len(set(s.sequence for s in fas))
     fas = db.taggify_entries(fas)
-    user_known_samples.extend(user_known_samples)
+    user_known_samples.extend(fas)
     table_path = parts_dir / f"{name}.tsv"
     with open(table_path, "w") as out:
         for entry, seq in zip(bed, fas):
@@ -242,14 +252,19 @@ for background in ('shades', 'aliens', 'random'):
     ds_dir = answer_dir / background
     ds_dir.mkdir(exist_ok=True)
     ds_info = ds.make_ds(background=background,
-                            path_pref=str(ds_dir / "data"),
-                            hide_labels=False)
+                         path_pref=str(ds_dir / "data"),
+                         hide_labels=False)
     
     filepath = answer_dir / background / f"config.json"
     ds_info.save(filepath)
 
+logger.info(f"Writing participants sequence file")
 participants_valid_dir = valid_dir / "participants"
 participants_valid_dir.mkdir(exist_ok=True)
 participants_fasta_path = participants_valid_dir / "submission.fasta"
+logger.info(f"Total user sequences: {len(user_known_samples)}")
 random.shuffle(user_known_samples)
+for entry in user_known_samples:
+    entry.label = NO_LABEL
+    entry.metainfo = {}
 seq_write(user_known_samples, participants_fasta_path)

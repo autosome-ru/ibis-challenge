@@ -12,7 +12,6 @@ from functools import partial
 import multiprocessing
 import tqdm 
 
-import sys
 from copy import copy
 
 from .sample_bed import sample_from_bed

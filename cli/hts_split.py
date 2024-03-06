@@ -10,19 +10,6 @@ from Bio.Seq import Seq
 import random
 import numpy as np 
 
-# duplicated code with parse_grecobit_htselex.py
-def log_splits(cfg: HTSRawConfig, splits: list[str]=None):
-    if splits is None:
-        splits = ['train', 'test']
-
-    for split in splits:
-        datasets = cfg.splits.get(split)
-        if datasets is None:
-            logger.info(f"For factor {cfg.tf_name} no replics are going to {split}")
-        else:
-            reps = ", ".join(datasets.keys())
-            logger.info(f"For factor {cfg.tf_name} the following replics are going to {split}: {reps}")    
-
 def load_ds2flanks(path):
     with open(path) as inp:
         dt = json.load(inp)
@@ -97,6 +84,19 @@ from bibis.utils import merge_fastqgz
 from bibis.sampling.reservoir import (AllSelector,  
                                       PredefinedSizeUniformSelector)
 from bibis.logging import get_logger, BIBIS_LOGGER_CFG
+
+# duplicated code with parse_grecobit_htselex.py
+def log_splits(cfg: HTSRawConfig, splits: list[str]=None):
+    if splits is None:
+        splits = ['train', 'test']
+
+    for split in splits:
+        datasets = cfg.splits.get(split)
+        if datasets is None:
+            logger.info(f"For factor {cfg.tf_name} no replics are going to {split}")
+        else:
+            reps = ", ".join(datasets.keys())
+            logger.info(f"For factor {cfg.tf_name} the following replics are going to {split}: {reps}")    
 
 BIBIS_LOGGER_CFG.set_path(path=args.log_path)
 logger = get_logger(name=args.logger_name, path=args.log_path)
