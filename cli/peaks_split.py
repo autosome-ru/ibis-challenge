@@ -43,6 +43,8 @@ parser.add_argument("--log_path",
                     default='log.txt')
 parser.add_argument("--logger_name",
                     default="peaks_split")
+parser.add_argument("--recalc",
+                    action="store_true")
 
 args = parser.parse_args()
 
@@ -107,7 +109,10 @@ if "test" not in cfg.splits:
 logger.info("Creating test datasets")
 valid_dir = CHS_BENCH_DIR / "valid" / cfg.tf_name
 valid_dir.mkdir(exist_ok=True, parents=True)
-
+if not args.recalc and valid_dir.exists():
+    logger.info("Skipping dataset writing as datasets dir already exist and recalc flag is not specified")
+    exit(0)
+    
 split = cfg.splits["test"]
 
 if len(split.reps) != 1:
