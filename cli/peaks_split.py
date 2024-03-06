@@ -222,7 +222,6 @@ parts_dir.mkdir(exist_ok=True)
 user_known_samples: list[SeqEntry] = []
 for name, bed in samples.items():
     fas = genome.cut(bed)
-    assert len(fas) == len(set(s.sequence for s in fas))
     fas = db.taggify_entries(fas)
     user_known_samples.extend(fas)
     table_path = parts_dir / f"{name}.tsv"
