@@ -1,4 +1,5 @@
 from logging import warning
+from pyclbr import Class
 import sys
 import string 
 from pathlib import Path
@@ -35,6 +36,8 @@ class PWMSubmission:
     POSSIBLE_CHARS: ClassVar[set[str]] = set(string.ascii_lowercase + string.ascii_uppercase + string.digits + "_")
     MAX_PRECISION: ClassVar[int] = 5
     MAX_1_DIFF: ClassVar[float] = 0.0015
+    MIN_PWM_LENGTH: ClassVar[int] = 5
+    MAX_PWM_LENGTH: ClassVar[int] = 30
     
     
     def split_into_pfms(self, dir_path: Path | str) -> list[PFMInfo]:
@@ -132,8 +135,11 @@ class PWMSubmission:
             if not waiting_for_header:
                 chunks[tag] = (tf, lines)
         for tag, (_, lines) in chunks.items():
-            if len(lines) == 0:
-                raise PWMSubmissionFormatException(f"Each matrix should contain at least one row with nucleotide frequencies: {tag}")
+            pwm_len = len(lines)
+            if pwm_len > self.MAX_PWM_LENGTH:
+                raise PWMSubmissionFormatException(f"Each matrix should contain no more than {self.MAX_PWM_LENGTH} rows with nucleotide frequencies: {tag}")
+            if pwm_len < self.MIN_PWM_LENGTH:
+                raise PWMSubmissionFormatException(f"Each matrix should contain at least {self.MIN_PWM_LENGTH} rows with nucleotide frequencies: {tag}")
         return chunks, warnings
                                  
     def validate(self, cfg: BenchmarkConfig) -> ValidationResult:
