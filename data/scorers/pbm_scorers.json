@@ -6,7 +6,6 @@
         "backgrounds": ["all"]
     },
     {
-        "name": "prroc_prauc",
         "alias": "auPRC",
         "params": {"type": "integral"},
         "backgrounds": ["all"]
