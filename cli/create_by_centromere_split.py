@@ -14,6 +14,9 @@ class Region:
     start: int
     end: int
 
+    def __len__(self) -> int:
+        return end - start 
+
 
 def write_regions(regions: list[Region], out_path: str | Path):
     with open(out_path, "w") as out:
@@ -77,12 +80,14 @@ for cent in centromers_joined:
     after = Region(chr=cent.chr,
                       start=cent.end,
                       end=len(chr_seq))
-    if ind % 2 == 0:
-        chs_hide.append(before)
-        ghts_hide.append(after)
-    else:
-        chs_hide.append(after)
-        ghts_hide.append(before)
+    ghts_h, chs_h = before, after  
+
+    if len(ghts_h) > len(chs_h): # not hide big arms for GHTS 
+        ghts_h, chs_h = chs_h, ghts_h
+
+    chs_hide.append(chs_h)
+    ghts_hide.append(ghts_h)
+    
 
 chs_hide_path = out_dir / "chs_hide.bed"
 ghts_hide_path = out_dir / "ghts_hide.bed"
