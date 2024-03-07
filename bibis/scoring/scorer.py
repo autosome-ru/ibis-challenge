@@ -376,7 +376,7 @@ class ScorerInfo:
             if tp is None:
                 raise Exception("type must be specified for prauc scorer from PRROC package")
             tp = tp.lower()
-            return PRROC_PRAUC_TOP50(self.alias, tp)
+            return PRROC_PRAUC_AVERAGED(self.alias, tp)
         elif self.name == "kendalltau":
             return KendallRank(self.alias)
         elif self.name == "constant_scorer":
