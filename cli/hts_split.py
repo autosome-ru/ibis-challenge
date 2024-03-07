@@ -258,7 +258,7 @@ db = DBConfig.load(BENCH_SEQDB_CFG).build()
 seq_datasets: dict[str, list[SeqEntry]] = {}
 
 user_known_samples: list[SeqEntry] = []
-logger.info("Collectiong positives dataset")
+logger.info("Collecting positives dataset")
 # benchmark part files
 with open(positives_path, "r") as inp:
     pos_samples: list[SeqEntry] = []
