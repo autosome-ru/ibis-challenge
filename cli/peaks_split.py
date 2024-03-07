@@ -265,5 +265,5 @@ logger.info(f"Total user sequences: {len(user_known_samples)}")
 random.shuffle(user_known_samples)
 for entry in user_known_samples:
     entry.label = NO_LABEL
-    entry.metainfo = {}
+
 seq_write(user_known_samples, participants_fasta_path)
