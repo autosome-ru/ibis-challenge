@@ -98,6 +98,7 @@ elif args.benchmark_kind in ("SMS", 'HTS'):
 else:
     raise Exception("No ordering implemented for benchmark {args.benchmark_kind}")
 
+entries_tags = [e.tag for e in final_entries]
 
 logger.info("Writing benchmark entries")
 participants_fasta_path = out_dir / "participants.fasta"
@@ -134,7 +135,7 @@ elif args.benchmark_kind  == "PBM":
 else:
     raise Exception("No config collection implemented for benchmark {args.benchmark_kind}")
 
-random.shuffle(all_tags)
+assert set(entries_tags) == set(all_tags), "Answer tags and entries task must match"
 
 
 logger.info("Writing benchmark config")
@@ -145,7 +146,7 @@ cfg = BenchmarkConfig(
     scorers=[ScorerInfo.from_dict(sc) for sc in scorers_dt],
     pwmeval_path=args.pwmeval,
     tfs=list(tfs),
-    tags=all_tags,
+    tags=entries_tags,
     metainfo={}    
 )
 
