@@ -183,17 +183,15 @@ class Benchmark:
     def score_prediction(self, ds: DatasetInfo, prediction: Prediction) -> dict[str, float]:
         #labelled_seqs = read_fasta(ds.path)
         answer = ds.answer()
-        if self.kind in ("CHS",  "GHTS", "PBM", "SMS", "HTS"):
-            if 'labels' in answer: 
-                true_y = list(map(int, answer['labels'].values()))
+        if self.kind in ("CHS",  "GHTS", "PBM", "SMS", "HTS"): 
+            true_y = list(map(int, answer['labels'].values()))
+            if 'groups' in answer:
                 y_group = np.array(list(answer['groups'].values()), 
                                    dtype=np.float32)
-                answer = answer['labels']
             else:
-                true_y = list(map(int, answer.values()))
                 y_group = None
             pred_y: list[float] = []
-            for tag in answer.keys():
+            for tag in answer['labels'].keys():
                 score = prediction.get(tag)
                 if score is None:
                     logger.warning(f"Prediction doesn't contain information for sequence {tag}, skipping prediction")
