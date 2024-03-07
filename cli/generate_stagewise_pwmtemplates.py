@@ -34,7 +34,8 @@ for stage in ('Leaderboard', 'Final'):
             for i in range(PWMSubmission.MAX_PWM_PER_TF):
                 tag = f"{tf}_motif{i+1}"
                 print(f">{tf} {tag}", file=out)
-                for i in range(np.random.randint(5, 31)):
+                for i in range(np.random.randint(PWMSubmission.MIN_PWM_LENGTH,
+                                             PWMSubmission.MAX_PWM_LENGTH)):
                     a, t, g, c = np.random.dirichlet([1,1,1,1])
                     p = PWMSubmission.MAX_PRECISION
                     print(f"{a:.0{p}f} {t:.0{p}f} {g:.0{p}f} {c:.0{p}f}", file=out)

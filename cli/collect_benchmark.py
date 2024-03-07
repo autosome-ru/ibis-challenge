@@ -170,7 +170,7 @@ for tf in score_template.tf_names:
     for tag in score_template.tags:
         score = answers.get((tf, tag), 0)
         if args.benchmark_kind == "HTS":
-            dcore = score / HTS_CYCLE_CNT
+            score = score / HTS_CYCLE_CNT
         score_template[tf][tag] = score
 
 ideal_aaa_path = out_dir / "aaa_ideal.tsv"
@@ -182,7 +182,8 @@ with open(pwm_submission_path, "w") as out:
         for i in range(PWMSubmission.MAX_PWM_PER_TF):
             tag = f"{tf}_motif{i+1}"
             print(f">{tf} {tag}", file=out)
-            for i in range(np.random.randint(3, 11)):
+            for i in range(np.random.randint(PWMSubmission.MIN_PWM_LENGTH,
+                                             PWMSubmission.MAX_PWM_LENGTH)):
                 a, t, g, c = np.random.dirichlet([1,1,1,1])
                 p = PWMSubmission.MAX_PRECISION
                 print(f"{a:.0{p}f} {t:.0{p}f} {g:.0{p}f} {c:.0{p}f}", file=out)
