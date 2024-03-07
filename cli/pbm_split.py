@@ -64,7 +64,10 @@ if len(cfg.train_paths) != 0:
     train_dir = PBM_BENCH_DIR / "train" / cfg.tf_name
     train_dir.mkdir(exist_ok=True, parents=True)
     for path in cfg.train_paths:
-        shutil.copy(path, train_dir / Path(path).name)
+        path = Path(path)
+        preprocessing = path.parents[1].name
+        rep = path.name
+        shutil.copy(path, train_dir / f"{preprocessing}_{path.name}")
 
     # just copy file without any modification
 

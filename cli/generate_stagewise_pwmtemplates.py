@@ -25,7 +25,7 @@ templates_dir = Path(args.templates_dir)
 
 print(benchmark)
 for stage in ('Leaderboard', 'Final'):
-    stage_tfs = list(set(p.name for p in benchmark.glob("*/{stage}/valid/*")))
+    stage_tfs = list(set(p.name for p in benchmark.glob(f"*/{stage}/valid/*")))
 
     pwm_submission_path = templates_dir / f"{stage}_pwm_submission.txt"
 
