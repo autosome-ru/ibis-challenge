@@ -53,7 +53,7 @@ sys.path.append(args.bibis_root) # temporary solution while package is in develo
 from bibis.seqdb.config import DBConfig 
 from bibis.peaks.config import PeakSeqConfig, PeakSeqDatasetConfig
 from bibis.peaks.peakfile import PeakList
-from bibis.bedtools.beddata import BedData
+from bibis.bedtools.beddata import BedData, join_bed
 from bibis.peaks.samplers import (PeakForeignSampler, 
                                   PeakShadesSampler,
                                   PeakGenomeSampler,
@@ -138,6 +138,10 @@ foreign_beds = [bed.filter(lambda e: e.chr in split.chroms) for bed in foreign_b
 
 if cfg.black_list_path is not None:
     black_list = BedData.from_file(cfg.black_list_path)
+    assert split.hide_regions is not None
+    logger.info(f"Hiding regions {split.hide_regions} from test")
+    hide_regions = BedData.from_file(split.hide_regions)
+    black_list = join_bed([black_list, hide_regions]).merge()
 else:
     black_list = None
 
