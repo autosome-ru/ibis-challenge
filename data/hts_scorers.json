@@ -3,13 +3,13 @@
         "name": "prroc_rocauc_averaged",
         "alias": "mauROC",
         "params": {},
-        "backgrounds": ["all"]
+        "backgrounds": ["input", "aliens"]
     },
     {
         "name": "prroc_prauc_averaged",
         "alias": "mauPRC",
         "params": {"type": "integral"},
-        "backgrounds": ["all"]
+        "backgrounds": ["input", "aliens"]
 
     },
     {
