@@ -170,7 +170,8 @@ for tf in score_template.tf_names:
     for tag in score_template.tags:
         score = answers.get((tf, tag), 0)
         if args.benchmark_kind == "HTS":
-            score_template[tf][tag] = score / HTS_CYCLE_CNT
+            dcore = score / HTS_CYCLE_CNT
+        score_template[tf][tag] = score
 
 ideal_aaa_path = out_dir / "aaa_ideal.tsv"
 score_template.write(ideal_aaa_path)    
