@@ -31,6 +31,12 @@ parser.add_argument("--pwmeval",
 parser.add_argument("--bibis_root",
                     default="/home_local/dpenzar/bibis_git/ibis-challenge",
                     type=str)
+parser.add_argument("--log_path",
+                    default="log.txt",
+                    type=str)
+parser.add_argument("--logger_name",
+                    default=None,
+                    type=str)
 args = parser.parse_args()
 
 sys.path.append(args.bibis_root)
@@ -41,11 +47,17 @@ from bibis.scoring.scorer import ScorerInfo
 from bibis.benchmark.score_submission import ScoreSubmission
 from bibis.benchmark.pwm_submission import PWMSubmission
 from bibis.seq.seqentry import SeqEntry, read_fasta, write_fasta
+from bibis.logging import get_logger, BIBIS_LOGGER_CFG
+BIBIS_LOGGER_CFG.set_path(path=args.log_path)
+log_name = args.logger_name
+if log_name is None:
+    log_name = f"collect_{args.benchmark_kind}"
+logger = get_logger(name=log_name, path=args.log_path)
 
 benchmark = Path(args.benchmark_root)
 
 HTS_CYCLE_CNT = 4
-
+logger.info(f"Collecting benchmark {args.benchmark_kind} {args.benchmark_name} ")
 if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS", "HTS"):   
     ds_cfg_paths = benchmark / "valid" / "*" / "answer" / "*" / "config.json"
 
@@ -54,6 +66,7 @@ if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS", "HTS"):
 else:
     raise Exception(f"No config collection implemented for benchmark {args.benchmark_kind}")
 
+logger.info("Collecting scorers info")
 with open(args.scorers, "r") as out:
     scorers_dt = json.load(out)
 
@@ -62,8 +75,7 @@ out_dir.mkdir(parents=True, exist_ok=True)
 
 datasets = [DatasetInfo.load(p) for p in config_paths]
 
-
-# WRITING PARTICIPANTS INFO
+logger.info(f"Reading participants information")
 if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS", "HTS"):          
     sub_fasta_paths = glob.glob(str(benchmark / "valid" / "*" / "participants" / "*.fasta"))
     assert len(sub_fasta_paths) > 0
@@ -75,6 +87,7 @@ if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS", "HTS"):
 else:
     raise Exception("No sequence collection implemented for benchmark {args.benchmark_kind}")
 
+logger.info("Shuffling benchmark entries")
 final_entries = list(unique_entries.values())
 if args.benchmark_kind in ("GHTS", "CHS"): 
     final_entries.sort(key=seqentry2interval_key)
@@ -86,6 +99,7 @@ else:
     raise Exception("No ordering implemented for benchmark {args.benchmark_kind}")
 
 
+logger.info("Writing benchmark entries")
 participants_fasta_path = out_dir / "participants.fasta"
 write_fasta(entries=final_entries, 
             handle=participants_fasta_path)
@@ -101,6 +115,7 @@ tags = {}
 answers = {}
 tfs = set()
 
+logger.info("Reading benchmark labels")
 ds_names = set()
 for ds in datasets:
     tfs.add(ds.tf)
@@ -121,6 +136,8 @@ else:
 
 random.shuffle(all_tags)
 
+
+logger.info("Writing benchmark config")
 cfg = BenchmarkConfig(
     name=args.benchmark_name,
     kind=args.benchmark_kind,
@@ -136,7 +153,7 @@ cfg_path = out_dir / f"benchmark.json"
 cfg.save(cfg_path)
 
 ## WRITING TEMPLATES
-
+logger.info("Writing template submissions")
 score_template = ScoreSubmission.template(tag_col_name="tag",
                                           tf_names=cfg.tfs,
                                           tags=cfg.tags)

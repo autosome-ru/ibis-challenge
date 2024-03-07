@@ -1,7 +1,5 @@
 
 import argparse
-from cgi import test
-import logging
 import pandas as pd
 import glob 
 import parse
