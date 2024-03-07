@@ -59,7 +59,7 @@ for ch, cents in groupby(centromers, key = lambda x: x.chr):
     cent = Region(chr=ch, start=start, end=end)
     centromers_joined.append(cent)
 
-joined_centromers_path = out_dir / "joined_cents.bed"
+joined_centromers_path = out_dir / "joined_centromers.bed"
 write_regions(centromers_joined, joined_centromers_path)
 
 genome = Genome.from_dir(args.genome)

@@ -1,0 +1,2 @@
+blacklist regions `hg38-blacklist.v2.bed` are downloaded from https://github.com/Boyle-Lab/Blacklist/blob/master/lists/hg38-blacklist.v2.bed.gz
+centromer regions are downloaded using https://genome.ucsc.edu/cgi-bin/hgTables
