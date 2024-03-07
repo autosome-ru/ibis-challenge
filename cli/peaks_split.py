@@ -169,7 +169,7 @@ positives_bed = positives_bed.subtract(valid_black_list,
                        full=True)
 removed_cnt = before_filter_pos_cnt - len(positives_bed)
 if removed_cnt != 0:
-    logger.warning(f"Removed {removed_cnt} positive seqs as containing N")
+    logger.warning(f"Removed {removed_cnt} positive seqs as containing N or sequences from prohibited regions")
 
 samples: dict[str, BedData] = {"positives": positives_bed}
 
