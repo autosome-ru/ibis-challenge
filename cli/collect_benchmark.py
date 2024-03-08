@@ -189,3 +189,19 @@ with open(pwm_submission_path, "w") as out:
                 p = PWMSubmission.MAX_PRECISION
                 print(f"{a:.0{p}f} {t:.0{p}f} {g:.0{p}f} {c:.0{p}f}", file=out)
             print(file=out)
+
+
+
+template_cfg = BenchmarkConfig(
+    name=args.benchmark_name,
+    kind=args.benchmark_kind,
+    datasets=[],
+    scorers=[ScorerInfo.from_dict(sc) for sc in scorers_dt],
+    pwmeval_path="",
+    tfs=list(tfs),
+    tags=entries_tags,
+    metainfo={}    
+)
+
+cfg_path = out_dir / f"participants_benchmark.json"
+template_cfg.save(cfg_path)

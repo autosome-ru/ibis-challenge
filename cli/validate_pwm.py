@@ -26,11 +26,10 @@ parser.add_argument("--pwm_sub",
 args = parser.parse_args()
 
 cfg = BenchmarkConfig.from_json(args.benchmark)
-bench_tfs = set([ds.tf for ds in cfg.datasets])
 
 subm = PWMSubmission(name="to_validate",
                      path=args.pwm_sub,
-                     available_tfs=bench_tfs)
+                     available_tfs=cfg.tfs)
 
 try:
     val_res = subm.validate(cfg) 
