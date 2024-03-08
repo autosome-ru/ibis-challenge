@@ -187,7 +187,7 @@ genome_sampler = PeakGenomeSampler.make(window_size=cfg.window_size,
                                 seed=cfg.seed)
 
 samples['random'] = genome_sampler.sample_bed()
-friends_peaks.append(samples['random'])
+#friends_peaks.append(samples['random'])
 
 logger.info("Creating shades")    
 shades_sampler = PeakShadesSampler.make(window_size=cfg.window_size,
@@ -200,7 +200,7 @@ shades_sampler = PeakShadesSampler.make(window_size=cfg.window_size,
                                         sample_per_object=cfg.shades_cfg.balance,
                                         seed=cfg.seed)
 samples['shades'] = shades_sampler.sample_bed()
-friends_peaks.append(samples['shades'])
+#friends_peaks.append(samples['shades'])
 
 logger.info("Creating aliens")    
 foreign_sampler = PeakForeignSampler.make(window_size=cfg.window_size,
@@ -214,7 +214,7 @@ foreign_sampler = PeakForeignSampler.make(window_size=cfg.window_size,
                                         seed=cfg.seed)
 
 samples['aliens'] = foreign_sampler.sample_bed()
-friends_peaks.append(samples['aliens'])
+#friends_peaks.append(samples['aliens'])
 
 
 
