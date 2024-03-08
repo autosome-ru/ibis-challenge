@@ -388,13 +388,13 @@ class GenomeGCSampler:
         
         while positive_gc.shape[0] * self.sample_per_object > negative_gc.shape[0] and custom_minpoint_dist != 1:
             custom_minpoint_dist = custom_minpoint_dist // 2 + 1
-            print(f"Changing min point specified to {custom_minpoint_dist} as too many negatives are required")
+            logger.warning(f"Changing min point specified to {custom_minpoint_dist} as too many negatives are required")
             chr_profile = self.get_chrom_profile(ch=chr,
                                              min_point_dist=custom_minpoint_dist)
             negative_gc, neg_positions = chr_profile.gc, chr_profile.idx
         
         if positive_gc.shape[0] * self.sample_per_object > negative_gc.shape[0]:
-            print(f"Can't sample: requested sample size is smaller, then negatives number: {positive_gc.shape[0] * self.sample_per_object}, {negative_gc.shape[0]}", file=sys.stderr)
+            logger.warning(f"Can't sample: requested sample size is smaller, then negatives number: {positive_gc.shape[0] * self.sample_per_object}, {negative_gc.shape[0]}")
             
             entries = []
             part_window = self.window_size // 2
