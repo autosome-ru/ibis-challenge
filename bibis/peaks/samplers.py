@@ -216,7 +216,6 @@ class PeakGenomeSampler:
             prohibit_peaks.extend(friend_peaks)
         if black_list_regions is not None:
             prohibit_peaks.append(black_list_regions)
-            
 
         prohibit = join_bed(prohibit_peaks)
         

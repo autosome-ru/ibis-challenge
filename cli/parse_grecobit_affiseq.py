@@ -20,7 +20,8 @@ parser.add_argument("--black_list_regions",
                     default=None,
                     type=str)
 parser.add_argument("--valid_hide_regions", 
-                    required=True, 
+                    required=False,
+                    default=None,
                     type=str)
 parser.add_argument('--train_chroms',
                     help="Chromosoms, for training", 

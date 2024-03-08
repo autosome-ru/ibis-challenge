@@ -136,21 +136,44 @@ else:
 train_beds = [bed.filter(lambda e: e.chr in split.chroms) for bed in train_beds]
 foreign_beds = [bed.filter(lambda e: e.chr in split.chroms) for bed in foreign_beds]
 
-if cfg.black_list_path is not None:
-    black_list = BedData.from_file(cfg.black_list_path)
-    assert split.hide_regions is not None
-    logger.info(f"Hiding regions {split.hide_regions} from test")
+# Add valid bed to friends peaks before removing any regions from it
+friends_peaks = list(train_beds)
+friends_peaks.append(valid_bed)
+
+if split.hide_regions is not None:
     hide_regions = BedData.from_file(split.hide_regions)
-    black_list = join_bed([black_list, hide_regions]).merge()
+    logger.info(f"Hiding regions {split.hide_regions} from test")
+
+    before_filter_pos_cnt = len(valid_bed)
+    valid_bed = valid_bed.subtract(hide_regions, 
+                                       full=True)
+    removed_cnt = before_filter_pos_cnt - len(valid_bed)
+    logger.info(f"Removed {removed_cnt}/{before_filter_pos_cnt} positive seqs as sequences from regions to hide")
 else:
-    black_list = None
+    logger.info(f"No regions to hide provided")
+    hide_regions = None
+
+if cfg.black_list_path is not None:
+    black_list = BedData.from_file(cfg.black_list_path)  
+
+    before_filter_pos_cnt = len(valid_bed)
+    valid_bed = valid_bed.subtract(black_list, 
+                                       full=True)
+    removed_cnt = before_filter_pos_cnt - len(valid_bed)
+    logger.info(f"Removed {removed_cnt}/{before_filter_pos_cnt} positive seqs as containing N or sequences from prohibited regions")
+
+    if hide_regions is not None:
+        black_list = join_bed([black_list, hide_regions]).merge()
+else:
+    logger.info(f"No blacklist regions provided")
+    black_list = hide_regions
 
 if black_list is not None:
     valid_black_list = black_list.filter(lambda e: e.chr in split.chroms)
 else:
     valid_black_list = None
 
-friends_peaks = list(train_beds)
+
 logger.info("Downloading genome")
 gpath = Path(cfg.genome_path)
 if gpath.is_dir():
@@ -160,18 +183,38 @@ else:
 
 valid_bed = valid_bed.to_min_width(width=cfg.window_size, 
                                    genome=genome)
-
 positives_bed = cut_to_window(bed=valid_bed, 
                               window_size=cfg.window_size,
                               genome=genome)
-before_filter_pos_cnt = len(positives_bed)
-positives_bed = positives_bed.subtract(valid_black_list, 
-                       full=True)
-removed_cnt = before_filter_pos_cnt - len(positives_bed)
-if removed_cnt != 0:
-    logger.warning(f"Removed {removed_cnt} positive seqs as containing N or sequences from prohibited regions")
 
 samples: dict[str, BedData] = {"positives": positives_bed}
+
+logger.info("Creating shades")    
+shades_sampler = PeakShadesSampler.make(window_size=cfg.window_size,
+                                        genome=genome,
+                                        tf_peaks=[valid_bed], # type: ignore
+                                        friend_peaks=friends_peaks,
+                                        black_list_regions=valid_black_list,
+                                        min_dist=cfg.shades_cfg.min_dist, 
+                                        max_dist=cfg.shades_cfg.max_dist,
+                                        sample_per_object=cfg.shades_cfg.balance,
+                                        seed=cfg.seed)
+samples['shades'] = shades_sampler.sample_bed()
+friends_peaks.append(samples['shades'])
+
+logger.info("Creating aliens")    
+foreign_sampler = PeakForeignSampler.make(window_size=cfg.window_size,
+                                        genome=genome,
+                                        tf_peaks=[valid_bed], # type: ignore
+                                        real_peaks=foreign_beds,
+                                        friend_peaks=friends_peaks,
+                                        black_list_regions=valid_black_list,
+                                        min_dist=cfg.foreign_cfg.min_dist,
+                                        sample_per_object=cfg.foreign_cfg.balance,
+                                        seed=cfg.seed)
+
+samples['aliens'] = foreign_sampler.sample_bed()
+friends_peaks.append(samples['aliens'])
 
 logger.info("Creating random genome samples")
 genome_sampler = PeakGenomeSampler.make(window_size=cfg.window_size,
@@ -187,36 +230,7 @@ genome_sampler = PeakGenomeSampler.make(window_size=cfg.window_size,
                                 seed=cfg.seed)
 
 samples['random'] = genome_sampler.sample_bed()
-#friends_peaks.append(samples['random'])
-
-logger.info("Creating shades")    
-shades_sampler = PeakShadesSampler.make(window_size=cfg.window_size,
-                                        genome=genome,
-                                        tf_peaks=[valid_bed], # type: ignore
-                                        friend_peaks=friends_peaks,
-                                        black_list_regions=valid_black_list,
-                                        min_dist=cfg.shades_cfg.min_dist, 
-                                        max_dist=cfg.shades_cfg.max_dist,
-                                        sample_per_object=cfg.shades_cfg.balance,
-                                        seed=cfg.seed)
-samples['shades'] = shades_sampler.sample_bed()
-#friends_peaks.append(samples['shades'])
-
-logger.info("Creating aliens")    
-foreign_sampler = PeakForeignSampler.make(window_size=cfg.window_size,
-                                        genome=genome,
-                                        tf_peaks=[valid_bed], # type: ignore
-                                        real_peaks=foreign_beds,
-                                        friend_peaks=friends_peaks,
-                                        black_list_regions=valid_black_list,
-                                        min_dist=cfg.foreign_cfg.min_dist,
-                                        sample_per_object=cfg.foreign_cfg.balance,
-                                        seed=cfg.seed)
-
-samples['aliens'] = foreign_sampler.sample_bed()
-#friends_peaks.append(samples['aliens'])
-
-
+friends_peaks.append(samples['random'])
 
 db = DBConfig.load(BENCH_SEQDB_CFG).build()
 

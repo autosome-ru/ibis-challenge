@@ -176,7 +176,7 @@ class GenomeGCSampler:
     sample_per_object: int = 1
     n_procs: int = 1
     exact: bool = True
-    allow_overlap_resise: bool = False
+    allow_overlap_resise: bool = True
     
     @staticmethod
     def _exact_profile(genome: Genome,
@@ -276,15 +276,13 @@ class GenomeGCSampler:
                   max_overlap: int | None = None,
                   sample_per_object: int = 1,
                   exact: bool = True,
-                  allow_overlap_resise: bool = False,
+                  allow_overlap_resise: bool = True,
                   precalc_profile: bool = False,
                   seed: int = 777,
                   n_procs: int = 1) -> 'GenomeGCSampler':
         if max_overlap is None:
             max_overlap = window_size // 2
         min_point_dist = window_size - max_overlap
-        
-        
         
         with tempfile.TemporaryDirectory() as tempdir:
             tempdir = Path(tempdir)
@@ -296,6 +294,7 @@ class GenomeGCSampler:
                                           cls.default_prohibited_regions(genome=genome,
                                                                          window_size=window_size)])
             negative_regions = blacklist_regions.complement(chroms_path)
+        negative_regions.write("/home_local/dpenzar/negative.bed")
 
         rng = np.random.default_rng(seed=seed)
         
@@ -327,7 +326,8 @@ class GenomeGCSampler:
                    sample_per_object=sample_per_object,
                    rng=rng,
                    n_procs=n_procs, 
-                   exact=exact)
+                   exact=exact,
+                   allow_overlap_resise=allow_overlap_resise)
 
     @classmethod
     def _calc_genome_profile_noparallel(cls, 
@@ -381,16 +381,19 @@ class GenomeGCSampler:
             return BedData()
         pos_seqs = self.genome.cut(positives)
         positive_gc = np.array([s.gc for s in pos_seqs])
-        
+
         chr_profile = self.get_chrom_profile(ch=chr,
                                              min_point_dist=None)
         negative_gc, neg_positions = chr_profile.gc, chr_profile.idx
 
         if self.allow_overlap_resise:
-            custom_minpoint_dist = self.min_point_dist
-            
-            while positive_gc.shape[0] * self.sample_per_object > negative_gc.shape[0] and custom_minpoint_dist != 1:
+            total_chr_len = sum(map(len, self.negative_regions.filter(lambda x: x.chr == chr)))
+            custom_minpoint_dist =  min(total_chr_len // (positive_gc.shape[0] * self.sample_per_object),
+                                        self.min_point_dist)
+
+            while positive_gc.shape[0] * self.sample_per_object > negative_gc.shape[0] and custom_minpoint_dist >= 1:
                 custom_minpoint_dist = custom_minpoint_dist // 2 + 1
+
                 logger.warning(f"Changing min point specified to {custom_minpoint_dist} as too many negatives are required")
                 chr_profile = self.get_chrom_profile(ch=chr,
                                                 min_point_dist=custom_minpoint_dist)
