@@ -173,6 +173,22 @@ if removed_cnt != 0:
 
 samples: dict[str, BedData] = {"positives": positives_bed}
 
+logger.info("Creating random genome samples")
+genome_sampler = PeakGenomeSampler.make(window_size=cfg.window_size,
+                                genome=genome,
+                                tf_peaks=[valid_bed], # type: ignore
+                                friend_peaks=friends_peaks,
+                                black_list_regions=valid_black_list,
+                                min_dist=cfg.foreign_cfg.min_dist,
+                                sample_per_object=cfg.genome_sample_cfg.balance,
+                                exact=cfg.genome_sample_cfg.exact,
+                                max_overlap=cfg.genome_sample_cfg.max_overlap,
+                                n_procs=args.n_procs,
+                                seed=cfg.seed)
+
+samples['random'] = genome_sampler.sample_bed()
+friends_peaks.append(samples['random'])
+
 logger.info("Creating shades")    
 shades_sampler = PeakShadesSampler.make(window_size=cfg.window_size,
                                         genome=genome,
@@ -200,21 +216,7 @@ foreign_sampler = PeakForeignSampler.make(window_size=cfg.window_size,
 samples['aliens'] = foreign_sampler.sample_bed()
 friends_peaks.append(samples['aliens'])
 
-logger.info("Creating random genome samples")
-genome_sampler = PeakGenomeSampler.make(window_size=cfg.window_size,
-                                genome=genome,
-                                tf_peaks=[valid_bed], # type: ignore
-                                friend_peaks=friends_peaks,
-                                black_list_regions=valid_black_list,
-                                min_dist=cfg.foreign_cfg.min_dist,
-                                sample_per_object=cfg.genome_sample_cfg.balance,
-                                exact=cfg.genome_sample_cfg.exact,
-                                max_overlap=cfg.genome_sample_cfg.max_overlap,
-                                n_procs=args.n_procs,
-                                seed=cfg.seed)
 
-samples['random'] = genome_sampler.sample_bed()
-friends_peaks.append(samples['random'])
 
 db = DBConfig.load(BENCH_SEQDB_CFG).build()
 
