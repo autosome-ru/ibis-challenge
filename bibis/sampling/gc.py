@@ -176,7 +176,7 @@ class GenomeGCSampler:
     sample_per_object: int = 1
     n_procs: int = 1
     exact: bool = True
-    
+    allow_overlap_resise: bool = False
     
     @staticmethod
     def _exact_profile(genome: Genome,
@@ -276,6 +276,7 @@ class GenomeGCSampler:
                   max_overlap: int | None = None,
                   sample_per_object: int = 1,
                   exact: bool = True,
+                  allow_overlap_resise: bool = False,
                   precalc_profile: bool = False,
                   seed: int = 777,
                   n_procs: int = 1) -> 'GenomeGCSampler':
@@ -384,14 +385,16 @@ class GenomeGCSampler:
         chr_profile = self.get_chrom_profile(ch=chr,
                                              min_point_dist=None)
         negative_gc, neg_positions = chr_profile.gc, chr_profile.idx
-        custom_minpoint_dist = self.min_point_dist
-        
-        while positive_gc.shape[0] * self.sample_per_object > negative_gc.shape[0] and custom_minpoint_dist != 1:
-            custom_minpoint_dist = custom_minpoint_dist // 2 + 1
-            logger.warning(f"Changing min point specified to {custom_minpoint_dist} as too many negatives are required")
-            chr_profile = self.get_chrom_profile(ch=chr,
-                                             min_point_dist=custom_minpoint_dist)
-            negative_gc, neg_positions = chr_profile.gc, chr_profile.idx
+
+        if self.allow_overlap_resise:
+            custom_minpoint_dist = self.min_point_dist
+            
+            while positive_gc.shape[0] * self.sample_per_object > negative_gc.shape[0] and custom_minpoint_dist != 1:
+                custom_minpoint_dist = custom_minpoint_dist // 2 + 1
+                logger.warning(f"Changing min point specified to {custom_minpoint_dist} as too many negatives are required")
+                chr_profile = self.get_chrom_profile(ch=chr,
+                                                min_point_dist=custom_minpoint_dist)
+                negative_gc, neg_positions = chr_profile.gc, chr_profile.idx
         
         if positive_gc.shape[0] * self.sample_per_object > negative_gc.shape[0]:
             logger.warning(f"Can't sample: requested sample size is smaller, then negatives number: {positive_gc.shape[0] * self.sample_per_object}, {negative_gc.shape[0]}")
