@@ -15,17 +15,36 @@ parser.add_argument("--templates_dir",
 parser.add_argument("--bibis_root",
                     default="/home_local/dpenzar/bibis_git/ibis-challenge",
                     type=str)
+parser.add_argument("--log_path",
+                    default="out.log",
+                    type=str)
 args = parser.parse_args()
 
 sys.path.append(args.bibis_root)
 
 from bibis.benchmark.pwm_submission import PWMSubmission
+from bibis.benchmark.benchmarkconfig import BenchmarkConfig
 benchmark = Path(args.benchmark_root).expanduser()
 templates_dir = Path(args.templates_dir)
 
 print(benchmark)
 for stage in ('Leaderboard', 'Final'):
     stage_tfs = list(set(p.name for p in benchmark.glob(f"*/{stage}/valid/*")))
+
+    pwm_config_path = templates_dir / f"{stage}_pwm_pseudocfg.cfg"
+
+    template_cfg = BenchmarkConfig(
+        name="PWM_PSEUDO_CFG",
+        kind=stage,
+        datasets=[],
+        scorers=[],
+        pwmeval_path="",
+        tfs=stage_tfs,
+        tags=[],
+        metainfo={}    
+    )
+
+    template_cfg.save(pwm_config_path)
 
     pwm_submission_path = templates_dir / f"{stage}_pwm_submission.txt"
 
