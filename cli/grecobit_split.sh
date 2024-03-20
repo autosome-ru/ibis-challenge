@@ -1,4 +1,4 @@
-BENCH_DATA=/home_local/dpenzar/BENCHMARK/BENCHMARK_DATA
+BENCH_DATA=/home_local/dpenzar/_BENCHMARK/BENCHMARK_DATA
 BECNHMARK_PROCESSED="/home_local/dpenzar/BENCHMARK/BENCHMARK_PROCESSED"
 TAG_DB=${BECNHMARK_PROCESSED}/tag.db
 TAG_DB_CFG=${BECNHMARK_PROCESSED}/tag.json
@@ -15,6 +15,7 @@ for type in "Leaderboard" "Final"; do
                             --remove_grey_zone\
                             --log_path $LOGFILE
     done
+done
 
 for type in "Leaderboard" "Final"; do
     for DATA_TYPE in "CHS" "GHTS"; do 
