@@ -21,8 +21,8 @@ parser.add_argument("--aaa_sub",
                     required=True)
 
 parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    help="Path to dir with bibis package",
+                    required=True,
+                    help="Path to dir with bibis package (example - /home_local/dpenzar/bibis_git/ibis-challenge)",
                     type=str)
 
 args = parser.parse_args()
