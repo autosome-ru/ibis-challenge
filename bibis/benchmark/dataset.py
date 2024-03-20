@@ -55,7 +55,7 @@ def get_seqentrykey(s: SeqEntry, kind: str):
 def seqentry2interval_key(s: SeqEntry):
         m = s.metainfo
         try:
-            return m['chr'], m['start'], m['end'] # type: ignore
+            return m['chr'], int(m['start']), int(m['end']) # type: ignore
         except KeyError:
             raise Exception("seqentry2interval_key works only for datasets with information about chr, start and end provided")
 

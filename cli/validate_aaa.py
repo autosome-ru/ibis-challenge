@@ -2,12 +2,9 @@ import sys
 from pathlib import Path
 
 
-sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
 
 import argparse
 
-from bibis.benchmark.benchmarkconfig import BenchmarkConfig
-from bibis.benchmark.score_submission import ScoreSubmission, ScoreSubmissionFormatException, ValidationResult
 
 SUCCESS_CODE = 0
 FORMAT_ERROR_CODE = 1
@@ -23,7 +20,17 @@ parser.add_argument("--aaa_sub",
                     help="path to AAA submission file",
                     required=True)
 
+parser.add_argument("--bibis_root",
+                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
+                    help="Path to dir with bibis package",
+                    type=str)
+
 args = parser.parse_args()
+
+sys.path.append(args.bibis_root)
+from bibis.benchmark.benchmarkconfig import BenchmarkConfig
+from bibis.benchmark.score_submission import ScoreSubmission, ScoreSubmissionFormatException, ValidationResult
+
 
 cfg = BenchmarkConfig.from_json(args.benchmark)
 

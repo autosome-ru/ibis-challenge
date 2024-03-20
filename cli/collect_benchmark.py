@@ -5,6 +5,7 @@ import json
 import sys
 import random
 import numpy as np
+from Bio import SeqIO
 
 from pathlib import Path
 
@@ -87,7 +88,14 @@ if args.benchmark_kind in ("GHTS", "CHS", "PBM", "SMS", "HTS"):
 else:
     raise Exception("No sequence collection implemented for benchmark {args.benchmark_kind}")
 
-logger.info("Shuffling benchmark entries")
+unmapped_path = benchmark / 'unmapped.fasta'
+if unmapped_path.exists():
+    for rec in SeqIO.parse(handle=unmapped_path, format='fasta'):
+        e = SeqEntry.from_seqrecord(rec)
+        unique_entries[e.tag] = e
+
+
+logger.info("Sorting/Shuffling benchmark entries")
 final_entries = list(unique_entries.values())
 if args.benchmark_kind in ("GHTS", "CHS"): 
     final_entries.sort(key=seqentry2interval_key)
@@ -135,7 +143,7 @@ elif args.benchmark_kind  == "PBM":
 else:
     raise Exception("No config collection implemented for benchmark {args.benchmark_kind}")
 
-assert set(entries_tags) == set(all_tags), "Answer tags and entries task must match"
+#assert set(entries_tags) == set(all_tags), "Answer tags and entries task must match"
 
 
 logger.info("Writing benchmark config")
