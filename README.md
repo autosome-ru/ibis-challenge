@@ -31,7 +31,7 @@ python cli/validate_aaa.py --benchmark leaderboard_examples/{EXP_TYPE}_benchmark
 For PWMs, validation against a single json covering all benchmarks and TFs is sufficient.
 
 ```console
-python validate_pwm.py --benchmark leaderboard_examples/example_PWM_benchmark.json --pwm_sub leaderboard_examples/pwm_submission.txt
+python cli/validate_pwm.py --benchmark leaderboard_examples/example_PWM_benchmark.json --pwm_sub leaderboard_examples/pwm_submission.txt
 ```
 
 To satisfy curious participants, the software implementation of the train-test data preparation and benchmarking protocols are available on GitHub in the same repo.
