@@ -14,8 +14,8 @@ git clone https://github.com/autosome-ru/ibis-challenge
 
 Then create and activate a conda environment:
 ```console
-conda create --name ibis --file spec-file.txt
-conda activate ibis
+conda env create -f environment.yml
+conda activate bibis
 ```
 
 The json benchmark configuration files and examples for offline validation are downloadable at the IBIS challenge website.

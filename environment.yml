@@ -1,4 +1,4 @@
-name: ibis
+name: bibis
 channels:
   - conda-forge
   - defaults
