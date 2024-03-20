@@ -40,8 +40,7 @@ class BedEntry:
         try:
             return int(s)
         except ValueError:
-            pass
-        raise Exception("Wrong peak format")
+            return s
 
     @classmethod
     def from_line(cls, line: str):
