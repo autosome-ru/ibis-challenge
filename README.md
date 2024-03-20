@@ -23,7 +23,7 @@ The respective archive file should be unpacked to the same folder.
 
 Finally, you can validate your AAA leaderboard submissions:
 ```console
-python cli/validate_aaa.py --benchmark leaderboard_examples/{EXP_TYPE}_benchmark.json --aaa_sub leaderboard_examples/example_{EXP_TYPE}_sub.tsv 
+python cli/validate_aaa.py --benchmark leaderboard_examples/{EXP_TYPE}_benchmark.json --aaa_sub leaderboard_examples/example_{EXP_TYPE}_sub.tsv --bibis_root /home_local/dpenzar/bibis_git/ibis-challenge
 ```
 
 ```{EXP_TYPE}``` can be SMS, PBM, CHS, GHTS, or HTS.
@@ -31,7 +31,7 @@ python cli/validate_aaa.py --benchmark leaderboard_examples/{EXP_TYPE}_benchmark
 For PWMs, validation against a single json covering all benchmarks and TFs is sufficient.
 
 ```console
-python cli/validate_pwm.py --benchmark leaderboard_examples/example_PWM_benchmark.json --pwm_sub leaderboard_examples/pwm_submission.txt
+python cli/validate_pwm.py --benchmark leaderboard_examples/example_PWM_benchmark.json --pwm_sub leaderboard_examples/pwm_submission.txt --bibis_root /home_local/dpenzar/bibis_git/ibis-challenge
 ```
 
 To satisfy curious participants, the software implementation of the train-test data preparation and benchmarking protocols are available on GitHub in the same repo.
