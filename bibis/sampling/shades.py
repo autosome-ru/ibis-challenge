@@ -87,7 +87,8 @@ class ShadesSampler:
         for peak_ch, sgmnts in self.sample_regions.items():
             smpl = sgmnts.sample_shades(seqsize=self.peak_size, 
                                         k=self.sample_per_peak,
-                                        genome=self.genome)
+                                        genome=self.genome,
+                                        rnf=self.rng)
             if len(smpl) < self.sample_per_peak:
                 logger.info(f"Warning: unable to sample more than {len(smpl)} for peak {peak_ch}")
             if save_metainfo:

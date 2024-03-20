@@ -98,6 +98,17 @@ class BedData:
             out_path = tempdir / "out.bed"
             self.executor.subtract(tmp1, tmp2, full=full, out_path=out_path)
             return self.from_file(out_path, presorted=True)
+        
+    def full_intersect(self, other: 'BedData') -> 'BedData':
+        with tempfile.TemporaryDirectory() as tempdir:
+            tempdir = Path(tempdir)
+            tmp1 = tempdir / "store1.bed"
+            tmp2 = tempdir / "store2.bed"
+            self.write(tmp1)
+            other.write(tmp2)
+            out_path = tempdir / "out.bed"
+            self.executor.full_intersect(tmp1, tmp2, out_path=out_path)
+            return self.from_file(out_path, presorted=True)
 
     def closest(self, other: 'BedData', how: BedClosestMode) -> list[int]:
         '''
