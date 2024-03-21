@@ -111,15 +111,14 @@ class ScoreSubmission:
                 msg = f"no prediction submitted for factor {tf}"
                 warnings.append(msg)
 
-        for tag in self.tags:
-            if tag not in cfg.tags:
-                msg = f"No such tag in becnhmark: {tag}"
-                errors.append(msg)
-
-        for tag in cfg.tags:
-            if tag not in self.tags:
-                msg = f"No prediction for tag: {tag}"
-                errors.append(msg)
+       sub_tags_set = set(self.tags) 
+       cfg_tags_set = set(cfg.tags) 
+       for tag in (sub_tags_set - cfg_tags_set): 
+           msg = f"No such tag in becnhmark: {tag}" 
+           errors.append(msg) 
+       for tag in (cfg_tags_set - sub_tags_set): 
+           msg = f"No prediction for tag: {tag}" 
+           errors.append(msg)
                 
         for tf in self._sub:
             if tf not in cfg.tfs:
