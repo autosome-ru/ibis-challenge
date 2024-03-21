@@ -125,10 +125,10 @@ class ScoreSubmission:
         for tf_name, pred in self._sub.items():
             for t in self.tags:
                 if Prediction.is_skipvalue(pred[t]):
-                    msg = f"Column for factor {tf_name} contains skipped prediction for {t}." 
-                    "Predictions for this factor won't be evaluated"
+                    msg = f"Column for factor {tf_name} an incomplete set of predictions: prediction skipped for {t}." 
+                    "The submission for this factor cannot be evaluated"
                     
-                    warnings.append(msg)                   
+                    errors.append(msg)                   
                     self._sub.pop(tf_name)
                     break
                 
