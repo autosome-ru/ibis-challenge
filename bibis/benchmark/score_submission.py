@@ -116,6 +116,10 @@ class ScoreSubmission:
                 msg = f"No such tag in becnhmark: {tag}"
                 errors.append(msg)
 
+        for tag in cfg.tags:
+            if tag not in self.tags:
+                msg = f"No prediction for tag: {tag}"
+                errors.append(msg)
                 
         for tf in self._sub:
             if tf not in cfg.tfs:
