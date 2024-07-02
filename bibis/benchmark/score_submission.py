@@ -53,7 +53,7 @@ class ScoreSubmission:
             pass
         
         if number is None:
-            raise ScoreSubmissionFormatException(f"Submission score must { Prediction.REPR_SKIPVALUE} or number: {score_str}")
+            raise ScoreSubmissionFormatException(f"Submission score must be either '{Prediction.REPR_SKIPVALUE}' or a number: {score_str}")
         
         if number > 1 + cls.MAX_0_1_DIFF:
             raise ScoreSubmissionFormatException(f"Submission score must be in [0, 1]: {score_str}")
@@ -68,7 +68,7 @@ class ScoreSubmission:
         after_point = fields[1]
         
         if len(after_point) > cls.MAX_PRECISION:
-            raise ScoreSubmissionFormatException(f"Submission score must contain at most {cls.MAX_PRECISION} after . : {score_str}")
+            raise ScoreSubmissionFormatException(f"Submission score must contain at most {cls.MAX_PRECISION} digits after '.' : {score_str}")
         
     
     @classmethod
