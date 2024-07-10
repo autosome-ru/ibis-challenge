@@ -88,9 +88,12 @@ class ScoreSubmission:
             tfs = fields[1:]
             _sub = {tf_name: Prediction() for tf_name in tfs}
             tags = []
-            for line in infile:
+            for line_number, line in enumerate(infile):
                 line = line.rstrip(END_LINE_CHARS)
                 vals = line.split(cls.FIELDSEP)
+                if len(vals) - 1 != len(tfs):
+                    msg = f"Submission has wrong number of predictions at line {line_number+2}: {vals[1:]}"
+                    raise ScoreSubmissionFormatException(msg)
                 tag = vals[0]
                 tags.append(tag)
                 for tf_name, val in zip(tfs, vals[1:]):
@@ -114,7 +117,7 @@ class ScoreSubmission:
         sub_tags_set = set(self.tags) 
         cfg_tags_set = set(cfg.tags) 
         for tag in (sub_tags_set - cfg_tags_set): 
-            msg = f"No such tag in becnhmark: {tag}" 
+            msg = f"No such tag in benchmark: {tag}"
             errors.append(msg) 
         for tag in (cfg_tags_set - sub_tags_set): 
             msg = f"No prediction for tag: {tag}" 
