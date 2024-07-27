@@ -41,7 +41,7 @@ parser.add_argument("--recalc",
 
 args = parser.parse_args()
 
-sys.path.append(args.bibis_root) # temporary solution while package is in development
+sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.pbm.config import PBMConfig 
 from bibis.seq.seqentry import SeqEntry, write as seq_write

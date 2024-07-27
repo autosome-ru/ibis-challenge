@@ -16,7 +16,7 @@ parser.add_argument("--recalc", action="store_true")
 parser.add_argument("--calc_dir", help="Dir for calculation mapreduce operations", default="mapreduce_calc")
 parser.add_argument("--n_procs", type=int, default=20)
 parser.add_argument("--seed", type=int, default=777)
-parser.add_argument("--bibis_path", default='/home_local/dpenzar/bibis_git/ibis-challenge')
+parser.add_argument("--bibis_root", default='/home_local/dpenzar/bibis_git/ibis-challenge')
 parser.add_argument("--log_path",
                     default='log.txt')
 parser.add_argument("--logger_name",
@@ -24,7 +24,7 @@ parser.add_argument("--logger_name",
 
 args = parser.parse_args()
 
-sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
+sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.utils import END_LINE_CHARS
 from bibis.counting.fastqcounter import FastqGzReadsCounter

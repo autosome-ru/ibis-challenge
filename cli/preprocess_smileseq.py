@@ -32,7 +32,7 @@ args = parser.parse_args()
 
 
 
-sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
+sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.sms.config import SMSRawConfig
 from bibis.sms.dataset import SMSRawDataset

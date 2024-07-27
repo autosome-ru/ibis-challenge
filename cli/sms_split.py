@@ -58,8 +58,8 @@ parser.add_argument("--recalc",
 
 args = parser.parse_args()
 
+sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
-sys.path.append(args.bibis_root) # temporary solution while package is in development
 
 from bibis.sms.config import SMSRawConfig
 from bibis.sampling.gc import SetGCSampler

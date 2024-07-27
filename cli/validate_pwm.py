@@ -27,7 +27,7 @@ parser.add_argument("--bibis_root",
 
 args = parser.parse_args()
 
-sys.path.append(args.bibis_root)
+sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.benchmark.benchmarkconfig import BenchmarkConfig
 from bibis.benchmark.pwm_submission import PWMSubmission, PWMSubmissionFormatException

@@ -81,7 +81,7 @@ parser.add_argument("--logger_name",
                     default="parse_chipseq")
 
 args = parser.parse_args()
-sys.path.append(args.bibis_root) 
+sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 
 from bibis.peaks.peakfile import PeakList

@@ -48,7 +48,7 @@ parser.add_argument("--recalc",
 
 args = parser.parse_args()
 
-sys.path.append(args.bibis_root) # temporary solution while package is in development
+sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.seqdb.config import DBConfig 
 from bibis.peaks.config import PeakSeqConfig, PeakSeqDatasetConfig

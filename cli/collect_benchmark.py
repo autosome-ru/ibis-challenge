@@ -40,7 +40,7 @@ parser.add_argument("--logger_name",
                     type=str)
 args = parser.parse_args()
 
-sys.path.append(args.bibis_root)
+sys.path.append(str(Path(args.bibis_root).resolve()))
 
 from bibis.benchmark.benchmarkconfig import BenchmarkConfig
 from bibis.benchmark.dataset import DatasetInfo, entries2tsv, seqentry2interval_key

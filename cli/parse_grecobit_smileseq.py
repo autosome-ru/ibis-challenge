@@ -21,7 +21,7 @@ parser.add_argument("--recalc",
                     action="store_true")
 
 args = parser.parse_args()
-sys.path.append(args.bibis_root)
+sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.sms.config import SMSRawConfig, split_datasets
 from bibis.sms.dataset import SMSRawDataset

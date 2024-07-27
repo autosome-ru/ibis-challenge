@@ -24,7 +24,7 @@ parser.add_argument("--neg2pos_ratio",
 
 
 args = parser.parse_args()
-sys.path.append(args.bibis_root)
+sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.pbm.config import PBMConfig
 from bibis.logging import get_logger, BIBIS_LOGGER_CFG

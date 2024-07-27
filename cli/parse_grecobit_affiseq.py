@@ -79,7 +79,7 @@ parser.add_argument("--logger_name",
 
 args = parser.parse_args()
 
-sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
+sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.peaks.peakfile import PeakList
 from bibis.peaks.config import PeakSeqConfig, PeakSeqSplit, ForeignConfig, GenomeSampleConfig, ShadesConfig

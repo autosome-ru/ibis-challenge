@@ -5,19 +5,11 @@ sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
 import argparse
 from pathlib import Path
 
+
 from rpy2.rinterface_lib.callbacks import logger as rpy2_logger
 import logging
 import numpy as np 
 rpy2_logger.setLevel(logging.ERROR)
-
-from bibis.benchmark.benchmark import Benchmark
-from bibis.benchmark.benchmarkconfig import BenchmarkConfig
-from bibis.benchmark.score_submission import ScoreSubmission, ScoreSubmissionFormatException
-from bibis.benchmark.pwm_submission import PWMSubmission, PWMSubmissionFormatException
-
-SUCCESS_CODE = 0
-FORMAT_ERROR_CODE = 1
-INTERNAL_ERROR_CODE = 2
 
 parser = argparse.ArgumentParser(description="Python script to locally validate PWM submission")
 
@@ -34,6 +26,24 @@ parser.add_argument("--sub_type",
 parser.add_argument("--scores_path",
                     default=sys.stdout,
                     help="Path to write output. By default - stdout")
+parser.add_argument("--bibis_root",
+                    required=True,
+                    help="Path to dir with bibis package (example - /home_local/dpenzar/bibis_git/ibis-challenge)",
+                    type=str)
+
+sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
+
+
+
+from bibis.benchmark.benchmark import Benchmark
+from bibis.benchmark.benchmarkconfig import BenchmarkConfig
+from bibis.benchmark.score_submission import ScoreSubmission, ScoreSubmissionFormatException
+from bibis.benchmark.pwm_submission import PWMSubmission, PWMSubmissionFormatException
+
+SUCCESS_CODE = 0
+FORMAT_ERROR_CODE = 1
+INTERNAL_ERROR_CODE = 2
+
 
 args = parser.parse_args()
 
