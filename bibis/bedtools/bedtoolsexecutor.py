@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from enum import Enum
 
-from ..logging import get_bibis_logger
+from ..plogging import get_bibis_logger
 logger = get_bibis_logger()
 
 

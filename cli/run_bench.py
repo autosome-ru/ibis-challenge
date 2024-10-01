@@ -1,7 +1,5 @@
-import sys
 import tempfile
-sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
-
+import sys
 import argparse
 from pathlib import Path
 
@@ -26,13 +24,8 @@ parser.add_argument("--sub_type",
 parser.add_argument("--scores_path",
                     default=sys.stdout,
                     help="Path to write output. By default - stdout")
-parser.add_argument("--bibis_root",
-                    required=True,
-                    help="Path to dir with bibis package (example - /home_local/dpenzar/bibis_git/ibis-challenge)",
-                    type=str)
 
-sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
-
+args = parser.parse_args()
 
 
 from bibis.benchmark.benchmark import Benchmark
@@ -44,8 +37,6 @@ SUCCESS_CODE = 0
 FORMAT_ERROR_CODE = 1
 INTERNAL_ERROR_CODE = 2
 
-
-args = parser.parse_args()
 
 cfg = BenchmarkConfig.from_json(args.benchmark)
 bench_tfs = set([ds.tf for ds in cfg.datasets])

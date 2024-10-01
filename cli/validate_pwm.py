@@ -1,8 +1,6 @@
 import sys
 from pathlib import Path
 
-
-
 import argparse
 
 
@@ -20,14 +18,7 @@ parser.add_argument("--pwm_sub",
                     help="path to pwm submission file",
                     required=True)
 
-parser.add_argument("--bibis_root",
-                    required=True,
-                    help="Path to dir with bibis package (example - /home_local/dpenzar/bibis_git/ibis-challenge)",
-                    type=str)
-
 args = parser.parse_args()
-
-sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.benchmark.benchmarkconfig import BenchmarkConfig
 from bibis.benchmark.pwm_submission import PWMSubmission, PWMSubmissionFormatException

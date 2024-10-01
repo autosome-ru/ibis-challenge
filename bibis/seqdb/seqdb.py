@@ -8,7 +8,7 @@ from typing import ClassVar
 
 from .tagger import UniqueTagger
 from ..seq.seqentry import SeqEntry
-from ..logging import get_bibis_logger
+from ..plogging import get_bibis_logger
 
 logger = get_bibis_logger()
 

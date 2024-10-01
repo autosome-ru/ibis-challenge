@@ -20,7 +20,7 @@ from ..matrix.pwm import PCM, PFM
 from .dataset import DatasetInfo
 from .benchmarkconfig import BenchmarkConfig
 from .pwm_submission import PFMInfo, PWMSubmission
-from ..logging import get_bibis_logger
+from ..plogging import get_bibis_logger
 
 logger = get_bibis_logger()
 

@@ -2,7 +2,7 @@ from typing import ClassVar
 from copy import deepcopy
 from dataclasses import dataclass, field 
 from ..seq.genome import Genome
-from ..logging import get_bibis_logger
+from ..plogging import get_bibis_logger
 
 logger = get_bibis_logger()
 

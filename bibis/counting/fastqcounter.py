@@ -14,7 +14,7 @@ from typing import ClassVar
 from pathlib import Path 
 from copy import copy 
 from ..utils import END_LINE_CHARS
-from ..logging import get_bibis_logger
+from ..plogging import get_bibis_logger
 
 logger = get_bibis_logger()
 

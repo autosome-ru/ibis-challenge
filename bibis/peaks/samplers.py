@@ -9,7 +9,7 @@ from ..seq.genome import Genome
 from ..bedtools.beddata import BedData, join_bed
 from ..bedtools.bedentry import BedEntry
 from ..sampling.gc import SetGCSampler, GenomeGCSampler
-from ..logging import get_bibis_logger
+from ..plogging import get_bibis_logger
 
 logger = get_bibis_logger()
 

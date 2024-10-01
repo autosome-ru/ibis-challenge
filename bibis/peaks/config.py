@@ -11,7 +11,7 @@ from ..benchmark.dataset import DatasetInfo, seqentry2interval_key
 from ..seq.seqentry import SeqEntry, read as seq_read
 from ..seq.seqentry import write as seq_write
 from ..scoring.label import POSITIVE_LABEL, NEGATIVE_LABEL
-from ..logging import get_bibis_logger
+from ..plogging import get_bibis_logger
 
 logger = get_bibis_logger()
 

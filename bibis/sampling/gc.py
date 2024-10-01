@@ -23,7 +23,7 @@ from ..bedtools.beddata import BedData, join_bed
 from ..bedtools.bedentry import BedEntry
 from ..bedtools.constants import CHROM_ORDER
 from ..seq.genome import Genome
-from ..logging import get_bibis_logger
+from ..plogging import get_bibis_logger
 
 logger = get_bibis_logger()
 
