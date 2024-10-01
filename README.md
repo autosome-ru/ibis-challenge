@@ -10,12 +10,18 @@ Offline validator scripts for PWM and AAA predictions are available in the ibis-
 Start by running: 
 ```console
 git clone https://github.com/autosome-ru/ibis-challenge
+cd ibis-challenge
 ```
 
 Then create and activate a conda environment:
 ```console
 conda env create -f environment.yml
 conda activate bibis
+```
+
+Now install bibis package required for benchmark scripts
+```
+pip install -e .
 ```
 
 The json benchmark configuration files and examples for offline validation are downloadable at the IBIS challenge website.
