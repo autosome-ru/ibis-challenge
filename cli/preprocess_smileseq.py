@@ -9,8 +9,6 @@ import argparse
 import math
 import random 
 
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--in_dir",
                     type=str,
@@ -19,9 +17,6 @@ parser.add_argument("--out_dir",
                     type=str,
                     required=True)
 parser.add_argument("--recalc_unique", action="store_true")
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
 parser.add_argument("--log_path",
                     default='log.txt')
 parser.add_argument("--logger_name",
@@ -29,10 +24,6 @@ parser.add_argument("--logger_name",
 parser.add_argument("--seed", type=int, default=777)
 
 args = parser.parse_args()
-
-
-
-sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.sms.config import SMSRawConfig
 from bibis.sms.dataset import SMSRawDataset

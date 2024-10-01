@@ -13,10 +13,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--benchmark_out_dir", 
                     required=True, 
                     type=str)
-# pbms already have tags 
-#parser.add_argument("--tagdb_cfg",
-#                    required=True,
-#                   type=str)
 parser.add_argument("--config_file", 
                     required=True, 
                     type=str)
@@ -27,9 +23,6 @@ parser.add_argument("--type",
 parser.add_argument("--n_procs", 
                     default=1,
                     type=int)
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
 parser.add_argument("--remove_grey_zone",
                     action="store_true")
 parser.add_argument("--log_path",
@@ -40,8 +33,6 @@ parser.add_argument("--recalc",
                     action="store_true")
 
 args = parser.parse_args()
-
-sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.pbm.config import PBMConfig 
 from bibis.seq.seqentry import SeqEntry, write as seq_write

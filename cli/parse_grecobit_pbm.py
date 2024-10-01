@@ -11,9 +11,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--out_dir",
                     type=str,
                     required=True)
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
 parser.add_argument("--log_path",
                     default='log.txt')
 parser.add_argument("--logger_name",
@@ -22,9 +19,7 @@ parser.add_argument("--neg2pos_ratio",
                     type=int, 
                     default=10)
 
-
 args = parser.parse_args()
-sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.pbm.config import PBMConfig
 from bibis.logging import get_logger, BIBIS_LOGGER_CFG

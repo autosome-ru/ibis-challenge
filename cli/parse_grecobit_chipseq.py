@@ -72,17 +72,12 @@ parser.add_argument("--seed",
 parser.add_argument("--n_procs",
                     type=int,
                     default=1)
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
 parser.add_argument("--log_path",
                     default='log.txt')
 parser.add_argument("--logger_name",
                     default="parse_chipseq")
 
 args = parser.parse_args()
-sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
-
 
 from bibis.peaks.peakfile import PeakList
 

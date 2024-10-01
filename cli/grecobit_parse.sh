@@ -5,12 +5,10 @@ python parse_grecobit_chipseq.py\
       --genome /home_local/dpenzar/final_genome/hg38/\
        --black_list_regions /home_local/dpenzar/bibis_git/ibis-challenge/data/Ns_ENCODE_blacklist.bed\
        --out_dir ${OUT_DIR}/CHS/\
-       #--valid_hide_regions /home_local/dpenzar/bibis_git/ibis-challenge/data/centromers_split/ghts_hide.bed
 python parse_grecobit_affiseq.py\
        --genome /home_local/dpenzar/final_genome/hg38/\
        --black_list_regions  /home_local/dpenzar/bibis_git/ibis-challenge/data/Ns_ENCODE_blacklist.bed\
        --out_dir ${OUT_DIR}/GHTS\
-       #--valid_hide_regions /home_local/dpenzar/bibis_git/ibis-challenge/data/centromers_split/chs_hide.bed
 python parse_grecobit_smileseq.py --out_dir ${OUT_DIR}/SMS/RAW
 python preprocess_smileseq.py --in_dir ${OUT_DIR}/SMS/RAW\
     --out_dir ${OUT_DIR}/SMS

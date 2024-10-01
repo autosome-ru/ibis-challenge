@@ -43,9 +43,7 @@ parser.add_argument("--config_file",
 parser.add_argument("--type", 
                     choices=['Leaderboard', 'Final'], 
                     required=True, type=str)
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
+
 parser.add_argument("--sample_count",
                     default=100_000,
                     type=sample_count_conv)
@@ -68,9 +66,6 @@ parser.add_argument("--logger_name",
 
 
 args = parser.parse_args()
-
-
-sys.path.append(args.bibis_root) # temporary solution while package is in development
 
 from bibis.sampling.gc import GCProfileMatcher
 from bibis.benchmark.dataset import DatasetInfo

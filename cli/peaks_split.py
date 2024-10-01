@@ -36,9 +36,6 @@ parser.add_argument("--n_procs",
 parser.add_argument("--bedtools", 
                     default="/home_local/dpenzar/bedtools2/bin",
                     type=str)
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
 parser.add_argument("--log_path",
                     default='log.txt')
 parser.add_argument("--logger_name",
@@ -47,8 +44,6 @@ parser.add_argument("--recalc",
                     action="store_true")
 
 args = parser.parse_args()
-
-sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.seqdb.config import DBConfig 
 from bibis.peaks.config import PeakSeqConfig, PeakSeqDatasetConfig

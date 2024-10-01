@@ -12,15 +12,11 @@ parser.add_argument("--benchmark_root",
 parser.add_argument("--templates_dir", 
                     type=str,
                     required=True)
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
 parser.add_argument("--log_path",
                     default="out.log",
                     type=str)
 args = parser.parse_args()
 
-sys.path.append(args.bibis_root)
 
 from bibis.benchmark.pwm_submission import PWMSubmission
 from bibis.benchmark.benchmarkconfig import BenchmarkConfig

@@ -28,9 +28,6 @@ parser.add_argument("--config_file",
 parser.add_argument("--type", 
                     choices=['Leaderboard', 'Final'], 
                     required=True, type=str)
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
 parser.add_argument("--sample_count",
                     default="all",
                     type=sample_count_conv)
@@ -57,9 +54,6 @@ parser.add_argument("--recalc",
                     action="store_true")
 
 args = parser.parse_args()
-
-sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
-
 
 from bibis.sms.config import SMSRawConfig
 from bibis.sampling.gc import SetGCSampler

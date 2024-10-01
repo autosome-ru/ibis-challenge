@@ -10,9 +10,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--out_dir",
                     type=str,
                     required=True)
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
 parser.add_argument("--log_path",
                     default='log.txt')
 parser.add_argument("--logger_name",
@@ -21,7 +18,6 @@ parser.add_argument("--recalc",
                     action="store_true")
 
 args = parser.parse_args()
-sys.path.append(sys.path.append(str(Path(args.bibis_root).resolve())))
 
 from bibis.sms.config import SMSRawConfig, split_datasets
 from bibis.sms.dataset import SMSRawDataset

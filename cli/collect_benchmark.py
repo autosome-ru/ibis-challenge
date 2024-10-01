@@ -29,9 +29,6 @@ parser.add_argument("--out_dir",
 parser.add_argument("--pwmeval",
                     type=str,
                     default="/home_local/dpenzar/PWMEval/pwm_scoring")
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
 parser.add_argument("--log_path",
                     default="log.txt",
                     type=str)
@@ -39,8 +36,6 @@ parser.add_argument("--logger_name",
                     default=None,
                     type=str)
 args = parser.parse_args()
-
-sys.path.append(str(Path(args.bibis_root).resolve()))
 
 from bibis.benchmark.benchmarkconfig import BenchmarkConfig
 from bibis.benchmark.dataset import DatasetInfo, entries2tsv, seqentry2interval_key

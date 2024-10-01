@@ -4,9 +4,7 @@ import argparse
 import sys 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
+
 parser.add_argument("--genome_dir",
                      type=str,
                        required=True)
@@ -20,8 +18,6 @@ parser.add_argument("--log_name",
                     type=str,
                     default="create_nmask")
 args = parser.parse_args()
-
-sys.path.append(args.bibis_root)
 
 from bibis.seq.genome import Genome
 from bibis.bedtools.beddata import BedData
