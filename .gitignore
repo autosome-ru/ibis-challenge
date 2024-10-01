@@ -1,2 +1,8 @@
 ibis_challenge/examples
 __pycache__/
+data/
+bibis.egg-info/dependency_links.txt
+bibis.egg-info/PKG-INFO
+bibis.egg-info/SOURCES.txt
+bibis.egg-info/top_level.txt
+env_new.yaml
