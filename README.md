@@ -71,7 +71,7 @@ Note that the PWMEval way of handling Ns in nucleotide sequences is not fully pr
 ## Gathering benchmark files
 
 Benchmark archive is available at ZENODO_LINK. 
-After downloading and unpacking it and run the following command to fix benchmark configs
+After downloading and unpacking it, run the following command to fix benchmark configs
 
 ```console
 bash cli/format_bench.sh ${PATH_TO_BENCHMARK_DIR} ${PATH_TO_PWMEval}/pwm_scoring
