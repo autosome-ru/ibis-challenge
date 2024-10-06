@@ -55,9 +55,31 @@ They return a non-zero error code in case of errors:
 
 2 - internal errors: bugs in the validation code or unhandled formatting errors
 
-# IBIS Benchmarking (for information purposes)
+# External dependencies
+
+To be able to run PWM scoring you need to download and compile PWMEval (pwm_scoring.c) from https://github.com/gio31415/PWMEval
+and update the path to PWMEval in benchmark_example.json
+
+The most up-to-date version of PWMEval is included in the PWMScan package: https://gitlab.sib.swiss/EPD/pwmscan
+
+Note that the PWMEval way of handling Ns in nucleotide sequences is not fully predictable and we explicitly avoided such sequences in the IBIS data.
+
+# IBIS Benchmarking (to be published)
 
 ## ! Note, that benchmarking data is hidden during the IBIS challenge hence you won't be able to fully replicate the analysis until the challenge ends (i.e. the command line examples won't work w/o complete test data).
+
+## Gathering benchmark files
+
+Benchmark archive is available at ZENODO_LINK. 
+After downloading and unpacking it run
+
+```console
+bash cli/format_bench.sh ${PATH_TO_BENCHMARK_DIR} ${PATH_TO_PWMEval}/pwm_scoring
+```
+
+to fix benchmark configs
+
+## How to run
 
 The main benchmarking script is ```run_bench.py```. Examples of correct json configuration files are available at the IBIS challenge website.
 
@@ -83,12 +105,3 @@ This behavior can be changed using the --scores_path parameter.
 ```console
 python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/pwm_submission.txt --sub_type pwm --scores_path out.tsv --bibis_root "."
 ```
-
-# External dependencies
-
-To be able to run PWM scoring you need to download and compile PWMEval (pwm_scoring.c) from https://github.com/gio31415/PWMEval
-and update the path to PWMEval in benchmark_example.json
-
-The most up-to-date version of PWMEval is included in the PWMScan package: https://gitlab.sib.swiss/EPD/pwmscan
-
-Note that the PWMEval way of handling Ns in nucleotide sequences is not fully predictable and we explicitly avoided such sequences in the IBIS data.
