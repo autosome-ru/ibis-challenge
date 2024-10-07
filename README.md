@@ -29,7 +29,7 @@ The respective archive file should be unpacked to the same folder.
 
 Finally, you can validate your AAA leaderboard submissions:
 ```console
-python cli/validate_aaa.py --benchmark leaderboard_examples/{EXP_TYPE}_benchmark.json --aaa_sub leaderboard_examples/example_{EXP_TYPE}_sub.tsv --bibis_root "."
+python cli/validate_aaa.py --benchmark leaderboard_examples/{EXP_TYPE}_benchmark.json --aaa_sub leaderboard_examples/example_{EXP_TYPE}_sub.tsv
 ```
 
 ```{EXP_TYPE}``` can be SMS, PBM, CHS, GHTS, or HTS.
@@ -37,7 +37,7 @@ python cli/validate_aaa.py --benchmark leaderboard_examples/{EXP_TYPE}_benchmark
 For PWMs, validation against a single json covering all benchmarks and TFs is sufficient.
 
 ```console
-python cli/validate_pwm.py --benchmark leaderboard_examples/example_PWM_benchmark.json --pwm_sub leaderboard_examples/pwm_submission.txt --bibis_root "."
+python cli/validate_pwm.py --benchmark leaderboard_examples/example_PWM_benchmark.json --pwm_sub leaderboard_examples/pwm_submission.txt
 ```
 
 To satisfy curious participants, the software implementation of the train-test data preparation and benchmarking protocols are available on GitHub in the same repo.
@@ -84,13 +84,13 @@ The main benchmarking script is ```run_bench.py```. Examples of correct json con
 Run PWM submission benchmarking:
 
 ```console
-python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/pwm_submission.txt --sub_type pwm --bibis_root "."
+python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/pwm_submission.txt --sub_type pwm
 ```
 
 Run AAA submission benchmarking:
 
 ```console
-python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/example_score_sub.txt --sub_type aaa --bibis_root "."
+python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/example_score_sub.txt --sub_type aaa
 ```
 
 The benchmarking script writes errors and warnings to stderr, and returns non-zero error codes if any error occurs:
@@ -101,5 +101,5 @@ By default, the benchmarking scores are written to stdout.
 This behavior can be changed using the --scores_path parameter.
 
 ```console
-python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/pwm_submission.txt --sub_type pwm --scores_path out.tsv --bibis_root "."
+python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/pwm_submission.txt --sub_type pwm --scores_path out.tsv
 ```
