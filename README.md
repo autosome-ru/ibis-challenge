@@ -79,7 +79,7 @@ After downloading and unpacking it, run the following command to fix benchmark c
 ```console
 bash cli/format_bench.sh ${PATH_TO_BENCHMARK_DIR} cli/pwm_scoring
 ```
-Otherwise, if you use different system, first visit the "[External dependencies](#external-dependencies)" section, and then add the path to the PWMEval executable to the previous command: 
+Otherwise, if you use different system, first visit the "[External dependencies](#external-dependencies)" section, and then replace the default path with your custom path to the PWMEval executable in the previous command: 
 ```console
 bash cli/format_bench.sh ${PATH_TO_BENCHMARK_DIR} ${PATH_TO_PWMEval}/pwm_scoring
 ```
