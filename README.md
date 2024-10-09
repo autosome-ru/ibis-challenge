@@ -57,8 +57,11 @@ They return a non-zero error code in case of errors:
 
 # External dependencies
 
-To be able to run PWM scoring you need to download and compile PWMEval (pwm_scoring.c) from https://github.com/gio31415/PWMEval
-and update the path to PWMEval in benchmark_example.json
+The IBIS Benchmarking uses PWMEval (https://github.com/gio31415/PWMEval). 
+We have included precompiled PWMEval binary executables in the `cli/` folder for x86-64 Linux distributions. If you are using a different system or architecture, please follow these steps to be able to run PWM scoring:
+- Download the PWMEval source code from https://github.com/gio31415/PWMEval and navigate to the downloaded PWMEval repository folder.
+- Compile PWMEval (pwm_scoring.c) using the following command: `make -f Makefile` in the source code directory of PWMEval.
+- Update the path to PWMEval in benchmark_example.json (more details in the section "[Gathering benchmark files](#gathering-benchmark-files)").
 
 The most up-to-date version of PWMEval is included in the PWMScan package: https://gitlab.sib.swiss/EPD/pwmscan
 
@@ -71,8 +74,12 @@ Note that the PWMEval way of handling Ns in nucleotide sequences is not fully pr
 ## Gathering benchmark files
 
 Benchmark archive is available at ZENODO_LINK. 
-After downloading and unpacking it, run the following command to fix benchmark configs
+After downloading and unpacking it, run the following command to fix benchmark configs if you have x86-64 Linux:
 
+```console
+bash cli/format_bench.sh ${PATH_TO_BENCHMARK_DIR} cli/pwm_scoring
+```
+Otherwise, if you use different system, first visit the "[External dependencies](#external-dependencies)" section section, and then add the path to the PWMEval executable to the previous command: 
 ```console
 bash cli/format_bench.sh ${PATH_TO_BENCHMARK_DIR} ${PATH_TO_PWMEval}/pwm_scoring
 ```
