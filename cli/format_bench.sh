@@ -17,6 +17,7 @@ else
     ROOT_LABEL=$3
 fi
 
+cd cli
 for path in $BENCHMARK_ROOT/BENCHMARK_CONFIGS/*/*/benchmark.json; do
     python format_bench.py --in_benchmark_path $path\
          --root_dir $BENCHMARK_ROOT\
