@@ -86,43 +86,47 @@ and labeled test data to estimate the performance metrics.
 
 ## Unpacking and benchmark files
 
-First, please set up the conda environment as for the offline validation scripts, see above.
+First, please set up the conda environment in the same way as for the offline validation scripts, see above.
+(you do not need to repeat this step if already done).
 Next, run the following command to fix benchmark configs if you have x86-64 Linux:
 
 ```console
 bash cli/format_bench.sh ${PATH_TO_BENCHMARK_DIR} cli/pwm_scoring
 ```
 
-Otherwise, if you use a different system or a custom-compiled PWMEval, check  the "[External dependencies](#external-dependencies)" section, and  replace the default path with your custom path to the PWMEval executable: 
-```console
-bash cli/format_bench.sh ${PATH_TO_BENCHMARK_DIR} ${PATH_TO_PWMEval}/pwm_scoring
-```
 `PATH_TO_BENCHMARK_DIR` should point to the folder where you unpacked the benchmarking suite archive from ZENODO.
 Particularly, it must contain the `BENCHMARK_CONFIGS` and `BENCHMARK_PROCESSED` folders, which contain the benchmark configuration files and the labeled test data.
 
+(Optional) If you use a different OS or a custom-compiled PWMEval, check  the "[External dependencies](#external-dependencies)" section, and  replace the default path with your custom path to the PWMEval executable: 
+```console
+bash cli/format_bench.sh ${PATH_TO_BENCHMARK_DIR} ${PATH_TO_PWMEval}/pwm_scoring
+```
+
 ## How to run
 
-The main benchmarking script is ```run_bench.py```. Examples of correct json configuration files are available at the IBIS challenge website.
+The main benchmarking script is ```run_bench.py```. 
+The json configuration files for each IBIS data type are provided within the benchmarking suite zip archive in the ZENODO repo.
 
 Run PWM submission benchmarking:
 
 ```console
-python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/pwm_submission.txt --sub_type pwm
+python cli/run_bench.py --benchmark BENCHMARK_CONGIS/${EXP_TYPE}/Leaderboard/benchmark.json --sub leaderboard_examples/pwm_submission.txt --sub_type pwm --scores_path out.tsv
 ```
 
 Run AAA submission benchmarking:
 
 ```console
-python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/example_score_sub.txt --sub_type aaa
+python cli/run_bench.py --benchmark BENCHMARK_CONFIGS/${EXP_TYPE}/Leaderboard/benchmark.json --sub leaderboard_examples/example_${EXP_TYPE}_sub.txt --sub_type aaa --scores_path out.tsv
 ```
+
+*You may replace* ```Leaderboard``` *with* ```Final``` *for the Final submissions.*
+```EXP_TYPE``` can be SMS, PBM, CHS, GHTS, or HTS.
 
 The benchmarking script writes errors and warnings to stderr, and returns non-zero error codes if any error occurs:
-1 - format error (wrong submission format);
-2 - internal error occurred (possible bug or unhandled format error).
 
-By default, the benchmarking scores are written to stdout. 
-This behavior can be changed using the --scores_path parameter.
+1 - File format error (misformatted submission file);
 
-```console
-python cli/run_bench.py --benchmark safe_examples/benchmark_example.json --sub safe_examples/pwm_submission.txt --sub_type pwm --scores_path out.tsv
-```
+2 - An internal error occurred (possible bug or an unhandled format error).
+
+
+*Note, that the benchmarking scores are written to stdout by default, and --scores_path redirects the results into the specified file.*
