@@ -16,6 +16,20 @@ The complete IBIS data package including train, test, and benchmarking-ready dat
 
 * To satisfy curious participants, along with the benchmarking protocols, here we also provide the software implementation of the train-test data preparation.
 
+# External dependencies
+
+For PWM scanning, the IBIS benchmarking suite relies on PWMEval (https://github.com/gio31415/PWMEval). 
+We have included a precompiled PWMEval binary executable for x86-64 Linux distributions in the `cli/` folder. 
+
+If you are using a different system or architecture, please follow these steps to be able to run PWM scoring:
+- Download the PWMEval source code from https://github.com/gio31415/PWMEval and navigate to the downloaded PWMEval repository folder.
+- Compile PWMEval (`pwm_scoring.c`) using the following command: `make -f Makefile` in the source code directory of PWMEval.
+- Update the path to PWMEval in benchmark_example.json (more details in the section "[Gathering benchmark files](#gathering-benchmark-files)").
+
+The most up-to-date version of PWMEval is included in the PWMScan package: https://gitlab.sib.swiss/EPD/pwmscan
+
+Note that the PWMEval way of handling Ns in nucleotide sequences is not fully predictable and we explicitly avoided such sequences in the IBIS data.
+
 # Offline validation scripts
 
 These scripts were intended to be used during the challenge to allow participants to ensure that their files are technically valid.
@@ -64,34 +78,27 @@ They return a non-zero error code in case of errors:
 
 2 - internal errors: bugs in the validation code or unhandled formatting errors
 
-# External dependencies
+# IBIS benchmarking scripts
 
-The IBIS Benchmarking uses PWMEval (https://github.com/gio31415/PWMEval). 
-We have included precompiled PWMEval binary executables in the `cli/` folder for x86-64 Linux distributions. If you are using a different system or architecture, please follow these steps to be able to run PWM scoring:
-- Download the PWMEval source code from https://github.com/gio31415/PWMEval and navigate to the downloaded PWMEval repository folder.
-- Compile PWMEval (`pwm_scoring.c`) using the following command: `make -f Makefile` in the source code directory of PWMEval.
-- Update the path to PWMEval in benchmark_example.json (more details in the section "[Gathering benchmark files](#gathering-benchmark-files)").
+The benchmarking data labels were hidden during the IBIS challenge but are now accessible in the dedicated ZENODO repository (see above).
+The benchmarking zip-file provided on ZENODO includes both the contents of this repository AND the necessary configuration files
+and labeled test data to estimate the performance metrics.
 
-The most up-to-date version of PWMEval is included in the PWMScan package: https://gitlab.sib.swiss/EPD/pwmscan
+## Unpacking and benchmark files
 
-Note that the PWMEval way of handling Ns in nucleotide sequences is not fully predictable and we explicitly avoided such sequences in the IBIS data.
-
-# IBIS Benchmarking (to be published)
-
-## ! Note, that benchmarking data is hidden during the IBIS challenge hence you won't be able to fully replicate the analysis until the challenge ends (i.e. the command line examples won't work w/o complete test data).
-
-## Gathering benchmark files
-
-Benchmark archive is available at ZENODO_LINK. 
-After downloading and unpacking it, run the following command to fix benchmark configs if you have x86-64 Linux:
+First, please set up the conda environment as for the offline validation scripts, see above.
+Next, run the following command to fix benchmark configs if you have x86-64 Linux:
 
 ```console
 bash cli/format_bench.sh ${PATH_TO_BENCHMARK_DIR} cli/pwm_scoring
 ```
-Otherwise, if you use different system, first visit the "[External dependencies](#external-dependencies)" section, and then replace the default path with your custom path to the PWMEval executable in the previous command: 
+
+Otherwise, if you use a different system or a custom-compiled PWMEval, check  the "[External dependencies](#external-dependencies)" section, and  replace the default path with your custom path to the PWMEval executable: 
 ```console
 bash cli/format_bench.sh ${PATH_TO_BENCHMARK_DIR} ${PATH_TO_PWMEval}/pwm_scoring
 ```
+`PATH_TO_BENCHMARK_DIR` should point to the folder where you unpacked the benchmarking suite archive from ZENODO.
+Particularly, it must contain the `BENCHMARK_CONFIGS` and `BENCHMARK_PROCESSED` folders, which contain the benchmark configuration files and the labeled test data.
 
 ## How to run
 
