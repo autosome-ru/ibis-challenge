@@ -1,3 +1,14 @@
+# This repository provides the benchmarking suite <br/> of *the IBIS Challenge*
+Codebook/GRECO-BIT open challenge in Inferring Binding Specificities <br/>of human transcription factors from multiple experimental data types
+
+![IBIS logo](https://github.com/user-attachments/assets/212f4edd-131d-4023-989a-a828e5e9dff4)
+
+# Detailed challenge documentation and accompanying data
+
+The detailed documentation of the IBIS challenge is available at the [IBIS](https://ibis.autosome.org) website.
+
+The complete IBIS data package including train, test, and benchmarking-ready data are available at [ZENODO](https://).
+
 # Project structure
 
 * bibis - main package, benchmarking tools, data sampling methods, etc
