@@ -14,9 +14,13 @@ The complete IBIS data package including train, test, and benchmarking-ready dat
 * bibis - main package, benchmarking tools, data sampling methods, etc
 * cli - command-line-wrappers for various tools, including an offline validator for IBIS submissions
 
+* To satisfy curious participants, along with the benchmarking protocols, here we also provide the software implementation of the train-test data preparation.
+
 # Offline validation scripts
 
-Offline validator scripts for PWM and AAA predictions are available in the ibis-challenge GitHub repository. The respective scripts can be used on a Linux machine. 
+These scripts were intended to be used during the challenge to allow participants to ensure that their files are technically valid.
+The respective scripts are designed to be used on a Linux machine. The scripts are applicable to both the Leaderboard and Final stages of IBIS,
+although the `leaderboard` should be replaced with `final` in the respective paths.
 
 Start by running: 
 ```console
@@ -35,29 +39,23 @@ Now install bibis package required for benchmark scripts
 pip install -e .
 ```
 
-The json benchmark configuration files and examples for offline validation are downloadable at the IBIS challenge website.
-The respective archive file should be unpacked to the same folder.
+The json 'minimal' configuration files and submission examples for offline validation are downloadable from the ZENODO repo.
+The respective archive file should be unpacked and placed in the same folder.
 
-Finally, you can validate your AAA leaderboard submissions:
+Finally, you can validate the AAA leaderboard submissions:
 ```console
-python cli/validate_aaa.py --benchmark leaderboard_examples/{EXP_TYPE}_benchmark.json --aaa_sub leaderboard_examples/example_{EXP_TYPE}_sub.tsv
+python cli/validate_aaa.py --benchmark leaderboard_examples/${EXP_TYPE}_benchmark.json --aaa_sub leaderboard_examples/example_${EXP_TYPE}_sub.tsv
 ```
 
-```{EXP_TYPE}``` can be SMS, PBM, CHS, GHTS, or HTS.
+where ```EXP_TYPE``` can be SMS, PBM, CHS, GHTS, or HTS.
 
-For PWMs, validation against a single json covering all benchmarks and TFs is sufficient.
+For PWMs, validation against a single json file covering all benchmarks and TFs is sufficient.
 
 ```console
 python cli/validate_pwm.py --benchmark leaderboard_examples/example_PWM_benchmark.json --pwm_sub leaderboard_examples/pwm_submission.txt
 ```
 
-To satisfy curious participants, the software implementation of the train-test data preparation and benchmarking protocols are available on GitHub in the same repo.
-
-# Final
-
-The data for the final evaluation will be organized in the same fashion as the data for the Leaderboard. You will be able to use the same validation scripts, and the necessary configuration files will be provided along with the test data.
-
-## Errors and Wardning
+## Errors and Warrnings
 
 The validation scripts report errors and warnings to stderr. 
 They return a non-zero error code in case of errors:
