@@ -71,6 +71,12 @@ python cli/validate_pwm.py --benchmark leaderboard_examples/example_PWM_benchmar
 
 ## Errors and Warrnings
 
+NOTE! In case you encounter any Python errors referring to libraries or packages in ```.local``` directory consider running
+```console
+export PYTHONUSERBASE=$CONDA_PREFIX
+```
+each time after activating the conda bibis environment. This will isolate you from locally installed and probably incompatible Python packages.
+
 The validation scripts report errors and warnings to stderr. 
 They return a non-zero error code in case of errors:
 
