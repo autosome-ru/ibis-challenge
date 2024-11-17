@@ -7,7 +7,7 @@ Codebook/GRECO-BIT open challenge in Inferring Binding Specificities <br/>of hum
 
 The detailed documentation of the IBIS challenge is available at the [IBIS](https://ibis.autosome.org) website.
 
-The complete IBIS data package including train, test, and benchmarking-ready data are available at [ZENODO](https://).
+The complete IBIS data package including the benchmarking-ready train & test data are available at [ZENODO repo1](https://zenodo.org/records/14174162) and [ZENOCODO repo2](https://zenodo.org/records/14176443).
 
 # Project structure
 
