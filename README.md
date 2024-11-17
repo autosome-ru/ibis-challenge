@@ -116,7 +116,7 @@ The json configuration files for each IBIS data type are provided within the ben
 Run PWM submission benchmarking:
 
 ```console
-python cli/run_bench.py --benchmark BENCHMARK_CONGIS/${EXP_TYPE}/Leaderboard/benchmark.json --sub leaderboard_examples/pwm_submission.txt --sub_type pwm --scores_path out.tsv
+python cli/run_bench.py --benchmark BENCHMARK_CONFIGS/${EXP_TYPE}/Leaderboard/benchmark.json --sub leaderboard_examples/pwm_submission.txt --sub_type pwm --scores_path out.tsv
 ```
 
 Run AAA submission benchmarking:
