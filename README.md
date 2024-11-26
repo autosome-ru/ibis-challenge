@@ -21,6 +21,8 @@ The complete IBIS data package including the benchmarking-ready train & test dat
 For PWM scanning, the IBIS benchmarking suite relies on PWMEval (https://github.com/gio31415/PWMEval). 
 We have included a precompiled PWMEval binary executable for x86-64 Linux distributions in the `cli/` folder. 
 
+_You might need to run_ `chmod +x cli/pwm_scoring` _prior to running the PWM benchmarking._
+
 If you are using a different system or architecture, please follow these steps to be able to run PWM scoring:
 - Download the PWMEval source code from https://github.com/gio31415/PWMEval and navigate to the downloaded PWMEval repository folder.
 - Compile PWMEval (`pwm_scoring.c`) using the following command: `make -f Makefile` in the source code directory of PWMEval.
