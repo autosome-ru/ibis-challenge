@@ -122,7 +122,7 @@ python cli/run_bench.py --benchmark BENCHMARK_CONFIGS/${EXP_TYPE}/Leaderboard/be
 Run AAA submission benchmarking:
 
 ```console
-python cli/run_bench.py --benchmark BENCHMARK_CONFIGS/${EXP_TYPE}/Leaderboard/benchmark.json --sub leaderboard_examples/example_${EXP_TYPE}_sub.txt --sub_type aaa --scores_path out.tsv
+python cli/run_bench.py --benchmark BENCHMARK_CONFIGS/${EXP_TYPE}/Leaderboard/benchmark.json --sub leaderboard_examples/example_${EXP_TYPE}_sub.tsv --sub_type aaa --scores_path out.tsv
 ```
 
 *You may replace* ```Leaderboard``` *with* ```Final``` *for the Final submissions.*
