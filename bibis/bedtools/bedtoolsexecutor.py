@@ -103,3 +103,11 @@ class BedtoolsExecutor:
         if isinstance(executor, Path):
             executor = BedtoolsExecutor(executor)
         cls.DEFAULT_EXECUTOR = executor
+
+    def merge_keeppeak(self, 
+                       path: str | Path, 
+                       out_path: str | Path):
+        cmd = f"{self.merge_path} -i {path} -c 4 -o mean"
+        self._run_bedtools_cmd(cmd, 
+                               out_path=out_path,
+                               name="merge")

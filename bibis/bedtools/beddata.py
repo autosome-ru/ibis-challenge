@@ -86,7 +86,7 @@ class BedData:
             self.write(store)
             out_path = tempdir / 'out.bed'
             self.executor.merge(store, out_path=out_path)
-        return self.from_file(out_path, presorted=True)
+            return self.from_file(out_path, presorted=True)
 
     def subtract(self, other: 'BedData', full: bool) -> 'BedData':
         with tempfile.TemporaryDirectory() as tempdir:
@@ -166,6 +166,30 @@ class BedData:
                                shift=shift, 
                                out_path=out_path)
             return BedData.from_file(out_path)
+
+    def _fix_merge_peak(self, path: str | Path):
+        with open(path) as inp:
+            lines = [line for line in inp]
+        n_lines = []
+        for l in lines:
+            start, end, ch, peak = l.split()
+            peak = int(round(float(peak)))
+            n_lines.append((start, end, ch, peak))
+        with open(path, "w") as out:
+            for line in n_lines:
+                print(*line, file=out, sep=BedData.BED_SEP)
+
+    def merge_keeppeak(self) -> 'BedData':
+        with tempfile.TemporaryDirectory() as tempdir:
+            tempdir = Path(tempdir)
+            store = tempdir / "store.bed"
+            self.write(store)
+            out_path = tempdir / "out.bed"
+            self.executor.merge_keeppeak(path=store, 
+                                         out_path=out_path)
+            self._fix_merge_peak(out_path)
+            return BedData.from_file(out_path)
+
 
     def append(self, e: BedEntry) -> None:
         self.entries.append(e)
@@ -271,3 +295,4 @@ def join_bed(beds: Iterable[BedData],  sort=True) -> BedData:
         return BedData(entries, sorted=sort)
     entries = list(heapq.merge(*(b.entries for b in beds)))
     return BedData(entries, sorted=True)
+

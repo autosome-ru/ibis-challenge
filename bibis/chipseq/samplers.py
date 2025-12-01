@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from copy import copy 
+import sys 
 
 from ..seq.seqentry import SeqEntry
 from ..seq.genome import Genome
@@ -12,7 +13,7 @@ def cut_to_window(bed: BedData, window_size: int, genome: Genome) -> BedData:
         for p in bed:
             if p.peak is None:
                 cnt = (p.end + p.start) // 2
-                print("Entry has no peak, will use the middle of the interval")
+                print("Entry has no peak, will use the middle of the interval", file=sys.stderr)
             else:
                 cnt = p.peak
             entry = BedEntry.from_center(chr=p.chr, 
@@ -22,6 +23,8 @@ def cut_to_window(bed: BedData, window_size: int, genome: Genome) -> BedData:
                                          metainfo=p.metainfo)
             if len(entry) == window_size:
                 cut_peaks.append(entry)
+            else:
+                print(f'Failed to cut entry to requested size: {len(entry)}')
         return BedData(cut_peaks)
         
 

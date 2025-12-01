@@ -213,15 +213,19 @@ class GenomeGCSampler:
             window_size=window_size,
             rng=rng)
         
-    def get_chrom_profile(self, ch: str) -> GCProfile:
-        if self.genome_profile is not None:
+    def get_chrom_profile(self, 
+                          ch: str,
+                          min_point_dist: int | None) -> GCProfile:
+        if self.genome_profile is not None and min_point_dist is None:
             return self.genome_profile[ch]
+        if min_point_dist is None:
+            min_point_dist = self.min_point_dist
         return self._calc_profile(chr=ch,
                                   genome=self.genome, 
                                   regions=self.negative_regions,
                                   window_size=self.window_size,
                                   rng=self.rng,
-                                  min_point_dist=self.min_point_dist,
+                                  min_point_dist=min_point_dist,
                                   exact=self.exact)
         
        
@@ -371,143 +375,167 @@ class GenomeGCSampler:
         return genome_profile
   
         
-    def _sample_chromosome(self, positives: BedData, chr: str) -> BedData:
+    def _sample_chromosome(self, chr: str, positives: BedData) -> BedData:
+        # the arguments order is important as otherwise parralel map would result in error
         positives = positives.filter(lambda e: e.chr == chr)
         if len(positives) == 0:
             return BedData()
         pos_seqs = self.genome.cut(positives)
         positive_gc = np.array([s.gc for s in pos_seqs])
         
-        chr_profile = self.get_chrom_profile(ch=chr)
-       
+        chr_profile = self.get_chrom_profile(ch=chr,
+                                             min_point_dist=None)
         negative_gc, neg_positions = chr_profile.gc, chr_profile.idx
+        custom_minpoint_dist = self.min_point_dist
+        
+        while positive_gc.shape[0] * self.sample_per_object > negative_gc.shape[0] and custom_minpoint_dist != 1:
+            custom_minpoint_dist = custom_minpoint_dist // 2 + 1
+            print(f"Changing min point specified to {custom_minpoint_dist} as too many negatives are required")
+            chr_profile = self.get_chrom_profile(ch=chr,
+                                             min_point_dist=custom_minpoint_dist)
+            negative_gc, neg_positions = chr_profile.gc, chr_profile.idx
         
         if positive_gc.shape[0] * self.sample_per_object > negative_gc.shape[0]:
-            raise Exception(f"Can't sample: requested sample size is smaller, then negatives number: {positive_gc.shape[0] * self.sample_per_object}, {negative_gc.shape[0]}")
-        
-        negative_gc = np.concatenate([[-np.inf],  negative_gc, [np.inf]])
-        
-        M = positive_gc.shape[0]
-
-        disjoint = DisjointSet.from_negative_gc(negative_gc) 
-        
-        heap = []
-
-        pos_clusters = np.searchsorted(negative_gc, positive_gc) - 1
-        
-        real_position_mapping = np.full(max(neg_positions) + 2, fill_value=-2, dtype=np.int32)
-
-        for i in range(neg_positions.shape[0]):
-            real_position_mapping[neg_positions[i]] = i 
+            print(f"Can't sample: requested sample size is smaller, then negatives number: {positive_gc.shape[0] * self.sample_per_object}, {negative_gc.shape[0]}", file=sys.stderr)
             
-        if self.exclude_positives:
-            for e in positives:
-                sur_start = max(e.start - self.min_point_dist, 0)
-                sur_end = max(e.end + self.min_point_dist + 1, real_position_mapping.shape[0])
-                for p in range(sur_start, sur_end):
-                    mapped_pos = real_position_mapping[p] + 1  # due to -np.inf
-                    if mapped_pos > 0: # if position exist 
-                        _ = disjoint.take(mapped_pos)
-        
-        for i in range(M):
-            val = positive_gc[i]
-            cl = pos_clusters[i]
-            p = disjoint.root(cl)
-            l = disjoint.left(p)
-            r = disjoint.right(p)
-
-            d1 = abs(negative_gc[l] - val)
-            d2 = abs(negative_gc[r] - val)
-
-            if d1 < d2:
-                pair = (d1, i, l)
-            elif d1 > d2:
-                pair = (d2, i, r)
-            else:
-                if self.rng.random() > 0.5:
-                    pair = (d1, i, l)
-                else:
-                    pair = (d2, i, r)
-
-            heap.append(pair)
-
-        heapq.heapify(heap)
-        samples = defaultdict(list)
-
-       
-        loss = 0
-        while len(heap) != 0:
-            d, i, pos = heapq.heappop(heap)
-
-            if not disjoint.is_taken[pos]:
-                
-                loss += d
-                _ = disjoint.take(pos)
-                
-                samples[i].append(pos)
-                
-                # added
-                
-                if self.exact: # else no such positions exist and we can skip this step 
-                    real_pos = neg_positions[pos-1] # due to -np.inf
-                    
-                    sur_start = max(real_pos -self.min_point_dist, 0)
-                    for sur_pos in range(sur_start, real_pos):
-                        mapped_sur_pos = real_position_mapping[sur_pos] + 1 # due to -np.inf
-                        if mapped_sur_pos > 0:
-                            _ = disjoint.take(mapped_sur_pos)
-                        
-                    sur_end = min(real_pos + self.min_point_dist + 1, real_position_mapping.shape[0])
-                    for sur_pos in range(real_pos + 1,  sur_end):
-                        mapped_sur_pos = real_position_mapping[sur_pos] + 1 # due to -np.inf
-                        if mapped_sur_pos > 0: # if position exist 
-                            _ = disjoint.take(mapped_sur_pos)
-                
-                
-                if len(samples[i]) == self.sample_per_object:
-                    continue
-                         
-            cl = pos_clusters[i]
-            p = disjoint.root(cl)
-            val = positive_gc[i]
-            l = disjoint.left(p)
-            r = disjoint.right(p)
-            d1 = abs(negative_gc[l] - val)
-            d2 = abs(negative_gc[r] - val)
-
-            if d1 < d2:
-                pair = (d1, i, l)
-            elif d1 > d2:
-                pair = (d2, i, r)
-            else: # d1 == d2
-                if self.rng.random() > 0.5:
-                    pair = (d1, i, l)
-                else:
-                    pair = (d2, i, r)
-            heapq.heappush(heap, pair)
-
-
-        for key, value in samples.items():
-            restored = [neg_positions[v - 1] for v in value]
-            samples[key] = restored 
-        
-        part_window = self.window_size // 2
-        entries = []
-        for pos_ind, negs in samples.items():
-            pos_entry = positives[pos_ind]
-            
-            for n in negs:
-
-                neg_entry = BedEntry.from_center(pos_entry.chr, 
-                                                 cntr=n, 
+            entries = []
+            part_window = self.window_size // 2
+            for i in range(len(neg_positions)):
+                center = neg_positions[i]
+                neg_entry = BedEntry.from_center(chr, 
+                                                 cntr=center, 
                                                  radius=part_window,
-                                                 metainfo=copy(pos_entry.metainfo), 
+                                                 metainfo=None, 
                                                  genome=self.genome)
                 if len(neg_entry) != self.window_size:
                     raise Exception("Error while sampling occured")
                 entries.append(neg_entry)
+            return BedData(entries)
+        else:
+        
+            negative_gc = np.concatenate([[-np.inf],  negative_gc, [np.inf]])
             
-        return BedData(entries)
+            M = positive_gc.shape[0]
+
+            disjoint = DisjointSet.from_negative_gc(negative_gc) 
+            
+            heap = []
+
+            pos_clusters = np.searchsorted(negative_gc, positive_gc) - 1
+            
+            real_position_mapping = np.full(max(neg_positions) + 2, fill_value=-2, dtype=np.int32)
+
+            for i in range(neg_positions.shape[0]):
+                real_position_mapping[neg_positions[i]] = i 
+                
+            if self.exclude_positives:
+                for e in positives:
+                    sur_start = max(e.start - self.min_point_dist, 0)
+                    sur_end = max(e.end + self.min_point_dist + 1, real_position_mapping.shape[0])
+                    for p in range(sur_start, sur_end):
+                        mapped_pos = real_position_mapping[p] + 1  # due to -np.inf
+                        if mapped_pos > 0: # if position exist 
+                            _ = disjoint.take(mapped_pos)
+    
+            for i in range(M):
+                val = positive_gc[i]
+                cl = pos_clusters[i]
+                p = disjoint.root(cl)
+                l = disjoint.left(p)
+                r = disjoint.right(p)
+
+                d1 = abs(negative_gc[l] - val)
+                d2 = abs(negative_gc[r] - val)
+
+                if d1 < d2:
+                    pair = (d1, i, l)
+                elif d1 > d2:
+                    pair = (d2, i, r)
+                else:
+                    if self.rng.random() > 0.5:
+                        pair = (d1, i, l)
+                    else:
+                        pair = (d2, i, r)
+
+                heap.append(pair)
+
+            heapq.heapify(heap)
+            samples = defaultdict(list)
+
+        
+            loss = 0
+            while len(heap) != 0:
+                d, i, pos = heapq.heappop(heap)
+
+                if not disjoint.is_taken[pos]:
+                    
+                    loss += d
+                    _ = disjoint.take(pos)
+                    
+                    samples[i].append(pos)
+                    
+                    # added
+                    
+                    if self.exact: # else no such positions exist and we can skip this step 
+                        real_pos = neg_positions[pos-1] # due to -np.inf
+                        
+                        sur_start = max(real_pos -self.min_point_dist, 0) # type: ignore
+                        for sur_pos in range(sur_start, real_pos):
+                            mapped_sur_pos = real_position_mapping[sur_pos] + 1 # due to -np.inf
+                            if mapped_sur_pos > 0:
+                                _ = disjoint.take(mapped_sur_pos)
+                            
+                        sur_end = min(real_pos + self.min_point_dist + 1, real_position_mapping.shape[0]) # type: ignore
+                        for sur_pos in range(real_pos + 1,  sur_end):
+                            mapped_sur_pos = real_position_mapping[sur_pos] + 1 # due to -np.inf
+                            if mapped_sur_pos > 0: # if position exist 
+                                _ = disjoint.take(mapped_sur_pos)
+                    
+                    
+                    if len(samples[i]) == self.sample_per_object:
+                        continue
+                            
+                cl = pos_clusters[i]
+                p = disjoint.root(cl)
+                val = positive_gc[i]
+                l = disjoint.left(p)
+                r = disjoint.right(p)
+                d1 = abs(negative_gc[l] - val)
+                d2 = abs(negative_gc[r] - val)
+
+                if d1 < d2:
+                    pair = (d1, i, l)
+                elif d1 > d2:
+                    pair = (d2, i, r)
+                else: # d1 == d2
+                    if self.rng.random() > 0.5:
+                        pair = (d1, i, l)
+                    else:
+                        pair = (d2, i, r)
+                heapq.heappush(heap, pair)
+
+
+            for key, value in samples.items():
+                restored = [neg_positions[v - 1] for v in value]
+                samples[key] = restored 
+            
+            part_window = self.window_size // 2
+            entries = []
+            for pos_ind, negs in samples.items():
+                pos_entry = positives[pos_ind]
+                
+                for n in negs:
+
+                    neg_entry = BedEntry.from_center(pos_entry.chr, 
+                                                    cntr=n, 
+                                                    radius=part_window,
+                                                    metainfo=copy(pos_entry.metainfo), 
+                                                    genome=self.genome)
+                    if len(neg_entry) != self.window_size:
+                        raise Exception("Error while sampling occured")
+                    entries.append(neg_entry)
+                
+            return BedData(entries)
     
     def _to_seqs(self, bed: BedData):
         seqs = self.genome.cut(bed)
