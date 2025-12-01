@@ -1,13 +1,8 @@
 import sys
 from pathlib import Path
 
-
-sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
-
 import argparse
 
-from bibis.benchmark.benchmarkconfig import BenchmarkConfig
-from bibis.benchmark.pwm_submission import PWMSubmission, PWMSubmissionFormatException
 
 SUCCESS_CODE = 0
 FORMAT_ERROR_CODE = 1
@@ -25,12 +20,14 @@ parser.add_argument("--pwm_sub",
 
 args = parser.parse_args()
 
+from bibis.benchmark.benchmarkconfig import BenchmarkConfig
+from bibis.benchmark.pwm_submission import PWMSubmission, PWMSubmissionFormatException
+
 cfg = BenchmarkConfig.from_json(args.benchmark)
-bench_tfs = set([ds.tf for ds in cfg.datasets])
 
 subm = PWMSubmission(name="to_validate",
                      path=args.pwm_sub,
-                     available_tfs=bench_tfs)
+                     available_tfs=cfg.tfs)
 
 try:
     val_res = subm.validate(cfg) 

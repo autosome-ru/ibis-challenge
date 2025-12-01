@@ -1,0 +1,14 @@
+[
+    {
+        "name": "prroc_rocauc",
+        "alias": "AUROC",
+        "params": {},
+        "backgrounds": ["all"]
+    },
+    {
+        "name": "prroc_prauc",
+        "alias": "AUPRC",
+        "params": {"type": "integral"},
+        "backgrounds": ["all"]
+    }
+]

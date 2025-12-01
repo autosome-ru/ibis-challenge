@@ -16,8 +16,8 @@ class IbisProtocol:
                            max_probs=1300):
         vals = [r.mean_signal_intensity for r in exp.records]
         vals.sort()
-        mean = np.mean(vals)
-        std = np.std(vals)
+        mean = np.mean(vals) # type:ignore
+        std = np.std(vals) # type: ignore
         th1 = mean + 4 * std
         th2 = vals[-min_probs]
         th = min(th1, th2) # type: ignore
@@ -46,7 +46,7 @@ class IbisProtocol:
             else:
 
                 label = 0
-            entry = rec.to_seqentry(label=label)
+            entry = rec.to_seqentry(label=label) # type:ignore
         
             if label == 1:
                 pos_entries.append(entry)

@@ -10,6 +10,9 @@ import tempfile
 from ..bedtools.beddata import BedData
 from ..bedtools.bedentry import BedEntry
 from ..seq.genome import Genome
+from ..plogging import get_bibis_logger
+
+logger = get_bibis_logger()
 
 @dataclass
 class ShadesSampler:
@@ -32,10 +35,13 @@ class ShadesSampler:
              genome: Genome, 
              pos_ds: BedData, 
              black_regions: BedData, 
+             min_dist: int,
              max_dist: int, 
              peak_size: int,
              sample_per_peak: int = 1,
              seed: int = 777):
+        assert min_dist >= 0, 'Min dist can`t be smaller than 0'
+        assert max_dist - min_dist > 0, 'Max dist must be larger than min dist'
         positives = {}
         for e in pos_ds:
             key = cls._key_from_entry(e)
@@ -47,7 +53,11 @@ class ShadesSampler:
             tempdir = Path(tempdir)
             genomesizes = tempdir / "genomesizes.txt"
             genome.write_bed_genome_file(genomesizes)
-            flanks = pos_ds.flank(genomesizes, max_dist + peak_size)
+            if min_dist != 0:
+                pos_ds = pos_ds.slop(genomesizes=genomesizes, 
+                                     shift=min_dist)
+            flanks = pos_ds.flank(genomesizes=genomesizes, 
+                                  size=max_dist - min_dist + peak_size)
         sbstr = flanks.subtract(black_regions, full=False)
         sub_dt = cls.map_peaks(sbstr)
         
@@ -77,9 +87,10 @@ class ShadesSampler:
         for peak_ch, sgmnts in self.sample_regions.items():
             smpl = sgmnts.sample_shades(seqsize=self.peak_size, 
                                         k=self.sample_per_peak,
-                                        genome=self.genome)
+                                        genome=self.genome,
+                                        rng=self.rng)
             if len(smpl) < self.sample_per_peak:
-                print(f"Warning: unable to sample more than {len(smpl)} for peak {peak_ch}")
+                logger.info(f"Warning: unable to sample more than {len(smpl)} for peak {peak_ch}")
             if save_metainfo:
                 positive = self.positives[peak_ch]
                 for e in smpl:

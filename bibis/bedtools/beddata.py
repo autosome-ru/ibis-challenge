@@ -98,6 +98,17 @@ class BedData:
             out_path = tempdir / "out.bed"
             self.executor.subtract(tmp1, tmp2, full=full, out_path=out_path)
             return self.from_file(out_path, presorted=True)
+        
+    def full_intersect(self, other: 'BedData') -> 'BedData':
+        with tempfile.TemporaryDirectory() as tempdir:
+            tempdir = Path(tempdir)
+            tmp1 = tempdir / "store1.bed"
+            tmp2 = tempdir / "store2.bed"
+            self.write(tmp1)
+            other.write(tmp2)
+            out_path = tempdir / "out.bed"
+            self.executor.full_intersect(tmp1, tmp2, out_path=out_path)
+            return self.from_file(out_path, presorted=True)
 
     def closest(self, other: 'BedData', how: BedClosestMode) -> list[int]:
         '''
@@ -208,14 +219,6 @@ class BedData:
             if s is not None:
                 new_entries.append(s)
         return BedData(new_entries)
-    
-    #def map(self, fn : Callable[[BedEntry], Optional[U]]) -> list[U]:
-    #    lst = []
-    #    for s in self.entries:
-    #        s = fn(s)
-    #        if s is not None:
-    #            lst.append(s)
-    #    return lst
 
     def filter(self, predicate: Callable[[BedEntry], bool]) -> 'BedData':
         flt_entries = []
@@ -284,6 +287,20 @@ class BedData:
     def sort_by(self, key_fn) -> 'BedData':
         cls = type(self)
         return cls(sorted(self.entries, key=key_fn), sorted=False)
+    
+    def to_min_width(self, width: int, genome: Genome, copy_meta: bool = False):
+        return self.apply(lambda e: e.to_min_width(width=width,
+                                                   genome=genome,
+                                                   copy_meta=copy_meta))
+    
+    # remove duplicate regions (in terms of start, end, chron)
+    def drop_duplicates(self) -> 'BedData':
+        mapping = {}
+        for en in self.entries:
+            mapping[(en.chr, en.start, en.end)] = en
+        entries = list(mapping.values())
+        return BedData(entries)
+
 
 def join_bed(beds: Iterable[BedData],  sort=True) -> BedData:
     if any(not x.sorted for x in beds):

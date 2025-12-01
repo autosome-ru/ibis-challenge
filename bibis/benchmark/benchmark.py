@@ -1,4 +1,3 @@
-from re import sub
 import tempfile
 import sys
 
@@ -6,21 +5,24 @@ import tqdm
 import pandas as pd
 import numpy as np 
 
+from collections import defaultdict
 from pathlib import Path
 from dataclasses import dataclass 
-from typing import ClassVar
+from typing import Any, ClassVar
 from pathlib import Path
 
-from ..scoring.scorer import SklearnROCAUC, SklearnPRAUC, PRROC_ROCAUC, PRROC_PRAUC, ConstantScorer
+from ..scoring.scorer import Scorer, ScorerResult
 from .prediction import Prediction
 from .score_submission import ScoreSubmission
 from ..matrix.pwmeval import MatrixSumPredictor, MatrixMaxPredictor
 from ..matrix.pwm import PCM, PFM
-from ..seq.seqentry import read_fasta
 
 from .dataset import DatasetInfo
 from .benchmarkconfig import BenchmarkConfig
 from .pwm_submission import PFMInfo, PWMSubmission
+from ..plogging import get_bibis_logger
+
+logger = get_bibis_logger()
 
 class Submit:
     name: str
@@ -36,8 +38,8 @@ class AAASubmit(Submit):
     
     def __post_init__(self):
         self.parent_name = self.name 
-    
-    
+
+
 @dataclass
 class MatrixSumbit(Submit):
     name: str
@@ -65,7 +67,8 @@ class MatrixSumbit(Submit):
                      pwmeval_path: Path) -> Prediction:
         if self.scoring_type == self.SUM_SCORE_NAME:
             model = MatrixSumPredictor(pfm_path, 
-                                    pwmeval_path=pwmeval_path)
+                                       pwmeval_path=pwmeval_path,
+                                       pseudocount=PFM.EPS)
             scores = Prediction(model.score_file(ds.fasta_path))
         elif self.scoring_type == self.BEST_SCORE_NAME:
             pfm = PFM.load(self.matrix_path)
@@ -108,20 +111,22 @@ class Benchmark:
     name: str
     kind: str
     datasets: list[DatasetInfo]
-    scorers: list[SklearnROCAUC | SklearnPRAUC | PRROC_ROCAUC | PRROC_PRAUC | ConstantScorer]
+    scorers: dict[str, Scorer]
     submits: list[Submit]
     
     results_dir: Path
     metainfo: dict
     pwmeval_path: Path
 
-    SKIPVALUE: ClassVar[float] = np.nan
+    SKIPVALUE: ClassVar[float] = ScorerResult(np.nan)
     REPR_SKIPVALUE: ClassVar[str] = "skipped"
-
-    @property
-    def skipped_prediction(self) -> dict[str, float]:
-        ds_scores = {sc.name: self.SKIPVALUE for sc in self.scorers}
+    
+    def skipped_prediction(self, ds: DatasetInfo) -> dict[str, float]:
+        ds_scores = {sc.name: self.SKIPVALUE for sc in self.scorers[ds.background]}
         return ds_scores
+    
+    def is_skipped_prediction(self, dt: dict[str, Any]):
+        return all(v == self.SKIPVALUE for v in dt.values())
 
     def submit_score_submission(self, sub: ScoreSubmission):
         aaa_sub = AAASubmit(name=sub.name,
@@ -144,7 +149,7 @@ class Benchmark:
                                tf=tf,
                                parent_name=parent_name)
         self.submits.append(mat_sub)
-        
+
     def submit_pfm_info(self, 
                         pfm_info: PFMInfo,
                         parent_name: str = ""):
@@ -178,36 +183,47 @@ class Benchmark:
     def score_prediction(self, ds: DatasetInfo, prediction: Prediction) -> dict[str, float]:
         #labelled_seqs = read_fasta(ds.path)
         answer = ds.answer()
-        if self.kind in ("CHS",  "GHTS", "PBM", "SMS"):
-            true_y = list(map(int, answer.values()))
+        if self.kind in ("CHS",  "GHTS", "PBM", "SMS", "HTS"): 
+            true_y = list(map(int, answer['labels'].values()))
+            if 'groups' in answer:
+                y_group = np.array(list(answer['groups'].values()), 
+                                   dtype=np.float32)
+            else:
+                y_group = None
             pred_y: list[float] = []
-            for tag in answer.keys():
+            for tag in answer['labels'].keys():
                 score = prediction.get(tag)
                 if score is None:
-                    print(f"Prediction doesn't contain information for sequence {tag}, skipping prediction",
-                          file=sys.stderr)
-                    return self.skipped_prediction
+                    logger.warning(f"Prediction doesn't contain information for sequence {tag}, skipping prediction")
+                    return self.skipped_prediction(ds)
                 pred_y.append(score)
-            
+
+            pred_y = np.array(pred_y)
+            true_y = np.array(true_y)
+            ord = np.argsort(pred_y)
+            pred_y = pred_y[ord]
+            true_y = true_y[ord]
+            if y_group is not None:
+                y_group = y_group[ord]
+
             scores: dict[str, float] = {}
-            for sc in self.scorers:
-                scores[sc.name] = sc.score(y_score=pred_y, y_real=true_y)
+            for sc in self.scorers[ds.background]:
+                scores[sc.name] = sc.score(y_score=pred_y, y_real=true_y, y_group=y_group)
             return scores
         else:
             raise NotImplementedError(f"Benchmark scoring is not implemented for {self.kind}")
 
-    def score_aaa_submit(self, submit: AAASubmit) -> dict[str, dict[str, float]]:
+    def score_aaa_submit(self, submit: AAASubmit) -> dict[str, dict[str, ScorerResult]]:
         scores = {}
         for ds in self.datasets:
             if ds.tf in submit.scores:
                 scores[ds.name] = self.score_prediction(ds, submit.scores[ds.tf])
             else:
-                print(f"No predictions for {ds.name} are provided. Skipping", 
-                      file=sys.stderr)
-                scores[ds.name] = self.skipped_prediction
+                logger.warning(f"No predictions for {ds.name} are provided. Skipping")
+                scores[ds.name] = self.skipped_prediction(ds)
         return scores 
     
-    def score_matrix_submit(self, submit: MatrixSumbit) -> dict[str, dict[str, float]]:
+    def score_matrix_submit(self, submit: MatrixSumbit) -> dict[str, dict[str, ScorerResult]]:
         scores = {}
         for ds in self.datasets:
             if ds.tf == submit.tf:
@@ -235,9 +251,9 @@ class Benchmark:
                     raise Exception("Wrong submit type")
                 
                 for ds_name, ds_dt in scores.items():
-                    if ds_dt == self.skipped_prediction:
+                    if self.is_skipped_prediction(ds_dt):
                         continue 
-                    for sc, value in ds_dt.items():
+                    for sc, sc_result in ds_dt.items():
                         ds = ds_mapping[ds_name]
                         results.append([sub.parent_name, 
                                         sub.name, 
@@ -245,7 +261,8 @@ class Benchmark:
                                         ds.tf, 
                                         ds.background,
                                         sc,
-                                        value])
+                                        sc_result.value,
+                                        sc_result.metainfo])
                 pbar.update(1)
         
         df = pd.DataFrame(results,
@@ -255,7 +272,8 @@ class Benchmark:
                                    "tf", 
                                    "background",
                                    "score",
-                                   "value"])
+                                   "value",
+                                   "metainfo"])
         if self.kind == "PBM":
             back = [x.split("_")[0] for x in df['background'].values]
             exp = [x.split("_")[1] for x in df['background'].values]
@@ -271,14 +289,34 @@ class Benchmark:
         if isinstance(results_dir, str):
             results_dir = Path(results_dir)
         
-        scorers = [sc.make() for sc in cfg.scorers]
-        
+        all_backgrounds = set(ds.background for ds in cfg.datasets)
+
+        back2scorers = defaultdict(list)
+        for sc_cfg in cfg.scorers:
+            backs_lst = []
+            all_specified = False
+            for back in sc_cfg.backgrounds:
+                if back == 'all':
+                    all_specified = True
+                elif back not in all_backgrounds:
+                    raise Exception(f"Wrong background specified: {back}")
+                else:
+                    backs_lst.append(back)
+            if all_specified:
+                if len(backs_lst) != 0:
+                    logger.warning("'All' background specified, all background will be used, other specifications are ignored") 
+                backs_lst = all_backgrounds
+            
+            scorer = sc_cfg.make() 
+            for back in backs_lst:
+                back2scorers[back].append(scorer)
+
+
         return Benchmark(name=cfg.name,
                          kind=cfg.kind,
                          datasets=cfg.datasets,
-                         scorers=scorers, 
+                         scorers=dict(back2scorers), 
                          submits=[],
                          results_dir=results_dir,
                          metainfo=cfg.metainfo,
                          pwmeval_path=cfg.pwmeval_path)
-    

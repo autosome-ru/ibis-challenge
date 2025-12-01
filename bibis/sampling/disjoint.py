@@ -3,9 +3,6 @@ import numpy as np
 
 @dataclass
 class DisjointSet:
-    """
-    GC-sampler based on DisjointSet
-    """
     parent: np.ndarray
     power: np.ndarray
     left_brd: np.ndarray

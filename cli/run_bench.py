@@ -1,13 +1,32 @@
-import sys
 import tempfile
-sys.path.append("/home_local/dpenzar/bibis_git/ibis-challenge")
-
+import sys
 import argparse
 from pathlib import Path
 
+
 from rpy2.rinterface_lib.callbacks import logger as rpy2_logger
 import logging
+import numpy as np 
 rpy2_logger.setLevel(logging.ERROR)
+
+parser = argparse.ArgumentParser(description="Python script to locally validate PWM submission")
+
+parser.add_argument("--benchmark", 
+                    help="benchmark config file (all dataset paths must be valid)",
+                    required=True)
+parser.add_argument("--sub", 
+                    help="path to submission file",
+                    required=True)
+parser.add_argument("--sub_type",
+                    choices=["aaa", "pwm"],
+                    help="submission type",
+                    required=True)
+parser.add_argument("--scores_path",
+                    default=sys.stdout,
+                    help="Path to write output. By default - stdout")
+
+args = parser.parse_args()
+
 
 from bibis.benchmark.benchmark import Benchmark
 from bibis.benchmark.benchmarkconfig import BenchmarkConfig
@@ -18,26 +37,6 @@ SUCCESS_CODE = 0
 FORMAT_ERROR_CODE = 1
 INTERNAL_ERROR_CODE = 2
 
-parser = argparse.ArgumentParser(description="Python script to locally validate PWM submission")
-
-parser.add_argument("--benchmark", 
-                    help="benchmark config file (all dataset paths must be valid)",
-                    required=True)
-
-parser.add_argument("--sub", 
-                    help="path to submission file",
-                    required=True)
-
-parser.add_argument("--sub_type",
-                    choices=["aaa", "pwm"],
-                    help="submission type",
-                    required=True)
-
-parser.add_argument("--scores_path",
-                    default=sys.stdout,
-                    help="Path to write output. By default - stdout")
-
-args = parser.parse_args()
 
 cfg = BenchmarkConfig.from_json(args.benchmark)
 bench_tfs = set([ds.tf for ds in cfg.datasets])
@@ -78,22 +77,21 @@ with tempfile.TemporaryDirectory() as tempdir:
 
 if args.sub_type == "aaa":
     if bench.kind == "PBM":
-        scores = scores[['tf', 'background', 'experiment_id', 'score', 'value', ]]    
-        scores.columns = ['tf', 'preprocessing', 'experiment_id', 'score_type', 'value']
+        scores = scores[['tf', 'background', 'experiment_id', 'score', 'value', 'metainfo']]    
+        scores.columns = ['tf', 'preprocessing', 'experiment_id', 'score_type', 'value', 'metainfo']
     else:
-        scores = scores[['tf', 'background', 'score', 'value']]    
-        scores.columns = ['tf', 'background', 'score_type', 'value']
+        scores = scores[['tf', 'background', 'score', 'value', 'metainfo']]    
+        scores.columns = ['tf', 'background', 'score_type', 'value', 'metainfo']
 elif args.sub_type == "pwm":
     if bench.kind == "PBM":
-        scores = scores[['tf', 'part_name', 'scoring_type', 'background', 'experiment_id', 'score', 'value']]    
-        scores.columns = ['tf', 'matrix_name', 'scoring_type', 'background', 'experiment_id', 'score_type', 'value']
+        scores = scores[['tf', 'part_name', 'scoring_type', 'background', 'experiment_id', 'score', 'value', 'metainfo']]    
+        scores.columns = ['tf', 'matrix_name', 'scoring_type', 'background', 'experiment_id', 'score_type', 'value', 'metainfo']
     else:
-         scores = scores[['tf', 'part_name', 'scoring_type', 'background', 'score', 'value']]    
-         scores.columns = ['tf', 'matrix_name', 'scoring_type', 'background', 'score_type', 'value']
+         scores = scores[['tf', 'part_name', 'scoring_type', 'background', 'score', 'value', 'metainfo']]    
+         scores.columns = ['tf', 'matrix_name', 'scoring_type', 'background', 'score_type', 'value', 'metainfo']
 else:
     print("Wrong submission type", file=sys.stderr)
     sys.exit(INTERNAL_ERROR_CODE)
-
 
 scores.to_csv(args.scores_path, 
               index=False,

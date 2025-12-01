@@ -13,8 +13,6 @@ class DatasetInfo:
     background: str 
     fasta_path: str
     answer_path: str | None
-    left_flank: str | None = None # valid for SMS and HT-SELEX
-    right_flank: str | None = None # valid for SMS and HT-SELEX
     
     @classmethod
     def from_dict(cls, dt: dict[str, str | Path]):
@@ -30,16 +28,13 @@ class DatasetInfo:
     def load(cls, path: str | Path) -> 'DatasetInfo':
         with open(path)  as inp:
             dt = json.load(inp)
+        if 'left_flank' in dt:
+            dt.pop('left_flank')
+            dt.pop('right_flank')
         return cls(**dt)
 
     def to_dict(self) -> dict[str, str]:
-        return asdict(self)
-    
-    def write_tsv(self, path: str | Path):
-        entries = read_fasta(self.fasta_path)
-        entries2tsv(entries=entries,
-                    path=path)
-        
+        return asdict(self)        
                 
     def answer(self) -> dict[str, Label]:
         if self.answer_path is None:
@@ -60,7 +55,7 @@ def get_seqentrykey(s: SeqEntry, kind: str):
 def seqentry2interval_key(s: SeqEntry):
         m = s.metainfo
         try:
-            return m['chr'], m['start'], m['end'] # type: ignore
+            return m['chr'], int(m['start']), int(m['end']) # type: ignore
         except KeyError:
             raise Exception("seqentry2interval_key works only for datasets with information about chr, start and end provided")
 
@@ -74,6 +69,8 @@ def entries2tsv(entries: list[SeqEntry], path: str | Path, kind: str):
         return pbm_entries2tsv(entries, path)
     elif kind == "SMS":
         return sms_entries2tsv(entries, path)
+    elif kind == "HTS":
+        return hts_entries2tsv(entries, path)
     else:
         raise Exception(f"entries2tsv is not implemented for benchmark {kind}")
 
@@ -103,6 +100,12 @@ def pbm_entries2tsv(entries: list[SeqEntry], path: str | Path):
             print(id_spot, row, col, tag, sep="\t", file=out)
 
 def sms_entries2tsv(entries: list[SeqEntry], path: str | Path):
+    with open(path, "w") as out:
+        for e in entries:
+            tag = e.tag
+            print(tag, file=out)
+
+def hts_entries2tsv(entries: list[SeqEntry], path: str | Path):
     with open(path, "w") as out:
         for e in entries:
             tag = e.tag

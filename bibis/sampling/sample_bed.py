@@ -45,7 +45,6 @@ def sample_segments(start: int,
         probs = np.concatenate([np.full(shape=min_dist, fill_value=1),
                                 (1 - np.arange(1, N - min_dist + 1) / w )])
         probs = probs / probs.sum()
-        #print(probs)
         start = start + rng.choice(N, p=probs)
         K = N // min_dist
         dists = rng.integers(low=min_dist, high=max_dist, size=K)

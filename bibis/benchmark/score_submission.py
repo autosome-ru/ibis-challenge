@@ -53,7 +53,7 @@ class ScoreSubmission:
             pass
         
         if number is None:
-            raise ScoreSubmissionFormatException(f"Submission score must { Prediction.REPR_SKIPVALUE} or number: {score_str}")
+            raise ScoreSubmissionFormatException(f"Submission score must be either '{Prediction.REPR_SKIPVALUE}' or a number: {score_str}")
         
         if number > 1 + cls.MAX_0_1_DIFF:
             raise ScoreSubmissionFormatException(f"Submission score must be in [0, 1]: {score_str}")
@@ -68,7 +68,7 @@ class ScoreSubmission:
         after_point = fields[1]
         
         if len(after_point) > cls.MAX_PRECISION:
-            raise ScoreSubmissionFormatException(f"Submission score must contain at most {cls.MAX_PRECISION} after . : {score_str}")
+            raise ScoreSubmissionFormatException(f"Submission score must contain at most {cls.MAX_PRECISION} digits after '.' : {score_str}")
         
     
     @classmethod
@@ -88,9 +88,12 @@ class ScoreSubmission:
             tfs = fields[1:]
             _sub = {tf_name: Prediction() for tf_name in tfs}
             tags = []
-            for line in infile:
+            for line_number, line in enumerate(infile):
                 line = line.rstrip(END_LINE_CHARS)
                 vals = line.split(cls.FIELDSEP)
+                if len(vals) - 1 != len(tfs):
+                    msg = f"Submission has wrong number of predictions at line {line_number+2}: {vals[1:]}"
+                    raise ScoreSubmissionFormatException(msg)
                 tag = vals[0]
                 tags.append(tag)
                 for tf_name, val in zip(tfs, vals[1:]):
@@ -111,11 +114,14 @@ class ScoreSubmission:
                 msg = f"no prediction submitted for factor {tf}"
                 warnings.append(msg)
 
-        for tag in self.tags:
-            if tag not in cfg.tags:
-                msg = f"No such tag in becnhmark: {tag}"
-                errors.append(msg)
-
+        sub_tags_set = set(self.tags) 
+        cfg_tags_set = set(cfg.tags) 
+        for tag in (sub_tags_set - cfg_tags_set): 
+            msg = f"No such tag in benchmark: {tag}"
+            errors.append(msg) 
+        for tag in (cfg_tags_set - sub_tags_set): 
+            msg = f"No prediction for tag: {tag}" 
+            errors.append(msg)
                 
         for tf in self._sub:
             if tf not in cfg.tfs:
@@ -125,10 +131,10 @@ class ScoreSubmission:
         for tf_name, pred in self._sub.items():
             for t in self.tags:
                 if Prediction.is_skipvalue(pred[t]):
-                    msg = f"Column for factor {tf_name} contains skipped prediction for {t}." 
-                    "Predictions for this factor won't be evaluated"
+                    msg = f"Column for factor {tf_name} an incomplete set of predictions: prediction skipped for {t}." 
+                    "The submission for this factor cannot be evaluated"
                     
-                    warnings.append(msg)                   
+                    errors.append(msg)                   
                     self._sub.pop(tf_name)
                     break
                 

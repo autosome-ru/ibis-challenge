@@ -1,0 +1,15 @@
+[
+    {
+        "name": "prroc_rocauc_averaged",
+        "alias": "MAUROC",
+        "params": {},
+        "backgrounds": ["all"]
+    },
+    {
+        "name": "prroc_prauc_averaged",
+        "alias": "MAUPRC",
+        "params": {"type": "integral"},
+        "backgrounds": ["all"]
+
+    }
+]

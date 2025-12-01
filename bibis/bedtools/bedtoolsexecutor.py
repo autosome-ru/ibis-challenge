@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from enum import Enum
 
+from ..plogging import get_bibis_logger
+logger = get_bibis_logger()
+
 
 class BedClosestMode(Enum):
     UPSTREAM = "-fu"
@@ -111,3 +114,17 @@ class BedtoolsExecutor:
         self._run_bedtools_cmd(cmd, 
                                out_path=out_path,
                                name="merge")
+        logger.info(f"Using {executor.bedtools_root} as bedtools executor")
+        cls.DEFAULT_EXECUTOR = executor
+
+    @property
+    def intersect_path(self) -> Path:
+        return self.bedtools_root / 'intersectBed'
+    
+
+    def full_intersect(self, a: str | Path, b: str | Path, out_path: str | Path):
+        cmd = f"{self.intersect_path} -a {a} -b {b} -f 1.0"
+        self._run_bedtools_cmd(cmd, 
+                               out_path=out_path, 
+                               name='full_intersect')
+   

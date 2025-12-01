@@ -2,6 +2,9 @@ from typing import ClassVar
 from copy import deepcopy
 from dataclasses import dataclass, field 
 from ..seq.genome import Genome
+from ..plogging import get_bibis_logger
+
+logger = get_bibis_logger()
 
 @dataclass(order=True, slots=True)
 class BedEntry:
@@ -39,7 +42,6 @@ class BedEntry:
         except ValueError:
             pass
         return None
-        #raise Exception(f"Wrong peak format: {s}")
 
     @classmethod
     def from_line(cls, line: str):
@@ -126,6 +128,23 @@ class BedEntry:
                     metainfo=deepcopy(self.metainfo) if copy_meta else None)
         return other
     
+    # extend entry if it is less then width. Otherwise -- return copy
+    # done symmetrically 
+    def to_min_width(self, width: int, genome: Genome, copy_meta: bool = False) -> 'BedEntry':
+        other = self.copy(copy_meta=copy_meta)
+        size = len(self)
+        if size >= width:
+            return other
+        rest = width - size
+        dv, md = divmod(rest, 2)
+        ls, rs = dv + md, dv
+        other.start = max(0, other.start - ls)
+        other.end = min(len(genome.chroms[other.chr]), other.end+rs)
+        if len(other) < width:
+            logger.warning("Failed to resize entry to requested size")
+
+        return other
+
     @classmethod
     def default_entry(cls) -> 'BedEntry':
         if not hasattr(cls, "default"):

@@ -98,7 +98,7 @@ def read(handle: io.TextIOWrapper | Path | str, format: str="fasta") -> list[Seq
 
 def write_fasta(entries: Iterable[SeqEntry], handle: io.TextIOWrapper | Path | str):
     records = (e.to_seqrecord() for e in entries)
-    return SeqIO.write(records, handle, format="fasta")
+    return SeqIO.write(records, handle, format="fasta-2line")
 
 def write(entries: Iterable[SeqEntry], handle: io.TextIOWrapper | Path | str, format: str="fasta"):
     match format:
@@ -106,3 +106,12 @@ def write(entries: Iterable[SeqEntry], handle: io.TextIOWrapper | Path | str, fo
             return write_fasta(entries, handle)
         case _:
             raise NotImplementedError(f"No method to write to {format}")
+        
+def drop_duplicates(entries: list[SeqEntry]) -> list[SeqEntry]:
+    """
+    remove duplicates (sequences)
+    """
+    mapping: dict[Seq, SeqEntry] = {}
+    for en in entries:
+        mapping[en.sequence] = en
+    return list(mapping.values())

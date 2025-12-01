@@ -11,13 +11,9 @@ parser.add_argument("--tagdb",
 parser.add_argument("--tagdb_cfg",
                     required=True,
                     type=str)
-parser.add_argument("--bibis_root",
-                    default="/home_local/dpenzar/bibis_git/ibis-challenge",
-                    type=str)
 
 args = parser.parse_args()
 
-sys.path.append(args.bibis_root)
 
 from bibis.seqdb.config import DBConfig
 

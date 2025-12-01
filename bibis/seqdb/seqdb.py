@@ -8,6 +8,9 @@ from typing import ClassVar
 
 from .tagger import UniqueTagger
 from ..seq.seqentry import SeqEntry
+from ..plogging import get_bibis_logger
+
+logger = get_bibis_logger()
 
 @dataclass
 class TagDatabase:
@@ -80,8 +83,6 @@ class TagDatabase:
         seqs = self.seqs2strs(seqs)
     
         wait_for_unlock = False
-        existing = {}
-        rest = {}
         while True:
             try:
                 with self.get_connection() as con:
@@ -96,25 +97,28 @@ class TagDatabase:
                                 continue
                             rest[s] = self.tagger.tag()
                     self.update_db(cur, self.TAG_TABLE_NAME, rest)  
+                    existing.update(rest)
             except sqlite3.IntegrityError as exc:
-                print(f"Waiting: database lock exception ({exc}), regenerating keys")
+                logger.info(f"Waiting: database lock exception ({exc}), regenerating keys")
                 wait_for_unlock=False
             except sqlite3.OperationalError as exc:
-                print(f"Waiting: database unique exception ({exc}), waiting for unlock")
+                logger.info(f"Waiting: database unique exception ({exc}), waiting for unlock")
                 wait_for_unlock=True
                 time.sleep(self.wait_time)
+            except Exception as exc:
+                raise Exception(f"Uknown exception occured: {exc}")
             else:
                 break
                 
-        existing.update(rest)
         return {s: existing[s] for s in seqs}
     
     def taggify_entries(self, entries: list[SeqEntry]):
         entry_mapping = {self.seq2str(e.sequence) : e for e in entries}
         seq_tags = self.taggify(list(entry_mapping.keys()))
-        for s, t in seq_tags.items():
-            e = entry_mapping[s]
-            e.tag = t
+        for entry in entries:
+            s = self.seq2str(entry.sequence)
+            t = seq_tags[s]
+            entry.tag = t
         return entries
     
     
