@@ -294,7 +294,6 @@ class GenomeGCSampler:
                                           cls.default_prohibited_regions(genome=genome,
                                                                          window_size=window_size)])
             negative_regions = blacklist_regions.complement(chroms_path)
-        negative_regions.write("/home_local/dpenzar/negative.bed")
 
         rng = np.random.default_rng(seed=seed)
         
